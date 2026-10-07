@@ -3,27 +3,45 @@ import { onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useLogStore } from './stores/log';
 import LogPanel from './components/LogPanel.vue';
+import { useI18n, type LocaleCode } from './i18n';
+import { api } from './api/bindings';
 
 const route = useRoute();
 const log = useLogStore();
+const { t, locale, setLocale, locales } = useI18n();
 
-onMounted(() => log.listen());
+function onChangeLocale(e: Event) {
+  setLocale((e.target as HTMLSelectElement).value as LocaleCode);
+  void api.setLocale(locale.value);
+}
+
+onMounted(() => {
+  log.listen();
+  void api.setLocale(locale.value); // 启动时把持久化语言同步给后端
+});
 </script>
 
 <template>
   <div class="app-shell">
     <header class="topbar">
-      <span class="brand">ProjectDocs</span>
+      <span class="brand">{{ t('app.brand') }}</span>
       <nav>
-        <router-link to="/" class="tab" exact-active-class="active">项目管理</router-link>
+        <router-link to="/" class="tab" exact-active-class="active">{{ t('app.projects') }}</router-link>
         <router-link
           :to="route.name === 'workbench' ? route.fullPath : ''"
           class="tab"
           :class="{ active: route.name === 'workbench', disabled: route.name !== 'workbench' }"
         >
-          工作台
+          {{ t('app.workbench') }}
         </router-link>
       </nav>
+      <span class="spacer" />
+      <label class="lang">
+        {{ t('app.language') }}
+        <select :value="locale" @change="onChangeLocale">
+          <option v-for="l in locales" :key="l.code" :value="l.code">{{ l.label }}</option>
+        </select>
+      </label>
     </header>
     <router-view />
     <LogPanel />
@@ -46,4 +64,7 @@ nav { display: flex; gap: 4px; }
 }
 .tab.active { color: #eee; background: #1f2d3d; }
 .tab.disabled { opacity: .45; cursor: not-allowed; }
+.spacer { flex: 1; }
+.lang { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #8fa3b8; }
+.lang select { background: #0f1720; color: #eee; border: 1px solid #3a4a5c; border-radius: 4px; padding: 3px 6px; font-size: 12px; }
 </style>

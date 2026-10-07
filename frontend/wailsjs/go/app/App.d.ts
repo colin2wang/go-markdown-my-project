@@ -29,4 +29,6 @@ export function SelectDirectory(arg1:string):Promise<string>;
 
 export function SerializeYAML(arg1:config.ProjectConfig):Promise<string>;
 
+export function SetLocale(arg1:string):Promise<void>;
+
 export function ValidateConfig(arg1:config.ProjectConfig):Promise<Array<app.FieldError>>;

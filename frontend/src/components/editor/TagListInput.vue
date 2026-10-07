@@ -3,7 +3,9 @@
 import { ref } from 'vue';
 import { api } from '../../api/bindings';
 import { useLogStore } from '../../stores/log';
+import { useI18n } from '../../i18n';
 
+const { t } = useI18n();
 const props = defineProps<{
   modelValue: string[];
   placeholder?: string;
@@ -25,7 +27,7 @@ function add(raw: string) {
     if (next.includes(it)) { dup++; continue; }
     next.push(it);
   }
-  if (dup) log.warn(`重复项已忽略 ${dup} 条`);
+  if (dup) log.warn(t('editor.tagDupIgnored', { n: dup }));
   emit('update:modelValue', next);
   input.value = '';
 }
@@ -85,7 +87,7 @@ async function browse() {
         @blur="input.trim() && add(input)"
       />
     </div>
-    <button v-if="dirSelect" type="button" class="browse" :disabled="disabled" @click="browse">📂 从磁盘选…</button>
+    <button v-if="dirSelect" type="button" class="browse" :disabled="disabled" @click="browse">📂 {{ t('editor.browseDisk') }}</button>
     <p v-if="error" class="field-error">{{ error }}</p>
   </div>
 </template>

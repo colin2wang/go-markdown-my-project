@@ -29,3 +29,4 @@ time="2026-10-07 22:11:53" level=INFO source=logger.go:169 msg="Starting Project
 time="2026-10-07 22:22:43" level=INFO source=logger.go:169 msg="Starting Project Docs GUI..."
 time="2026-10-07 22:35:01" level=INFO source=logger.go:169 msg="Starting Project Docs GUI..."
 time="2026-10-07 22:39:43" level=INFO source=logger.go:169 msg="Starting Project Docs GUI..."
+time="2026-10-08 07:53:25" level=INFO source=logger.go:169 msg="正在启动 Project Docs 界面…"

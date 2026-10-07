@@ -8,6 +8,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 
 	"go-markdown-my-project/app"
+	"go-markdown-my-project/core/i18n"
 	"go-markdown-my-project/core/logger"
 )
 
@@ -17,7 +18,7 @@ var assets embed.FS
 func main() {
 	// 初始化日志（对齐 log4rs.yml：控制台 + 滚动文件）
 	_ = logger.Init(logger.Options{Level: "debug", Console: true})
-	logger.Info("Starting Project Docs GUI...")
+	logger.Info(i18n.T("log.starting"))
 
 	appObj := app.NewApp()
 	err := wails.Run(&options.App{

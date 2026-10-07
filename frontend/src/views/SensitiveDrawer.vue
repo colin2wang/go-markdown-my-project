@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { SensitiveHit } from '../api/bindings';
+import { useI18n } from '../i18n';
 
+const { t } = useI18n();
 defineProps<{ hits: SensitiveHit[] }>();
 const emit = defineEmits<{ (e: 'close'): void }>();
 </script>
@@ -9,19 +11,19 @@ const emit = defineEmits<{ (e: 'close'): void }>();
   <div class="drawer-mask" @click.self="emit('close')">
     <aside class="drawer">
       <header>
-        <h3>敏感信息命中 ({{ hits.length }})</h3>
+        <h3>{{ t('sensitive.title', { n: hits.length }) }}</h3>
         <button class="link" @click="emit('close')">✕</button>
       </header>
-      <p class="muted tip">命中仅显示掩码预览，绝不落盘明文。导出时按策略替换。</p>
+      <p class="muted tip">{{ t('sensitive.tip') }}</p>
       <div class="list">
-        <p v-if="hits.length === 0" class="muted">无命中</p>
+        <p v-if="hits.length === 0" class="muted">{{ t('sensitive.none') }}</p>
         <div v-for="(h, i) in hits" :key="i" class="hit">
           <div class="loc">{{ h.file }} : {{ h.line }} <span class="rule">[{{ h.rule }}]</span></div>
           <div class="masked">{{ h.masked }}</div>
         </div>
       </div>
       <footer>
-        <button class="primary" @click="emit('close')">知道了</button>
+        <button class="primary" @click="emit('close')">{{ t('sensitive.ok') }}</button>
       </footer>
     </aside>
   </div>

@@ -8,23 +8,25 @@ import FileTree from './FileTree.vue';
 import SensitiveDrawer from './SensitiveDrawer.vue';
 import { estimateTokensFromSize, fmtNum } from '../estimate';
 import { useLogStore } from '../stores/log';
+import { useI18n } from '../i18n';
 
 const props = defineProps<{ configPath: string }>();
 const router = useRouter();
 const projects = useProjectsStore();
 const exp = useExportStore();
 const log = useLogStore();
+const { t } = useI18n();
 
 const loadError = ref('');
 const scanning = ref(false);
 const exporting = ref(false);
 
-const MODES = [
-  { value: 'full', icon: '📄', label: '完整代码', desc: '文件树 + 全部文件代码' },
-  { value: 'files', icon: '🗂', label: '文件名清单', desc: '仅文件树与路径列表' },
-  { value: 'symbols', icon: '🔎', label: '符号目录', desc: '文件名 + 方法/类名（启发式解析）' },
-  { value: 'signatures', icon: '✍️', label: '签名导出', desc: '文件名 + 函数完整签名' },
-];
+const MODES = computed(() => [
+  { value: 'full', icon: '📄', label: t('wb.modes.full.label'), desc: t('wb.modes.full.desc') },
+  { value: 'files', icon: '🗂', label: t('wb.modes.files.label'), desc: t('wb.modes.files.desc') },
+  { value: 'symbols', icon: '🔎', label: t('wb.modes.symbols.label'), desc: t('wb.modes.symbols.desc') },
+  { value: 'signatures', icon: '✍️', label: t('wb.modes.signatures.label'), desc: t('wb.modes.signatures.desc') },
+]);
 
 onMounted(async () => {
   loadError.value = '';
@@ -38,11 +40,11 @@ onMounted(async () => {
 
 async function rescan() {
   if (!projects.current) return;
-  log.info(`扫描项目：${projects.current.project_name}`);
+  log.info(t('wb.logScan', { name: projects.current.project_name }));
   scanning.value = true;
   try {
     await exp.scan(projects.current);
-    log.info(`扫描完成：共 ${exp.files.length} 个文件`);
+    log.info(t('wb.logScanned', { n: exp.files.length }));
   } finally {
     scanning.value = false;
   }
@@ -50,7 +52,7 @@ async function rescan() {
 
 // 导出模式切换
 watch(() => exp.mode, (m, old) => {
-  if (old) log.info(`切换导出模式：${old} → ${m}`);
+  if (old) log.info(t('wb.logModeSwitch', { from: old, to: m }));
 });
 
 // —— 勾选统计（左栏底/状态条共用），300ms 防抖避免大项目勾选时频繁重算 ——
@@ -87,15 +89,15 @@ const redactStrategy = ref('placeholder');
 
 async function scanSensitive() {
   if (!projects.current) return;
-  log.info(`扫描敏感信息：${exp.checkedPaths.size} 个文件，策略=${redactStrategy.value}`);
+  log.info(t('wb.logSensitiveScan', { n: exp.checkedPaths.size, strategy: redactStrategy.value }));
   sensitiveScanning.value = true;
   try {
     const hits: SensitiveHit[] = await api.scanSensitive(projects.current, [...exp.checkedPaths]);
     sensitive.value = { state: hits.length ? 'hit' : 'none', count: hits.length, hits };
-    if (hits.length) log.warn(`发现 ${hits.length} 处敏感信息`);
-    else log.info('未发现敏感信息');
+    if (hits.length) log.warn(t('wb.logHits', { n: hits.length }));
+    else log.info(t('wb.logNoHit'));
   } catch (e) {
-    log.warn(`敏感信息扫描失败：${String(e)}`);
+    log.warn(t('wb.logSensitiveFail', { err: String(e) }));
     sensitive.value = { state: 'unscanned', count: 0, hits: [] };
   } finally {
     sensitiveScanning.value = false;
@@ -122,13 +124,17 @@ function onExportClick() {
 
 async function doExport() {
   if (!projects.current) return;
-  log.info(`触发导出：模式=${exp.mode}，脱敏=${redactEnabled.value ? '开' : '关'}，文件=${checkedFiles.value.length}`);
+  log.info(t('wb.logExport', {
+    mode: exp.mode,
+    redact: redactEnabled.value ? t('wb.redactOn') : t('wb.redactOff'),
+    n: checkedFiles.value.length,
+  }));
   exporting.value = true;
   exp.redact = redactEnabled.value;
   exp.splitTokens = splitEnabled.value ? splitTokens.value : 0;
   try {
     await exp.run(projects.current);
-    if (exp.result) log.info(`导出成功：${exp.result.outputPaths.join(', ')}（${exp.result.durationMs} ms）`);
+    if (exp.result) log.info(t('wb.logExportOk', { paths: exp.result.outputPaths.join(', '), ms: exp.result.durationMs }));
   } finally {
     exporting.value = false;
   }
@@ -140,24 +146,24 @@ const outline = computed(() => buildOutline(projects.current, checkedFiles.value
 function buildOutline(cfg: ProjectConfig | null, files: FileInfo[], mode: string): string[] {
   if (!cfg) return [];
   const lines: string[] = [
-    `# 项目文档 for ${cfg.project_name}`,
-    '├─ ## 项目文件树',
+    t('wb.outlineTitle', { name: cfg.project_name }),
+    t('wb.outlineTree'),
   ];
   if (mode === 'full') {
-    lines.push(`├─ ## 项目文件 (${files.length})`);
-    for (const f of files.slice(0, 30)) lines.push(`│   ├─ ### 文件: ${f.path}`);
-    if (files.length > 30) lines.push(`│   └─ … 共 ${files.length} 个文件`);
+    lines.push(t('wb.outlineFiles', { n: files.length }));
+    for (const f of files.slice(0, 30)) lines.push(t('wb.outlineFile', { path: f.path }));
+    if (files.length > 30) lines.push(t('wb.outlineMore', { n: files.length }));
   } else if (mode === 'symbols') {
-    lines.push(`├─ ## 符号目录 (${files.length})`);
+    lines.push(t('wb.outlineSymbols', { n: files.length }));
   } else if (mode === 'signatures') {
-    lines.push(`├─ ## 签名导出 (${files.length})`);
+    lines.push(t('wb.outlineSignatures', { n: files.length }));
   }
   return lines;
 }
 
 async function openOutputDir() {
   if (!exp.result) return;
-  log.info(`打开输出目录：${exp.result.outputPaths[0]}`);
+  log.info(t('wb.logOpenDir', { path: exp.result.outputPaths[0] }));
   await api.openPath(exp.result.outputPaths[0]);
 }
 
@@ -165,22 +171,22 @@ async function copyResult() {
   if (!exp.result) return;
   try {
     await navigator.clipboard.writeText(exp.result.outputPaths.join('\n'));
-    log.info(`已复制输出路径：${exp.result.outputPaths.join(', ')}`);
+    log.info(t('wb.logCopyPath', { paths: exp.result.outputPaths.join(', ') }));
   } catch {
-    log.warn('复制路径失败：剪贴板权限不可用');
+    log.warn(t('wb.logCopyFail'));
   }
 }
 </script>
 
 <template>
   <main class="workbench">
-    <p v-if="loadError" class="error">{{ loadError }} <button @click="router.push('/')">← 返回项目列表</button></p>
+    <p v-if="loadError" class="error">{{ loadError }} <button @click="router.push('/')">{{ t('wb.backList') }}</button></p>
 
     <template v-else-if="projects.current">
       <!-- 左栏：项目信息 + 文件树 -->
       <aside class="pane pane-tree">
         <div class="proj-head">
-          <button class="link" @click="router.push('/')">← 返回</button>
+          <button class="link" @click="router.push('/')">{{ t('wb.back') }}</button>
           <div class="proj-name">{{ projects.current.project_name }}</div>
           <div class="muted path">{{ projects.current.project_path }}</div>
         </div>
@@ -189,7 +195,7 @@ async function copyResult() {
 
       <!-- 中栏：导出选项 -->
       <section class="pane pane-options">
-        <h3>导出模式</h3>
+        <h3>{{ t('wb.exportMode') }}</h3>
         <div
           v-for="m in MODES" :key="m.value"
           class="mode-card" :class="{ active: exp.mode === m.value }"
@@ -203,74 +209,74 @@ async function copyResult() {
         <template v-if="exp.mode === 'symbols' || exp.mode === 'signatures'">
           <label class="inline sub">
             <input v-model="exp.includeLineNumbers" type="checkbox" />
-            显示行号
+            {{ t('wb.lineNumbers') }}
           </label>
           <label class="block sub">
-            签名截断长度
+            {{ t('wb.sigLen') }}
             <input v-model.number="exp.maxSignatureLen" type="number" class="num" min="40" max="2000" />
           </label>
         </template>
 
-        <h3>敏感信息过滤</h3>
+        <h3>{{ t('wb.redaction') }}</h3>
         <label class="inline">
           <input v-model="redactEnabled" type="checkbox" />
-          导出时自动剔除密码/密钥
+          {{ t('wb.redactEnable') }}
         </label>
         <template v-if="redactEnabled">
-          <label class="block">策略:
+          <label class="block">{{ t('wb.strategy') }}:
             <select v-model="redactStrategy">
-              <option value="placeholder">占位符替换</option>
-              <option value="drop_line">删除所在行</option>
+              <option value="placeholder">{{ t('wb.strategyPlaceholder') }}</option>
+              <option value="drop_line">{{ t('wb.strategyDropLine') }}</option>
             </select>
           </label>
-          <label class="block">替换为:
+          <label class="block">{{ t('wb.replaceWith') }}:
             <input v-model="redactPlaceholder" :disabled="redactStrategy === 'drop_line'" />
           </label>
           <button :disabled="sensitiveScanning" @click="scanSensitive">
-            {{ sensitiveScanning ? '扫描中…' : '🔍 扫描敏感信息' }}
+            {{ sensitiveScanning ? t('common.scanning') : t('wb.scanSensitive') }}
           </button>
           <div class="chip" :class="sensitive.state">
-            <template v-if="sensitive.state === 'none'">✓ 未发现敏感信息</template>
+            <template v-if="sensitive.state === 'none'">{{ t('wb.noHit') }}</template>
             <template v-else-if="sensitive.state === 'hit'">
-              ⚠ 发现 {{ sensitive.count }} 处
-              <button class="link" @click="showSensitiveDrawer = true">查看 →</button>
+              {{ t('wb.hits', { n: sensitive.count }) }}
+              <button class="link" @click="showSensitiveDrawer = true">{{ t('wb.viewHits') }}</button>
             </template>
-            <template v-else>○ 尚未扫描</template>
+            <template v-else>{{ t('wb.unscanned') }}</template>
           </div>
         </template>
 
-        <h3>大小控制</h3>
+        <h3>{{ t('wb.sizeControl') }}</h3>
         <label class="inline">
           <input v-model="splitEnabled" type="checkbox" />
-          超过 <input v-model.number="splitTokens" type="number" class="num" :disabled="!splitEnabled" /> token
+          {{ t('wb.overTokens') }} <input v-model.number="splitTokens" type="number" class="num" :disabled="!splitEnabled" /> token
         </label>
-        <p v-if="splitEnabled" class="muted">预计切成 {{ estParts }} 片</p>
+        <p v-if="splitEnabled" class="muted">{{ t('wb.estParts', { n: estParts }) }}</p>
       </section>
 
       <!-- 右栏：预览 / 结果 -->
       <section class="pane pane-result">
         <template v-if="exp.result">
           <div class="result-card ok">
-            <h3>✓ 导出成功</h3>
+            <h3>{{ t('wb.resultTitle') }}</h3>
             <table>
-              <tr><th>输出文件</th><td>{{ exp.result.outputPaths.join(', ') }}</td></tr>
-              <tr><th>字符数</th><td>{{ fmtNum(exp.result.totalChars) }}</td></tr>
-              <tr><th>≈Token</th><td>{{ fmtNum(estTokens) }}</td></tr>
-              <tr><th>耗时</th><td>{{ exp.result.durationMs }} ms</td></tr>
-              <tr><th>脱敏</th><td>{{ redactEnabled ? sensitive.count + ' 处' : '未开启' }}</td></tr>
+              <tr><th>{{ t('wb.resultOutput') }}</th><td>{{ exp.result.outputPaths.join(', ') }}</td></tr>
+              <tr><th>{{ t('wb.resultChars') }}</th><td>{{ fmtNum(exp.result.totalChars) }}</td></tr>
+              <tr><th>{{ t('wb.resultTokens') }}</th><td>{{ fmtNum(estTokens) }}</td></tr>
+              <tr><th>{{ t('wb.resultDuration') }}</th><td>{{ exp.result.durationMs }} ms</td></tr>
+              <tr><th>{{ t('wb.resultRedaction') }}</th><td>{{ redactEnabled ? t('wb.hitsShort', { n: sensitive.count }) : t('common.off') }}</td></tr>
             </table>
             <div class="result-actions">
-              <button @click="openOutputDir">📂 打开目录</button>
-              <button @click="copyResult">📋 复制路径</button>
-              <button @click="doExport" :disabled="exporting">↻ 重新导出</button>
+              <button @click="openOutputDir">{{ t('wb.openDir') }}</button>
+              <button @click="copyResult">{{ t('wb.copyPath') }}</button>
+              <button @click="doExport" :disabled="exporting">{{ t('wb.reExport') }}</button>
             </div>
           </div>
         </template>
         <template v-else>
-          <h3>内容预览</h3>
+          <h3>{{ t('wb.previewTitle') }}</h3>
           <pre class="outline"><template v-for="l in outline" :key="l">{{ l }}
 </template></pre>
-          <p class="muted">当前模式: {{ MODES.find((m) => m.value === exp.mode)?.label }} · 敏感过滤{{ redactEnabled ? '已开启' : '未开启' }}</p>
+          <p class="muted">{{ t('wb.previewSummary', { mode: MODES.find((m) => m.value === exp.mode)?.label, state: redactEnabled ? t('common.on') : t('common.off') }) }}</p>
         </template>
       </section>
     </template>
@@ -278,13 +284,13 @@ async function copyResult() {
     <!-- 底部状态条 -->
     <footer v-if="projects.current" class="statusbar">
       <span class="status-left">
-        <template v-if="exporting">⏳ 正在导出…</template>
-        <template v-else>● 就绪</template>
-        <span class="muted">{{ checkedFiles.length }} 文件 · {{ fmtSize(checkedBytes) }} · ≈{{ fmtNum(estTokens) }} tokens</span>
+        <template v-if="exporting">{{ t('wb.statusExporting') }}</template>
+        <template v-else>{{ t('wb.statusReady') }}</template>
+        <span class="muted">{{ t('wb.statusStats', { count: checkedFiles.length, size: fmtSize(checkedBytes), tokens: fmtNum(estTokens) }) }}</span>
       </span>
       <span class="status-right">
-        <button :disabled="exporting" @click="doExport">预览</button>
-        <button class="primary" :disabled="exporting" @click="onExportClick">执行导出 ▸</button>
+        <button :disabled="exporting" @click="doExport">{{ t('wb.previewBtn') }}</button>
+        <button class="primary" :disabled="exporting" @click="onExportClick">{{ t('wb.exportBtn') }}</button>
       </span>
     </footer>
 
@@ -296,12 +302,12 @@ async function copyResult() {
 
     <div v-if="showUnscannedConfirm" class="modal" @click.self="showUnscannedConfirm = false">
       <div class="modal-body">
-        <h3>尚未扫描敏感信息</h3>
-        <p>已开启敏感过滤但还未扫描，建议先扫描确认命中情况。</p>
+        <h3>{{ t('wb.unscannedTitle') }}</h3>
+        <p>{{ t('wb.unscannedBody') }}</p>
         <div class="actions">
-          <button class="primary" @click="showUnscannedConfirm = false; scanSensitive()">扫描并继续</button>
-          <button @click="showUnscannedConfirm = false; doExport()">直接导出</button>
-          <button @click="showUnscannedConfirm = false">取消</button>
+          <button class="primary" @click="showUnscannedConfirm = false; scanSensitive()">{{ t('wb.scanAndContinue') }}</button>
+          <button @click="showUnscannedConfirm = false; doExport()">{{ t('wb.directExport') }}</button>
+          <button @click="showUnscannedConfirm = false">{{ t('common.cancel') }}</button>
         </div>
       </div>
     </div>

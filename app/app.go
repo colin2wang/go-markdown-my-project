@@ -16,6 +16,7 @@ import (
 
 	"go-markdown-my-project/core/config"
 	"go-markdown-my-project/core/generator"
+	"go-markdown-my-project/core/i18n"
 	"go-markdown-my-project/core/logger"
 	"go-markdown-my-project/core/redactor"
 	"go-markdown-my-project/core/scanner"
@@ -72,7 +73,13 @@ func (a *App) Startup(ctx context.Context) {
 	logger.SetSink(func(e logger.Entry) {
 		runtime.EventsEmit(a.ctx, "app:log", e)
 	})
-	logger.Info("应用已启动，前端日志转发已启用")
+	logger.Info(i18n.T("log.started"))
+}
+
+// SetLocale 由前端在切换界面语言时调用，同步后端日志/校验文案语言。
+func (a *App) SetLocale(code string) {
+	i18n.SetLocale(code)
+	logger.Info(i18n.T("log.localeSwitched"), "locale", code)
 }
 
 // languagesDir 返回资源目录（langs.yml 所在）。
@@ -81,8 +88,8 @@ func languagesPath() string { return "assets/langs.yml" }
 // ListProjects 列出 projectsDir 下所有 *.yml 项目配置。
 func (a *App) ListProjects(projectsDir string) ([]ProjectSummary, error) {
 	if info, err := os.Stat(projectsDir); err != nil || !info.IsDir() {
-		logger.Warn("ListProjects: projects dir not found", "dir", projectsDir)
-		return nil, fmt.Errorf("projects 目录不存在: %s（当前工作目录: %s）", projectsDir, wd())
+		logger.Warn(i18n.T("log.listProjectsDirNotFound"), "dir", projectsDir)
+		return nil, fmt.Errorf("%s", i18n.T("err.projectsDirNotFound", "dir", projectsDir, "wd", wd()))
 	}
 	matches, err := filepath.Glob(filepath.Join(projectsDir, "*.yml"))
 	if err != nil {
@@ -94,7 +101,7 @@ func (a *App) ListProjects(projectsDir string) ([]ProjectSummary, error) {
 		cfg, err := config.Load(p)
 		if err != nil {
 			// 单个配置损坏不阻断列表，但要记录原因便于排查
-			logger.Warn("ListProjects: failed to load config", "path", p, "err", err)
+			logger.Warn(i18n.T("log.listProjectsLoadFail"), "path", p, "err", err)
 			continue
 		}
 		out = append(out, ProjectSummary{
@@ -115,7 +122,7 @@ func (a *App) SaveProject(configPath string, cfg config.ProjectConfig) error {
 	if errs := a.ValidateConfig(cfg); len(errs) > 0 {
 		return fmt.Errorf("%s: %s", errs[0].Field, errs[0].Message)
 	}
-	logger.Info("保存项目配置", "path", configPath, "name", cfg.ProjectName)
+	logger.Info(i18n.T("log.saveProject"), "path", configPath, "name", cfg.ProjectName)
 	return cfg.Save(configPath)
 }
 
@@ -131,36 +138,36 @@ func (a *App) ValidateConfig(cfg config.ProjectConfig) []FieldError {
 	add := func(field, msg string) { errs = append(errs, FieldError{Field: field, Message: msg}) }
 
 	if strings.TrimSpace(cfg.ProjectName) == "" {
-		add("project_name", "项目名称不能为空")
+		add("project_name", i18n.T("val.nameRequired"))
 	}
 	if cfg.ProjectPath == "" {
-		add("project_path", "项目路径不能为空")
+		add("project_path", i18n.T("val.pathRequired"))
 	} else if info, err := os.Stat(cfg.ProjectPath); err != nil {
-		add("project_path", "路径不存在: "+cfg.ProjectPath)
+		add("project_path", i18n.T("val.pathNotFound", "path", cfg.ProjectPath))
 	} else if !info.IsDir() {
-		add("project_path", "不是目录: "+cfg.ProjectPath)
+		add("project_path", i18n.T("val.pathNotDir", "path", cfg.ProjectPath))
 	}
 	if strings.TrimSpace(cfg.OutputFile) == "" {
-		add("output_file", "输出文件名不能为空")
+		add("output_file", i18n.T("val.outputRequired"))
 	} else if ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(cfg.OutputFile)), "."); ext != "" &&
 		!map[string]bool{"md": true, "markdown": true, "txt": true}[ext] {
-		add("output_file", "扩展名 ."+ext+" 可能为文档格式（.md/.markdown/.txt）")
+		add("output_file", i18n.T("val.outputExt", "ext", ext))
 	}
 	if cfg.MaxFileSize < 0 {
-		add("max_file_size", "不能为负")
+		add("max_file_size", i18n.T("val.notNegative"))
 	}
 	if cfg.SplitTokens < 0 {
-		add("split_tokens", "不能为负")
+		add("split_tokens", i18n.T("val.notNegative"))
 	}
 	for _, p := range cfg.ExcludePatterns {
 		if strings.TrimSpace(p) == "" {
-			add("exclude_patterns", "排除规则不能为空")
+			add("exclude_patterns", i18n.T("val.excludeEmpty"))
 			break
 		}
 	}
 	for _, p := range cfg.Redaction.CustomPatterns {
 		if _, err := regexp.Compile(p); err != nil {
-			add("custom_patterns", "正则无效: "+err.Error())
+			add("custom_patterns", i18n.T("val.regexInvalid", "err", err.Error()))
 			break
 		}
 	}
@@ -330,7 +337,7 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 			}
 		}
 	}
-	logger.Info("开始导出", "project", cfg.ProjectName, "mode", opt.Mode, "files", len(files), "dirs", len(dirs))
+	logger.Info(i18n.T("log.exportStart"), "project", cfg.ProjectName, "mode", opt.Mode, "files", len(files), "dirs", len(dirs))
 
 	results, err := scanner.ProcessFiles(scanner.Options{
 		ProjectPath:        cfg.ProjectPath,
@@ -386,7 +393,7 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 		return ExportResult{}, err
 	}
 
-	logger.Info("导出完成", "mode", string(mode), "files", len(results), "chars", len([]rune(content)), "out", outPath, "ms", time.Since(start).Milliseconds())
+	logger.Info(i18n.T("log.exportDone"), "mode", string(mode), "files", len(results), "chars", len([]rune(content)), "out", outPath, "ms", time.Since(start).Milliseconds())
 
 	return ExportResult{
 		OutputPaths: []string{outPath},

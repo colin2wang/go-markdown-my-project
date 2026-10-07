@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 
+	"go-markdown-my-project/core/i18n"
 	"go-markdown-my-project/core/logger"
 )
 
@@ -82,7 +83,7 @@ func parallelProcessDirectory(dir string, results *[]FileResult, opts Options) {
 	var paths []string
 	err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
-			logger.Warn("walk error", "path", p, "err", err)
+			logger.Warn(i18n.T("log.walkError"), "path", p, "err", err)
 			return nil
 		}
 		if d.IsDir() {
@@ -95,7 +96,7 @@ func parallelProcessDirectory(dir string, results *[]FileResult, opts Options) {
 		return nil
 	})
 	if err != nil {
-		logger.Warn("failed to walk directory", "dir", dir, "err", err)
+		logger.Warn(i18n.T("log.walkDirFail"), "dir", dir, "err", err)
 		return
 	}
 
@@ -124,7 +125,7 @@ func parallelProcessDirectory(dir string, results *[]FileResult, opts Options) {
 				content, err := ReadFileContent(p)
 				if err != nil {
 					// 单文件失败仅告警，不中断
-					logger.Warn("Failed to read file", "path", p, "err", err)
+					logger.Warn(i18n.T("log.readFileFail"), "path", p, "err", err)
 					continue
 				}
 				out <- item{path: p, content: content}
@@ -153,7 +154,7 @@ func ShouldIncludeFile(filePath string, excludePatterns []string, maxSize int64,
 			return false, fmt.Errorf("failed to get metadata for: %s: %w", filePath, err)
 		}
 		if info.Size() > maxSize {
-			logger.Debug("Skipping large file", "path", filePath, "size", info.Size(), "limit", maxSize)
+			logger.Debug(i18n.T("log.skipLargeFile"), "path", filePath, "size", info.Size(), "limit", maxSize)
 			return false, nil
 		}
 	}
@@ -170,14 +171,14 @@ func ShouldIncludeFile(filePath string, excludePatterns []string, maxSize int64,
 			// glob 匹配（对齐 glob::Pattern：对整个相对路径匹配）
 			ok, err := matchGlob(pattern, relSlash)
 			if err == nil && ok {
-				logger.Debug("Skipping file due to pattern", "pattern", pattern, "path", filePath)
+				logger.Debug(i18n.T("log.skipByPattern"), "pattern", pattern, "path", filePath)
 				return false, nil
 			}
 		} else {
 			// 精确匹配或前缀匹配（目录）
 			if relSlash == pattern || strings.HasPrefix(relSlash, pattern+"/") ||
 				relSlash == filepath.ToSlash(pattern) || strings.HasPrefix(relSlash, filepath.ToSlash(pattern)+"/") {
-				logger.Debug("Skipping file due to pattern", "pattern", pattern, "path", filePath)
+				logger.Debug(i18n.T("log.skipByPattern"), "pattern", pattern, "path", filePath)
 				return false, nil
 			}
 		}

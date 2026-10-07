@@ -2,6 +2,9 @@
 import { computed, ref, watch } from 'vue';
 import { api } from '../api/bindings';
 import type { ProjectConfig, FileInfo } from '../api/bindings';
+import { useI18n } from '../i18n';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   /** 编辑模式传入已有配置；新建传 null */
@@ -144,12 +147,12 @@ function finish() {
 const savePath = computed(() => props.configPath);
 
 const summary = computed(() => [
-  ['名称', form.value.project_name],
-  ['项目路径', form.value.project_path],
-  ['输出文件', form.value.output_file],
-  ['界面语言', form.value.markdown_lang],
-  ['包含文件', (form.value.files ?? []).join(', ') || '—'],
-  ['包含目录', (form.value.directories ?? []).join(', ') || '—'],
+  [t('wizard.summaryName'), form.value.project_name],
+  [t('wizard.summaryPath'), form.value.project_path],
+  [t('wizard.summaryOutput'), form.value.output_file],
+  [t('wizard.summaryLang'), form.value.markdown_lang],
+  [t('wizard.summaryFiles'), (form.value.files ?? []).join(', ') || '—'],
+  [t('wizard.summaryDirs'), (form.value.directories ?? []).join(', ') || '—'],
 ]);
 
 async function save() {
@@ -170,11 +173,11 @@ async function save() {
   <div class="modal" @click.self="emit('close')">
     <div class="wizard">
       <header>
-        <h2>{{ isEdit ? '编辑项目' : '新建项目向导' }}</h2>
+        <h2>{{ isEdit ? t('wizard.titleEdit') : t('wizard.titleNew') }}</h2>
         <ol class="steps">
-          <li :class="{ active: step === 1, done: step > 1 }">1 基本信息</li>
-          <li :class="{ active: step === 2, done: step > 2 }">2 选择范围</li>
-          <li :class="{ active: step === 3 }">3 确认</li>
+          <li :class="{ active: step === 1, done: step > 1 }">{{ t('wizard.step1') }}</li>
+          <li :class="{ active: step === 2, done: step > 2 }">{{ t('wizard.step2') }}</li>
+          <li :class="{ active: step === 3 }">{{ t('wizard.step3') }}</li>
         </ol>
       </header>
 
@@ -182,21 +185,21 @@ async function save() {
 
       <!-- Step 1 -->
       <section v-if="step === 1">
-        <label>名称 *
+        <label>{{ t('wizard.name') }}
           <input v-model="form.project_name" placeholder="My Project" />
         </label>
-        <label>项目路径 *
+        <label>{{ t('wizard.path') }}
           <div class="row">
             <input v-model="form.project_path" placeholder="C:/Workspaces/my-project" @blur="checkPath" />
-            <button @click="browseDir">浏览…</button>
+            <button @click="browseDir">{{ t('common.browse') }}</button>
           </div>
         </label>
-        <p v-if="pathChecked && !pathChecked.exists" class="field-error">路径不存在</p>
-        <p v-else-if="pathChecked && !pathChecked.isDir" class="field-error">该路径不是目录</p>
-        <label>输出文件 *
+        <p v-if="pathChecked && !pathChecked.exists" class="field-error">{{ t('wizard.pathMissing') }}</p>
+        <p v-else-if="pathChecked && !pathChecked.isDir" class="field-error">{{ t('wizard.pathNotDir') }}</p>
+        <label>{{ t('wizard.output') }}
           <input v-model="form.output_file" placeholder="output.md" />
         </label>
-        <label>界面语言
+        <label>{{ t('wizard.lang') }}
           <select v-model="form.markdown_lang">
             <option value="zh_cn">zh_cn</option>
             <option value="en_us">en_us</option>
@@ -207,20 +210,20 @@ async function save() {
       <!-- Step 2 -->
       <section v-else-if="step === 2">
         <div class="row toolbar2">
-          <label class="inline">语言
+          <label class="inline">{{ t('wizard.langFilter') }}
             <select v-model="langFilter">
-              <option value="">全部</option>
+              <option value="">{{ t('wizard.langAll') }}</option>
               <option v-for="l in langs" :key="l" :value="l">{{ l }}</option>
             </select>
           </label>
-          <label class="inline"><input type="checkbox" :checked="allChecked" @change="toggleAll" /> 全选（当前过滤）</label>
-          <button @click="onlyCode">仅代码文件</button>
-          <button @click="runScan" :disabled="scanning">{{ scanning ? '扫描中…' : '重新扫描' }}</button>
+          <label class="inline"><input type="checkbox" :checked="allChecked" @change="toggleAll" /> {{ t('wizard.selectAll') }}</label>
+          <button @click="onlyCode">{{ t('wizard.codeOnly') }}</button>
+          <button @click="runScan" :disabled="scanning">{{ scanning ? t('common.scanning') : t('wizard.rescan') }}</button>
         </div>
-        <p class="muted">共 {{ scanFiles.length }} 个文件，已勾选 {{ checked.size }} 个</p>
+        <p class="muted">{{ t('wizard.scanSummary', { total: scanFiles.length, checked: checked.size }) }}</p>
         <div class="filelist">
-          <p v-if="scanning" class="muted">扫描中…</p>
-          <p v-else-if="scanFiles.length === 0" class="muted">未扫描到文件（检查项目路径与排除规则）</p>
+          <p v-if="scanning" class="muted">{{ t('common.scanning') }}</p>
+          <p v-else-if="scanFiles.length === 0" class="muted">{{ t('wizard.noFiles') }}</p>
           <label v-for="f in filteredFiles" :key="f.path" class="fileitem">
             <input
               type="checkbox"
@@ -240,16 +243,16 @@ async function save() {
             <td>{{ v }}</td>
           </tr>
         </table>
-        <p class="muted">配置将保存到: {{ savePath }}</p>
+        <p class="muted">{{ t('wizard.saveTo', { path: savePath }) }}</p>
       </section>
 
       <footer>
-        <button v-if="step > 1" @click="back">上一步</button>
+        <button v-if="step > 1" @click="back">{{ t('common.back') }}</button>
         <span class="spacer" />
-        <button v-if="step === 1" class="primary" :disabled="!step1Valid" @click="next">下一步</button>
-        <button v-if="step === 2" class="primary" @click="finish">下一步</button>
-        <button v-if="step === 3" class="primary" :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
-        <button @click="emit('close')">取消</button>
+        <button v-if="step === 1" class="primary" :disabled="!step1Valid" @click="next">{{ t('common.next') }}</button>
+        <button v-if="step === 2" class="primary" @click="finish">{{ t('common.next') }}</button>
+        <button v-if="step === 3" class="primary" :disabled="saving" @click="save">{{ saving ? t('common.saving') : t('common.save') }}</button>
+        <button @click="emit('close')">{{ t('common.cancel') }}</button>
       </footer>
     </div>
   </div>

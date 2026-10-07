@@ -4,6 +4,7 @@ import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import { api } from '../api/bindings';
 import type { ProjectConfig, ScanPreview } from '../api/bindings';
+import { t } from '../i18n';
 
 export function emptyConfig(): ProjectConfig {
   return {
@@ -25,19 +26,19 @@ export function emptyConfig(): ProjectConfig {
 // 前端即时校验（§4.1），后端 ValidateConfig 保存时复检
 function localValidate(cfg: ProjectConfig): Record<string, string> {
   const e: Record<string, string> = {};
-  if (!cfg.project_name?.trim()) e.project_name = '请输入项目名称';
-  else if (cfg.project_name.length > 100) e.project_name = '项目名称不能超过 100 字符';
-  if (!cfg.project_path?.trim()) e.project_path = '请输入项目路径';
-  if (!cfg.output_file?.trim()) e.output_file = '请输入输出文件名';
-  else if (!/\.(md|markdown|txt)$/i.test(cfg.output_file)) e.output_file = '必须为 .md/.markdown/.txt 文档格式';
-  if ((cfg.max_file_size ?? 0) < 0) e.max_file_size = '不能为负';
-  if ((cfg.split_tokens ?? 0) < 0) e.split_tokens = '不能为负';
-  if ((cfg.exclude_patterns ?? []).some((p) => !p.trim())) e.exclude_patterns = '排除规则不能为空';
+  if (!cfg.project_name?.trim()) e.project_name = t('editor.errNameRequired');
+  else if (cfg.project_name.length > 100) e.project_name = t('editor.errNameTooLong');
+  if (!cfg.project_path?.trim()) e.project_path = t('editor.errPathRequired');
+  if (!cfg.output_file?.trim()) e.output_file = t('editor.errOutputRequired');
+  else if (!/\.(md|markdown|txt)$/i.test(cfg.output_file)) e.output_file = t('editor.errOutputExt');
+  if ((cfg.max_file_size ?? 0) < 0) e.max_file_size = t('editor.errMaxSize');
+  if ((cfg.split_tokens ?? 0) < 0) e.split_tokens = t('editor.errSplitTokens');
+  if ((cfg.exclude_patterns ?? []).some((p) => !p.trim())) e.exclude_patterns = t('editor.errExcludeEmpty');
   for (const p of cfg.redaction?.custom_patterns ?? []) {
     try {
       new RegExp(p);
     } catch (err) {
-      e.custom_patterns = `正则无效: ${String(err)}`;
+      e.custom_patterns = t('editor.errRegex', { err: String(err) });
       break;
     }
   }

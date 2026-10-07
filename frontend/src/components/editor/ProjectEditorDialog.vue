@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue';
 import type { ProjectConfig } from '../../api/bindings';
 import { useProjectEditor } from '../../stores/projectEditor';
 import { useLogStore } from '../../stores/log';
+import { useI18n } from '../../i18n';
 import EditorSection from './EditorSection.vue';
 import PathInput from './PathInput.vue';
 import TagListInput from './TagListInput.vue';
@@ -18,6 +19,7 @@ const props = defineProps<{
 const emit = defineEmits<{ (e: 'close'): void; (e: 'saved', path: string): void }>();
 
 const log = useLogStore();
+const { t } = useI18n();
 const ed = useProjectEditor();
 const showCloseConfirm = ref(false);
 const saveError = ref('');
@@ -34,7 +36,7 @@ const savePath = computed(() => {
 onMounted(() => {
   if (props.configPath && props.initial) ed.openForEdit(props.configPath, props.initial);
   else ed.openForCreate(savePath.value);
-  log.info(ed.isNew ? '打开新建项目编辑器' : `打开编辑项目：${props.configPath}`);
+  log.info(ed.isNew ? t('editor.logOpenCreate') : t('editor.logOpenEdit', { path: props.configPath }));
 });
 
 // 锚点导航：点击滚动到左栏对应分区
@@ -49,11 +51,11 @@ async function onSave() {
   try {
     ed.updateConfigPath(savePath.value);
     await ed.save();
-    log.info(`项目配置已保存：${savePath.value}`);
+    log.info(t('editor.logSaved', { path: savePath.value }));
     emit('saved', savePath.value);
   } catch (e) {
     saveError.value = String(e instanceof Error ? e.message : e);
-    log.warn(`保存失败：${saveError.value}`);
+    log.warn(t('editor.logSaveFail', { err: saveError.value }));
   } finally {
     saving.value = false;
   }
@@ -70,12 +72,12 @@ function onCancel() {
     <div class="dialog">
       <!-- 顶栏 -->
       <header class="head">
-        <h3>{{ ed.isNew ? '新建项目' : '编辑项目' }}{{ ed.draft?.project_name ? ' · ' + ed.draft.project_name : '' }}</h3>
+        <h3>{{ ed.isNew ? t('editor.newTitle') : t('editor.editTitle') }}{{ ed.draft?.project_name ? ' · ' + ed.draft.project_name : '' }}</h3>
         <span class="spacer" />
-        <button type="button" class="ghost" @click="ed.reset(); log.info('已恢复默认值')">恢复默认</button>
-        <button type="button" class="ghost" @click="onCancel">取消</button>
+        <button type="button" class="ghost" @click="ed.reset(); log.info(t('editor.logRestore'))">{{ t('editor.restore') }}</button>
+        <button type="button" class="ghost" @click="onCancel">{{ t('common.cancel') }}</button>
         <button type="button" class="primary" :disabled="saving || ed.errorCount > 0" :title="ed.errorCount ? Object.values(ed.errors)[0] : ''" @click="onSave">
-          💾 保存
+          {{ t('editor.save') }}
         </button>
       </header>
       <p v-if="saveError" class="banner error-banner">{{ saveError }}</p>
@@ -86,92 +88,92 @@ function onCancel() {
         <div ref="leftPane" class="left">
           <!-- 锚点 -->
           <nav class="anchors">
-            <a @click="scrollTo('sec-basic')">基本</a>
-            <a @click="scrollTo('sec-scope')">范围</a>
-            <a @click="scrollTo('sec-exclude')">排除</a>
-            <a @click="scrollTo('sec-export')">导出</a>
-            <a @click="scrollTo('sec-redaction')">敏感</a>
-            <a @click="scrollTo('sec-preview')">预检</a>
+            <a @click="scrollTo('sec-basic')">{{ t('editor.anchorBasic') }}</a>
+            <a @click="scrollTo('sec-scope')">{{ t('editor.anchorScope') }}</a>
+            <a @click="scrollTo('sec-exclude')">{{ t('editor.anchorExclude') }}</a>
+            <a @click="scrollTo('sec-export')">{{ t('editor.anchorExport') }}</a>
+            <a @click="scrollTo('sec-redaction')">{{ t('editor.anchorRedaction') }}</a>
+            <a @click="scrollTo('sec-preview')">{{ t('editor.anchorPreview') }}</a>
           </nav>
 
           <template v-if="ed.draft">
-            <EditorSection id="sec-basic" icon="📦" title="基本信息" :error-count="['project_name', 'project_path', 'output_file'].filter((f) => ed.errors[f]).length">
-              <label>项目名称
+            <EditorSection id="sec-basic" icon="📦" :title="t('editor.sectionBasic')" :error-count="['project_name', 'project_path', 'output_file'].filter((f) => ed.errors[f]).length">
+              <label>{{ t('editor.projectName') }}
                 <input :value="ed.draft.project_name" :class="{ invalid: !!ed.errors.project_name }" @input="ed.draft!.project_name = ($event.target as HTMLInputElement).value" />
               </label>
               <p v-if="ed.errors.project_name" class="field-error">{{ ed.errors.project_name }}</p>
-              <label>项目路径</label>
+              <label>{{ t('editor.projectPath') }}</label>
               <PathInput v-model="ed.draft!.project_path" placeholder="F:/path/to/project" :error="ed.errors.project_path" />
-              <label>输出文件
+              <label>{{ t('editor.outputFile') }}
                 <input :value="ed.draft.output_file" :class="{ invalid: !!ed.errors.output_file }" @input="ed.draft!.output_file = ($event.target as HTMLInputElement).value" />
               </label>
               <p v-if="ed.errors.output_file" class="field-error">{{ ed.errors.output_file }}</p>
-              <label class="inline">文档语言
-                <label class="inline"><input v-model="ed.draft!.markdown_lang" type="radio" value="zh_cn" /> 中文</label>
-                <label class="inline"><input v-model="ed.draft!.markdown_lang" type="radio" value="en_us" /> English</label>
+              <label class="inline">{{ t('editor.docLang') }}
+                <label class="inline"><input v-model="ed.draft!.markdown_lang" type="radio" value="zh_cn" /> {{ t('editor.langZh') }}</label>
+                <label class="inline"><input v-model="ed.draft!.markdown_lang" type="radio" value="en_us" /> {{ t('editor.langEn') }}</label>
               </label>
             </EditorSection>
 
-            <EditorSection id="sec-scope" icon="🔍" title="扫描范围" hint="目录将递归收集全部文件">
-              <label>包含文件</label>
-              <TagListInput v-model="ed.draft!.files!" placeholder="回车添加，如 cargo.toml" />
-              <label>包含目录</label>
-              <TagListInput v-model="ed.draft!.directories!" placeholder="回车添加，如 src" dir-select :base-path="ed.draft!.project_path" />
+            <EditorSection id="sec-scope" icon="🔍" :title="t('editor.sectionScope')" :hint="t('editor.hintScope')">
+              <label>{{ t('editor.includeFiles') }}</label>
+              <TagListInput v-model="ed.draft!.files!" :placeholder="t('editor.phFiles')" />
+              <label>{{ t('editor.includeDirs') }}</label>
+              <TagListInput v-model="ed.draft!.directories!" :placeholder="t('editor.phDirs')" dir-select :base-path="ed.draft!.project_path" />
             </EditorSection>
 
-            <EditorSection id="sec-exclude" icon="🚫" title="排除规则" :error-count="ed.errors.exclude_patterns ? 1 : 0">
-              <label>排除目录</label>
-              <TagListInput v-model="ed.draft!.exclude_directories!" placeholder="支持 **/name" />
-              <label>排除规则</label>
-              <TagListInput v-model="ed.draft!.exclude_patterns!" placeholder="支持 *.log" :error="ed.errors.exclude_patterns" />
-              <label class="inline">大小上限
+            <EditorSection id="sec-exclude" icon="🚫" :title="t('editor.sectionExclude')" :error-count="ed.errors.exclude_patterns ? 1 : 0">
+              <label>{{ t('editor.excludeDirs') }}</label>
+              <TagListInput v-model="ed.draft!.exclude_directories!" :placeholder="t('editor.phExcludeDirs')" />
+              <label>{{ t('editor.excludePatterns') }}</label>
+              <TagListInput v-model="ed.draft!.exclude_patterns!" :placeholder="t('editor.phExcludePatterns')" :error="ed.errors.exclude_patterns" />
+              <label class="inline">{{ t('editor.maxSize') }}
                 <input :value="ed.draft.max_file_size ?? 0" type="number" class="num" :class="{ invalid: !!ed.errors.max_file_size }" @input="ed.draft!.max_file_size = Number(($event.target as HTMLInputElement).value)" />
-                字节（0 = 不限制）
+                {{ t('editor.maxSizeSuffix') }}
               </label>
             </EditorSection>
 
-            <EditorSection id="sec-export" icon="📤" title="导出设置">
-              <label class="inline">导出模式
+            <EditorSection id="sec-export" icon="📤" :title="t('editor.sectionExport')">
+              <label class="inline">{{ t('editor.exportMode') }}
                 <select v-model="ed.draft!.export_mode">
-                  <option value="full">完整代码</option>
-                  <option value="files">文件名清单</option>
-                  <option value="symbols">符号目录</option>
-                  <option value="signatures">签名导出</option>
-                  <option value="custom">自定义模板</option>
+                  <option value="full">{{ t('wb.modes.full.label') }}</option>
+                  <option value="files">{{ t('wb.modes.files.label') }}</option>
+                  <option value="symbols">{{ t('wb.modes.symbols.label') }}</option>
+                  <option value="signatures">{{ t('wb.modes.signatures.label') }}</option>
+                  <option value="custom">{{ t('editor.exportModeCustom') }}</option>
                 </select>
               </label>
-              <label class="inline">Token 分片
+              <label class="inline">{{ t('editor.splitTokens') }}
                 <input :value="ed.draft.split_tokens ?? 0" type="number" class="num" :class="{ invalid: !!ed.errors.split_tokens }" @input="ed.draft!.split_tokens = Number(($event.target as HTMLInputElement).value)" />
-                （0 = 不分片）
+                {{ t('editor.splitHint') }}
               </label>
             </EditorSection>
 
             <EditorSection
-              id="sec-redaction" icon="🛡" title="敏感过滤"
+              id="sec-redaction" icon="🛡" :title="t('editor.sectionRedaction')"
               :muted="!ed.draft.redaction?.enabled"
               :error-count="ed.errors.custom_patterns ? 1 : 0"
             >
               <label class="inline">
                 <input v-model="ed.draft!.redaction!.enabled" type="checkbox" />
-                导出时剔除密码/密钥
+                {{ t('editor.redactEnable') }}
               </label>
               <template v-if="ed.draft.redaction?.enabled">
-                <label class="inline">策略
+                <label class="inline">{{ t('editor.strategy') }}
                   <select v-model="ed.draft!.redaction!.strategy">
-                    <option value="placeholder">占位符替换</option>
-                    <option value="drop_line">删除整行</option>
+                    <option value="placeholder">{{ t('wb.strategyPlaceholder') }}</option>
+                    <option value="drop_line">{{ t('editor.strategyDropLine') }}</option>
                   </select>
                 </label>
-                <label v-if="ed.draft.redaction.strategy === 'placeholder'">替换为
+                <label v-if="ed.draft.redaction.strategy === 'placeholder'">{{ t('editor.replaceWith') }}
                   <input :value="ed.draft.redaction.placeholder" @input="ed.draft!.redaction!.placeholder = ($event.target as HTMLInputElement).value" />
                 </label>
-                <label>自定义正则规则</label>
-                <TagListInput v-model="ed.draft!.redaction!.custom_patterns!" placeholder="每条即时校验，如 api[_-]?key" :error="ed.errors.custom_patterns" />
+                <label>{{ t('editor.customPatterns') }}</label>
+                <TagListInput v-model="ed.draft!.redaction!.custom_patterns!" :placeholder="t('editor.phPatterns')" :error="ed.errors.custom_patterns" />
               </template>
             </EditorSection>
 
-            <EditorSection id="sec-preview" icon="📊" title="预检">
-              <button type="button" class="ghost" @click="ed.runPreview(); log.info('执行扫描预检')">▶ 扫描预览</button>
+            <EditorSection id="sec-preview" icon="📊" :title="t('editor.sectionPreview')">
+              <button type="button" class="ghost" @click="ed.runPreview(); log.info(t('editor.logPreview'))">{{ t('editor.runPreview') }}</button>
               <ScanPreviewCard v-if="ed.preview" :preview="ed.preview" />
             </EditorSection>
           </template>
@@ -186,11 +188,11 @@ function onCancel() {
       <!-- 关闭守卫 -->
       <div v-if="showCloseConfirm" class="modal sub" @click.self="showCloseConfirm = false">
         <div class="confirm">
-          <h4>有未保存的修改</h4>
-          <p>关闭将丢失本次编辑内容。</p>
+          <h4>{{ t('editor.unsavedTitle') }}</h4>
+          <p>{{ t('editor.unsavedBody') }}</p>
           <div class="actions">
-            <button type="button" class="danger" @click="showCloseConfirm = false; emit('close')">放弃修改</button>
-            <button type="button" @click="showCloseConfirm = false">继续编辑</button>
+            <button type="button" class="danger" @click="showCloseConfirm = false; emit('close')">{{ t('editor.discard') }}</button>
+            <button type="button" @click="showCloseConfirm = false">{{ t('editor.keepEditing') }}</button>
           </div>
         </div>
       </div>

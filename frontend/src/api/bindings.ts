@@ -113,6 +113,10 @@ export const api = {
   async openPath(path: string): Promise<void> {
     return go()?.OpenPath(path);
   },
+  // 同步界面语言到后端（后端日志/校验文案随之切换）
+  async setLocale(locale: string): Promise<void> {
+    return go()?.SetLocale(locale);
+  },
   async scanSensitive(cfg: ProjectConfig, fileOverrides: string[]): Promise<SensitiveHit[]> {
     return (await go()?.ScanSensitive(cfg, fileOverrides)) ?? [];
   },

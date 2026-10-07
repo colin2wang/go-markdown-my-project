@@ -1,8 +1,10 @@
 <!-- PathInput：Input + 浏览 + 异步校验徽标三态（设计文档 §2.2） -->
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { api } from '../../api/bindings';
+import { useI18n } from '../../i18n';
 
+const { t } = useI18n();
 const props = defineProps<{ modelValue: string; placeholder?: string; error?: string }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>();
 
@@ -34,9 +36,14 @@ async function browse() {
   if (dir) emit('update:modelValue', dir.replace(/\\/g, '/'));
 }
 
-const badgeText: Record<string, string> = {
-  idle: '', checking: '校验中…', valid: '● 目录有效', notfound: '● 路径不存在', notdir: '● 不是目录',
+const badgeKey: Record<string, string> = {
+  idle: '',
+  checking: 'editor.pathChecking',
+  valid: 'editor.pathValid',
+  notfound: 'editor.pathNotFound',
+  notdir: 'editor.pathNotDir',
 };
+const badgeText = computed(() => (badgeKey[checkState.value] ? t(badgeKey[checkState.value]) : ''));
 const badgeClass: Record<string, string> = {
   idle: '', checking: 'gray', valid: 'green', notfound: 'red', notdir: 'red',
 };
@@ -51,8 +58,8 @@ const badgeClass: Record<string, string> = {
         :class="{ invalid: !!error || checkState === 'notfound' || checkState === 'notdir' }"
         @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
       />
-      <button type="button" @click="browse">📂 浏览…</button>
-      <span v-if="checkState !== 'idle'" class="badge" :class="badgeClass[checkState]">{{ badgeText[checkState] }}</span>
+      <button type="button" @click="browse">📂 {{ t('common.browse') }}</button>
+      <span v-if="checkState !== 'idle'" class="badge" :class="badgeClass[checkState]">{{ badgeText }}</span>
     </div>
     <p v-if="error" class="field-error">{{ error }}</p>
   </div>

@@ -54,6 +54,10 @@ export function SerializeYAML(arg1) {
   return window['go']['app']['App']['SerializeYAML'](arg1);
 }
 
+export function SetLocale(arg1) {
+  return window['go']['app']['App']['SetLocale'](arg1);
+}
+
 export function ValidateConfig(arg1) {
   return window['go']['app']['App']['ValidateConfig'](arg1);
 }

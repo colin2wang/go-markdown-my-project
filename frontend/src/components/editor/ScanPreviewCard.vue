@@ -2,7 +2,9 @@
 <script setup lang="ts">
 import type { ScanPreview } from '../../api/bindings';
 import { fmtNum } from '../../estimate';
+import { useI18n } from '../../i18n';
 
+const { t } = useI18n();
 defineProps<{ preview: ScanPreview }>();
 
 function fmtSize(n: number): string {
@@ -14,7 +16,7 @@ function fmtSize(n: number): string {
 
 <template>
   <div class="scanpreview">
-    <p class="ok">✓ 扫描完成：{{ preview.fileCount }} 文件 · {{ fmtSize(preview.totalBytes) }}</p>
+    <p class="ok">{{ t('editor.previewDone', { count: preview.fileCount, size: fmtSize(preview.totalBytes) }) }}</p>
     <p class="langs">
       {{ Object.entries(preview.byLang).map(([l, n]) => `${l} ×${n}`).join(' · ') }}
     </p>

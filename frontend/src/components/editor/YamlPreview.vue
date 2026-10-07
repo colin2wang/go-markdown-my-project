@@ -2,7 +2,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useLogStore } from '../../stores/log';
+import { useI18n } from '../../i18n';
 
+const { t } = useI18n();
 const props = defineProps<{
   yaml: string;
   changed: Set<number>;
@@ -18,9 +20,9 @@ const lines = computed(() => props.yaml.split('\n'));
 async function copyAll() {
   try {
     await navigator.clipboard.writeText(props.yaml);
-    log.info(`已复制 YAML（${lines.value.length} 行）`);
+    log.info(t('editor.yamlCopyOk', { n: lines.value.length }));
   } catch {
-    log.warn('复制 YAML 失败：剪贴板权限不可用');
+    log.warn(t('editor.yamlCopyFail'));
   }
 }
 </script>
@@ -29,12 +31,12 @@ async function copyAll() {
   <div class="yamlpreview">
     <div class="toolbar">
       <span class="chip" :class="errorCount ? 'red' : 'green'">
-        {{ syncing ? '⟳ 同步中…' : errorCount ? `● ${errorCount} 个错误` : '● 校验通过' }}
+        {{ syncing ? t('editor.yamlSyncing') : errorCount ? t('editor.yamlErrors', { n: errorCount }) : t('editor.yamlOk') }}
       </span>
-      <span class="muted">{{ lines.length }} 行</span>
+      <span class="muted">{{ t('editor.yamlLines', { n: lines.length }) }}</span>
       <span class="spacer" />
-      <button type="button" @click="copyAll">复制</button>
-      <label class="wrap-toggle"><input v-model="wrap" type="checkbox" /> 换行</label>
+      <button type="button" @click="copyAll">{{ t('editor.yamlCopy') }}</button>
+      <label class="wrap-toggle"><input v-model="wrap" type="checkbox" /> {{ t('editor.yamlWrap') }}</label>
     </div>
     <div class="code" :class="{ wrap }">
       <div v-for="(l, i) in lines" :key="i" class="line" :class="{ changed: changed.has(i + 1) }">

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { useLogStore } from '../stores/log';
+import { useI18n } from '../i18n';
 
+const { t } = useI18n();
 const log = useLogStore();
 const collapsed = ref(false);
 const autoscroll = ref(true);
@@ -39,7 +41,7 @@ function levelClass(level: string) {
 <template>
   <section class="logpanel" :class="{ collapsed }">
     <header class="log-head">
-      <button class="toggle" @click="collapsed = !collapsed">{{ collapsed ? '▸' : '▾' }} 日志</button>
+      <button class="toggle" @click="collapsed = !collapsed">{{ collapsed ? '▸' : '▾' }} {{ t('log.title') }}</button>
       <span class="counts">
         <span class="lvl-debug">D {{ counts.DEBUG }}</span>
         <span class="lvl-info">I {{ counts.INFO }}</span>
@@ -47,8 +49,8 @@ function levelClass(level: string) {
         <span class="lvl-error">E {{ counts.ERROR }}</span>
       </span>
       <span class="spacer" />
-      <label class="auto"><input v-model="autoscroll" type="checkbox" /> 自动滚动</label>
-      <button class="clear" @click="log.clear()">清空</button>
+      <label class="auto"><input v-model="autoscroll" type="checkbox" /> {{ t('log.autoscroll') }}</label>
+      <button class="clear" @click="log.clear()">{{ t('log.clear') }}</button>
     </header>
     <div v-show="!collapsed" ref="scroller" class="log-body" @scroll="onScroll">
       <div v-for="(e, i) in log.entries" :key="i" class="log-line" :class="levelClass(e.level)">
@@ -57,7 +59,7 @@ function levelClass(level: string) {
         <span class="m">{{ e.msg }}</span>
         <span v-if="e.source" class="src">{{ e.source }}</span>
       </div>
-      <div v-if="log.entries.length === 0" class="empty">（暂无日志）</div>
+      <div v-if="log.entries.length === 0" class="empty">{{ t('log.empty') }}</div>
     </div>
   </section>
 </template>
@@ -96,7 +98,7 @@ function levelClass(level: string) {
   font-family: ui-monospace, Menlo, Consolas, monospace;
   font-size: 12px;
   line-height: 1.6;
-  text-align: left; /* 覆盖全局 text-align:center，日志始终左对齐 */
+  text-align: left; /* 日志始终左对齐 */
 }
 .log-line { white-space: pre-wrap; word-break: break-all; }
 .log-line .t { color: #6b7c8f; margin-right: 8px; }

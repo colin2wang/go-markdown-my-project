@@ -6,10 +6,12 @@ import { api } from '../api/bindings';
 import type { ProjectConfig } from '../api/bindings';
 import ProjectEditorDialog from '../components/editor/ProjectEditorDialog.vue';
 import { useLogStore } from '../stores/log';
+import { useI18n } from '../i18n';
 
 const router = useRouter();
 const projects = useProjectsStore();
 const log = useLogStore();
+const { t } = useI18n();
 
 // 向导状态：null = 关闭；configPath 为空串 = 新建
 const showWizard = ref(false);
@@ -26,14 +28,14 @@ onMounted(async () => {
 });
 
 function openCreate() {
-  log.info('打开新建项目向导');
+  log.info(t('projects.logCreate'));
   wizardInitial.value = null;
   wizardPath.value = '';
   showWizard.value = true;
 }
 
 async function openEdit(path: string) {
-  log.info(`编辑项目配置：${path}`);
+  log.info(t('projects.logEdit', { path }));
   await projects.open(path);
   wizardInitial.value = { ...projects.current! };
   wizardPath.value = path;
@@ -41,12 +43,12 @@ async function openEdit(path: string) {
 }
 
 function enterWorkbench(path: string) {
-  log.info(`进入工作台：${path}`);
+  log.info(t('projects.logWorkbench', { path }));
   router.push({ name: 'workbench', params: { configPath: path } });
 }
 
 async function onWizardSaved(path: string) {
-  log.info(`项目配置已保存：${path}`);
+  log.info(t('projects.logSaved', { path }));
   showWizard.value = false;
   await projects.refresh();
   // 新建保存后直接进入工作台
@@ -54,7 +56,7 @@ async function onWizardSaved(path: string) {
 }
 
 async function refreshProjects() {
-  log.info(`刷新项目列表：${projects.projectsDir}`);
+  log.info(t('projects.logRefresh', { dir: projects.projectsDir }));
   await projects.refresh();
 }
 
@@ -64,7 +66,7 @@ function askDelete(path: string) {
 
 async function confirmDelete() {
   if (!deleteConfirm.value) return;
-  log.info(`删除项目配置：${deleteConfirm.value}`);
+  log.info(t('projects.logDelete', { path: deleteConfirm.value }));
   await projects.remove(deleteConfirm.value);
   deleteConfirm.value = null;
 }
@@ -73,26 +75,26 @@ async function confirmDelete() {
 <template>
   <main class="projects-view">
     <div class="toolbar">
-      <label>项目目录:
-        <input v-model="projects.projectsDir" placeholder="projects 目录" />
+      <label>{{ t('projects.dir') }}:
+        <input v-model="projects.projectsDir" placeholder="projects" />
       </label>
-      <button @click="refreshProjects">🔄 刷新</button>
+      <button @click="refreshProjects">🔄 {{ t('projects.refresh') }}</button>
       <span class="spacer" />
-      <button class="primary" @click="openCreate">＋ 新建项目配置</button>
+      <button class="primary" @click="openCreate">{{ t('projects.create') }}</button>
     </div>
     <p v-if="projects.error" class="error">{{ projects.error }}</p>
-    <p v-else-if="projects.list.length === 0" class="muted">未找到项目配置（检查目录是否正确）</p>
+    <p v-else-if="projects.list.length === 0" class="muted">{{ t('projects.empty') }}</p>
     <div class="cards">
       <div v-for="p in projects.list" :key="p.configPath" class="card">
         <h3>📦 {{ p.name }}</h3>
         <p class="muted path">{{ p.path }}</p>
-        <p class="muted">→ {{ p.outputFile }}</p>
-        <p class="muted">语言: {{ p.markdownLang }}</p>
-        <p class="muted">{{ lastExport.get(p.configPath) ? '上次导出: ' + lastExport.get(p.configPath) : '尚未导出' }}</p>
-        <button class="primary enter" @click="enterWorkbench(p.configPath)">进入工作台 ▸</button>
+        <p class="muted">{{ t('projects.output', { file: p.outputFile }) }}</p>
+        <p class="muted">{{ t('projects.language', { lang: p.markdownLang }) }}</p>
+        <p class="muted">{{ lastExport.get(p.configPath) ? t('projects.lastExport', { time: lastExport.get(p.configPath) }) : t('projects.notExported') }}</p>
+        <button class="primary enter" @click="enterWorkbench(p.configPath)">{{ t('projects.enter') }}</button>
         <div class="actions">
-          <button class="link" @click="openEdit(p.configPath)">✏ 编辑</button>
-          <button class="link danger-text" @click="askDelete(p.configPath)">🗑 删除</button>
+          <button class="link" @click="openEdit(p.configPath)">{{ t('projects.edit') }}</button>
+          <button class="link danger-text" @click="askDelete(p.configPath)">{{ t('projects.delete') }}</button>
         </div>
       </div>
     </div>
@@ -108,11 +110,11 @@ async function confirmDelete() {
 
     <div v-if="deleteConfirm" class="modal" @click.self="deleteConfirm = null">
       <div class="modal-body">
-        <h3>确认删除</h3>
-        <p>将删除配置文件：<code>{{ deleteConfirm }}</code>（不影响项目源码）</p>
+        <h3>{{ t('projects.deleteTitle') }}</h3>
+        <p>{{ t('projects.deleteBody', { path: deleteConfirm }) }}</p>
         <div class="actions">
-          <button class="danger" @click="confirmDelete">删除</button>
-          <button @click="deleteConfirm = null">取消</button>
+          <button class="danger" @click="confirmDelete">{{ t('common.delete') }}</button>
+          <button @click="deleteConfirm = null">{{ t('common.cancel') }}</button>
         </div>
       </div>
     </div>

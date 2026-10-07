@@ -2,7 +2,9 @@
 import { computed, ref, watch } from 'vue';
 import type { FileInfo } from '../api/bindings';
 import { useLogStore } from '../stores/log';
+import { useI18n } from '../i18n';
 
+const { t } = useI18n();
 const props = defineProps<{
   files: FileInfo[];
   checked: Set<string>;
@@ -127,22 +129,22 @@ const log = useLogStore();
 
 function selectAll() {
   setCheckedDeep(props.files.map((f) => f.path), true);
-  log.info(`文件树：全选（${props.files.length} 个文件）`);
+  log.info(t('tree.logSelectAll', { n: props.files.length }));
 }
 function selectNone() {
   setCheckedDeep(props.files.map((f) => f.path), false);
-  log.info('文件树：全不选');
+  log.info(t('tree.logSelectNone'));
 }
 function selectInvert() {
   const next = new Set<string>();
   for (const f of props.files) if (!props.checked.has(f.path)) next.add(f.path);
   emit('update:checked', next);
-  log.info(`文件树：反选（选中 ${next.size}/${props.files.length}）`);
+  log.info(t('tree.logInvert', { n: next.size, total: props.files.length }));
 }
 function selectCodeOnly() {
   const next = new Set(props.files.filter((f) => f.language !== 'Text').map((f) => f.path));
   emit('update:checked', next);
-  log.info(`文件树：仅代码（选中 ${next.size}/${props.files.length}）`);
+  log.info(t('tree.logCodeOnly', { n: next.size, total: props.files.length }));
 }
 
 // —— 底部统计 ——
@@ -162,19 +164,19 @@ function formatSize(n: number): string {
 <template>
   <div class="filetree">
     <div class="head">
-      <div class="title">文件 <span class="muted">({{ stats.count }}/{{ stats.total }})</span></div>
-      <input v-model="search" class="search" placeholder="🔍 搜索文件…" />
+      <div class="title">{{ t('tree.title') }} <span class="muted">({{ stats.count }}/{{ stats.total }})</span></div>
+      <input v-model="search" class="search" :placeholder="t('tree.search')" />
       <div class="quick">
-        <button @click="selectAll">全选</button>
-        <button @click="selectInvert">反选</button>
-        <button @click="selectCodeOnly">仅代码</button>
-        <button @click="selectNone">全不选</button>
+        <button @click="selectAll">{{ t('tree.selectAll') }}</button>
+        <button @click="selectInvert">{{ t('tree.selectInvert') }}</button>
+        <button @click="selectCodeOnly">{{ t('tree.codeOnly') }}</button>
+        <button @click="selectNone">{{ t('tree.selectNone') }}</button>
       </div>
     </div>
 
     <div class="treewrap">
-      <p v-if="search" class="muted hint">匹配 {{ matchCount }} 个文件</p>
-      <p v-if="files.length === 0" class="muted hint">未扫描到文件</p>
+      <p v-if="search" class="muted hint">{{ t('tree.matched', { n: matchCount }) }}</p>
+      <p v-if="files.length === 0" class="muted hint">{{ t('tree.noFiles') }}</p>
       <template v-for="node in visibleTree" :key="node.path">
         <template v-if="node.dir">
           <DirNode
@@ -194,7 +196,7 @@ function formatSize(n: number): string {
       </template>
     </div>
 
-    <div class="foot muted">{{ stats.count }} 文件 · {{ stats.size }}</div>
+    <div class="foot muted">{{ t('tree.stats', { count: stats.count, size: stats.size }) }}</div>
   </div>
 </template>
 
@@ -202,13 +204,14 @@ function formatSize(n: number): string {
 <script lang="ts">
 import { defineComponent, h, type PropType } from 'vue';
 import type { TreeNode } from './filetree-types';
+import { t } from '../i18n';
 
 const Indent = (depth: number) => h('span', { class: 'indent', style: { width: depth * 16 + 'px' } });
 
 const Chevron = (open: boolean, onToggle: () => void) =>
   h('span', {
     class: 'chevron',
-    title: open ? '收起' : '展开',
+    title: open ? t('tree.collapse') : t('tree.expand'),
     onClick: (e: Event) => { e.stopPropagation(); onToggle(); },
   }, open ? '▾' : '▸');
 
