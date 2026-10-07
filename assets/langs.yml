@@ -1,0 +1,14 @@
+# 公共语言定义文件
+languages:
+  rs: "Rust"
+  py: "Python"
+  cpp: "C++"
+  java: "Java"
+  js: "JavaScript"
+  ts: "TypeScript"
+  go: "Go"
+  sh: "Shell"
+  txt: "Text"
+  md: "Markdown"
+  yml: "YAML"
+  json: "JSON"

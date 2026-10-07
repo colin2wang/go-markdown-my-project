@@ -1,0 +1,29 @@
+# Project Configuration for Project Documentation
+
+# Name of the project
+project_name: "Markdown My Project"
+
+# Path to the project root directory
+project_path: "F:/Workspaces/JetBrains/RustRover/markdown_my_project"
+
+# Output file path for the generated documentation
+output_file: "markdown_my_project.md"
+
+# Markdown output language: "zh_cn" for Chinese, "en_us" for English
+markdown_lang: zh_cn
+
+# List of specific files to include in the documentation
+files:
+  - cargo.toml
+  - log4rs.yml
+  - languages.yml
+
+# List of directories to include in the documentation (files within these directories will be processed recursively)
+directories:
+  - src
+  - test
+  - projects
+
+# List of directories to exclude from the documentation
+exclude_directories:
+  - "**/444"

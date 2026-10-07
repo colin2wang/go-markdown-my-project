@@ -1,0 +1,32 @@
+# Scan this file for changes every 30 seconds
+refresh_rate: 30 seconds
+
+appenders:
+  stdout:
+    kind: console
+    encoder:
+      pattern: "{d(%Y-%m-%d %H:%M:%S)} {l} {f} {L} — {m}{n}"
+  rolling_file:
+    kind: rolling_file
+    encoder:
+      pattern: "{d(%Y-%m-%d %H:%M:%S)} {l} {f} {L} — {m}{n}"
+    path: "logs/project_documentation.log"
+    policy:
+      # Identifies which policy is to be used. If no kind is specified, it will
+      # default to "compound".
+      kind: compound
+      # The remainder of the configuration is passed along to the policy's
+      # deserializer, and will vary based on the kind of policy.
+      trigger:
+        kind: size
+        limit: 1mb
+      roller:
+        kind: fixed_window
+        base: 1
+        count: 10
+        pattern: "logs/project_documentation.{}.log"
+root:
+  level: debug
+  appenders:
+    - stdout
+    - rolling_file

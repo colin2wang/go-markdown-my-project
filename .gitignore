@@ -1,0 +1,10 @@
+# Binary files
+build/
+dist/
+
+# Frontend
+frontend/dist/
+frontend/node_modules/
+
+# IDEs
+.idea/
