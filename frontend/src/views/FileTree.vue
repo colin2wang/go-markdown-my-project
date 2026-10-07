@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { FileInfo } from '../api/bindings';
+import { useLogStore } from '../stores/log';
 
 const props = defineProps<{
   files: FileInfo[];
@@ -122,19 +123,26 @@ const visibleTree = computed<TreeNode[]>(() => {
 watch(search, () => { collapsed.value = new Set(); }); // 搜索时全部展开
 
 // —— 快捷操作 ——
+const log = useLogStore();
+
 function selectAll() {
   setCheckedDeep(props.files.map((f) => f.path), true);
+  log.info(`文件树：全选（${props.files.length} 个文件）`);
 }
 function selectNone() {
   setCheckedDeep(props.files.map((f) => f.path), false);
+  log.info('文件树：全不选');
 }
 function selectInvert() {
   const next = new Set<string>();
   for (const f of props.files) if (!props.checked.has(f.path)) next.add(f.path);
   emit('update:checked', next);
+  log.info(`文件树：反选（选中 ${next.size}/${props.files.length}）`);
 }
 function selectCodeOnly() {
-  emit('update:checked', new Set(props.files.filter((f) => f.language !== 'Text').map((f) => f.path)));
+  const next = new Set(props.files.filter((f) => f.language !== 'Text').map((f) => f.path));
+  emit('update:checked', next);
+  log.info(`文件树：仅代码（选中 ${next.size}/${props.files.length}）`);
 }
 
 // —— 底部统计 ——
@@ -197,8 +205,12 @@ import type { TreeNode } from './filetree-types';
 
 const Indent = (depth: number) => h('span', { class: 'indent', style: { width: depth * 16 + 'px' } });
 
-const Chevron = (open: boolean) =>
-  h('span', { class: 'chevron' }, open ? '▾' : '▸');
+const Chevron = (open: boolean, onToggle: () => void) =>
+  h('span', {
+    class: 'chevron',
+    title: open ? '收起' : '展开',
+    onClick: (e: Event) => { e.stopPropagation(); onToggle(); },
+  }, open ? '▾' : '▸');
 
 function fmtSize(n: number): string {
   if (n < 1024) return n + ' B';
@@ -229,10 +241,10 @@ const DirNode = defineComponent({
       return h('div', {
         class: 'file-row dir-row',
         style: { paddingLeft: p.depth * 16 + 'px' },
-        onClick: () => emit('toggle-node', p.node),
+        onClick: () => emit('toggle-dir', p.node.path),
       }, [
         Indent(0),
-        Chevron(!p.collapsed.has(p.node.path)),
+        Chevron(!p.collapsed.has(p.node.path), () => emit('toggle-dir', p.node.path)),
         h('input', {
           type: 'checkbox', class: state === 'some' ? 'some' : '',
           checked: state === 'all',
@@ -290,12 +302,14 @@ const DirChildren = defineComponent({
           out.push(h(DirNode, {
             node: n, depth: p.depth,
             collapsed: p.collapsed, checked: p.checked,
+            'onToggle-dir': (path: string) => emit('toggle-dir', path),
             'onToggle-node': (node: TreeNode) => emit('toggle-node', node),
           }));
           if (!p.collapsed.has(n.path)) {
             out.push(h(DirChildren, {
               nodes: n.children, depth: p.depth + 1,
               collapsed: p.collapsed, checked: p.checked,
+              'onToggle-dir': (path: string) => emit('toggle-dir', path),
               'onToggle-node': (node: TreeNode) => emit('toggle-node', node),
               'onToggle-file': (path: string) => emit('toggle-file', path),
             }));

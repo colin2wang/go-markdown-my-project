@@ -5,6 +5,7 @@ package logger
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -15,6 +16,20 @@ import (
 )
 
 var global *slog.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
+
+// Entry 一条日志的结构化表示，用于转发到前端日志窗口。
+type Entry struct {
+	Time   string `json:"time"`
+	Level  string `json:"level"`
+	Msg    string `json:"msg"`
+	Source string `json:"source"`
+}
+
+// sink 日志转发回调；由 app 层注入（core 不依赖 Wails）。
+var sink func(Entry)
+
+// SetSink 设置日志转发回调（传 nil 关闭转发）。
+func SetSink(fn func(Entry)) { sink = fn }
 
 // Options 日志初始化选项，对齐 log4rs.yml。
 type Options struct {
@@ -62,15 +77,18 @@ func Init(opts Options) error {
 	if opts.Console {
 		writers = append(writers, os.Stdout)
 	}
+	// 目录创建失败不应阻断整个日志系统：降级为仅控制台输出，
+	// 并始终挂上 sinkHandler，保证前端日志转发与后续文件日志可用。
 	if err := os.MkdirAll(opts.LogDir, 0o755); err != nil {
-		return err
+		fmt.Fprintf(os.Stderr, "[logger] 无法创建日志目录 %q: %v（仅控制台输出）\n", opts.LogDir, err)
+	} else {
+		writers = append(writers, &lumberjack.Logger{
+			Filename:   filepath.Join(opts.LogDir, opts.LogFile),
+			MaxSize:    opts.MaxSizeMB,
+			MaxBackups: opts.MaxBackups,
+			Compress:   false,
+		})
 	}
-	writers = append(writers, &lumberjack.Logger{
-		Filename:   filepath.Join(opts.LogDir, opts.LogFile),
-		MaxSize:    opts.MaxSizeMB,
-		MaxBackups: opts.MaxBackups,
-		Compress:   false,
-	})
 
 	handler := slog.NewTextHandler(io.MultiWriter(writers...), &slog.HandlerOptions{
 		Level: level,
@@ -91,7 +109,9 @@ func Init(opts Options) error {
 		},
 		AddSource: true,
 	})
-	global = slog.New(handler)
+	// 总是包裹 sinkHandler：sink 可能在 Init 之后（如 Startup）才注入，
+	// 转发在 Handle 时按 sink 是否为 nil 动态决定，避免错过后续日志。
+	global = slog.New(&sinkHandler{base: handler})
 	slog.SetDefault(global)
 	return nil
 }
@@ -112,6 +132,37 @@ func itoa(n int) string {
 
 // L 返回全局 logger。
 func L() *slog.Logger { return global }
+
+// sinkHandler 包裹底层 handler，在每条日志记录落盘/控制台的同时转发给 sink（前端日志窗口）。
+type sinkHandler struct{ base slog.Handler }
+
+func (h *sinkHandler) Enabled(ctx context.Context, l slog.Level) bool {
+	return h.base.Enabled(ctx, l)
+}
+
+func (h *sinkHandler) Handle(ctx context.Context, r slog.Record) error {
+	err := h.base.Handle(ctx, r)
+	if sink != nil {
+		e := Entry{
+			Time:  r.Time.Format("2006-01-02 15:04:05"),
+			Level: r.Level.String(),
+			Msg:   r.Message,
+		}
+		if src := r.Source(); src != nil {
+			e.Source = filepath.Base(src.File) + ":" + itoa(src.Line)
+		}
+		sink(e)
+	}
+	return err
+}
+
+func (h *sinkHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &sinkHandler{base: h.base.WithAttrs(attrs)}
+}
+
+func (h *sinkHandler) WithGroup(name string) slog.Handler {
+	return &sinkHandler{base: h.base.WithGroup(name)}
+}
 
 // 便捷方法
 func Debug(msg string, args ...any) { global.Log(context.Background(), slog.LevelDebug, msg, args...) }

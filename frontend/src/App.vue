@@ -1,7 +1,13 @@
 <script setup lang="ts">
+import { onMounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { useLogStore } from './stores/log';
+import LogPanel from './components/LogPanel.vue';
 
 const route = useRoute();
+const log = useLogStore();
+
+onMounted(() => log.listen());
 </script>
 
 <template>
@@ -20,6 +26,7 @@ const route = useRoute();
       </nav>
     </header>
     <router-view />
+    <LogPanel />
   </div>
 </template>
 

@@ -7,11 +7,13 @@ import type { FileInfo, ProjectConfig } from '../api/bindings';
 import FileTree from './FileTree.vue';
 import SensitiveDrawer from './SensitiveDrawer.vue';
 import { estimateTokensFromSize, fmtNum } from '../estimate';
+import { useLogStore } from '../stores/log';
 
 const props = defineProps<{ configPath: string }>();
 const router = useRouter();
 const projects = useProjectsStore();
 const exp = useExportStore();
+const log = useLogStore();
 
 const loadError = ref('');
 const scanning = ref(false);
@@ -36,13 +38,20 @@ onMounted(async () => {
 
 async function rescan() {
   if (!projects.current) return;
+  log.info(`扫描项目：${projects.current.project_name}`);
   scanning.value = true;
   try {
     await exp.scan(projects.current);
+    log.info(`扫描完成：共 ${exp.files.length} 个文件`);
   } finally {
     scanning.value = false;
   }
 }
+
+// 导出模式切换
+watch(() => exp.mode, (m, old) => {
+  if (old) log.info(`切换导出模式：${old} → ${m}`);
+});
 
 // —— 勾选统计（左栏底/状态条共用），300ms 防抖避免大项目勾选时频繁重算 ——
 import { onUnmounted } from 'vue';
@@ -78,11 +87,15 @@ const redactStrategy = ref('placeholder');
 
 async function scanSensitive() {
   if (!projects.current) return;
+  log.info(`扫描敏感信息：${exp.checkedPaths.size} 个文件，策略=${redactStrategy.value}`);
   sensitiveScanning.value = true;
   try {
     const hits: SensitiveHit[] = await api.scanSensitive(projects.current, [...exp.checkedPaths]);
     sensitive.value = { state: hits.length ? 'hit' : 'none', count: hits.length, hits };
-  } catch {
+    if (hits.length) log.warn(`发现 ${hits.length} 处敏感信息`);
+    else log.info('未发现敏感信息');
+  } catch (e) {
+    log.warn(`敏感信息扫描失败：${String(e)}`);
     sensitive.value = { state: 'unscanned', count: 0, hits: [] };
   } finally {
     sensitiveScanning.value = false;
@@ -109,11 +122,13 @@ function onExportClick() {
 
 async function doExport() {
   if (!projects.current) return;
+  log.info(`触发导出：模式=${exp.mode}，脱敏=${redactEnabled.value ? '开' : '关'}，文件=${checkedFiles.value.length}`);
   exporting.value = true;
   exp.redact = redactEnabled.value;
   exp.splitTokens = splitEnabled.value ? splitTokens.value : 0;
   try {
     await exp.run(projects.current);
+    if (exp.result) log.info(`导出成功：${exp.result.outputPaths.join(', ')}（${exp.result.durationMs} ms）`);
   } finally {
     exporting.value = false;
   }
@@ -141,14 +156,19 @@ function buildOutline(cfg: ProjectConfig | null, files: FileInfo[], mode: string
 }
 
 async function openOutputDir() {
-  if (exp.result) await api.openPath(exp.result.outputPaths[0]);
+  if (!exp.result) return;
+  log.info(`打开输出目录：${exp.result.outputPaths[0]}`);
+  await api.openPath(exp.result.outputPaths[0]);
 }
 
 async function copyResult() {
   if (!exp.result) return;
   try {
     await navigator.clipboard.writeText(exp.result.outputPaths.join('\n'));
-  } catch { /* 剪贴板权限失败静默 */ }
+    log.info(`已复制输出路径：${exp.result.outputPaths.join(', ')}`);
+  } catch {
+    log.warn('复制路径失败：剪贴板权限不可用');
+  }
 }
 </script>
 

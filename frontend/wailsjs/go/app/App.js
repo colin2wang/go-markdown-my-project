@@ -26,6 +26,10 @@ export function PathExists(arg1) {
   return window['go']['app']['App']['PathExists'](arg1);
 }
 
+export function PreviewScan(arg1) {
+  return window['go']['app']['App']['PreviewScan'](arg1);
+}
+
 export function RunExport(arg1, arg2) {
   return window['go']['app']['App']['RunExport'](arg1, arg2);
 }
@@ -42,6 +46,14 @@ export function ScanSensitive(arg1, arg2) {
   return window['go']['app']['App']['ScanSensitive'](arg1, arg2);
 }
 
-export function SelectDirectory() {
-  return window['go']['app']['App']['SelectDirectory']();
+export function SelectDirectory(arg1) {
+  return window['go']['app']['App']['SelectDirectory'](arg1);
+}
+
+export function SerializeYAML(arg1) {
+  return window['go']['app']['App']['SerializeYAML'](arg1);
+}
+
+export function ValidateConfig(arg1) {
+  return window['go']['app']['App']['ValidateConfig'](arg1);
 }

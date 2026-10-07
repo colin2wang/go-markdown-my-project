@@ -14,31 +14,33 @@ import (
 )
 
 // RedactionConfig 敏感信息过滤配置（F99，v2 新增）。
+// json 标签与 yaml 保持一致：Wails 绑定经 encoding/json 序列化到前端。
 type RedactionConfig struct {
-	Enabled        bool     `yaml:"enabled"`
-	Placeholder    string   `yaml:"placeholder,omitempty"`
-	Strategy       string   `yaml:"strategy,omitempty"`  // placeholder | drop_line
-	Allowlist      []string `yaml:"allowlist,omitempty"` // key = 相对路径:行号:规则名
-	CustomPatterns []string `yaml:"custom_patterns,omitempty"`
+	Enabled        bool     `yaml:"enabled" json:"enabled"`
+	Placeholder    string   `yaml:"placeholder,omitempty" json:"placeholder,omitempty"`
+	Strategy       string   `yaml:"strategy,omitempty" json:"strategy,omitempty"`   // placeholder | drop_line
+	Allowlist      []string `yaml:"allowlist,omitempty" json:"allowlist,omitempty"` // key = 相对路径:行号:规则名
+	CustomPatterns []string `yaml:"custom_patterns,omitempty" json:"custom_patterns,omitempty"`
 }
 
 // ProjectConfig 对应 projects/*.yml。
+// json 标签与前端 bindings.ts 的蛇形字段一一对应（Wails 经 encoding/json 序列化）。
 type ProjectConfig struct {
 	// v1 字段
-	ProjectName        string   `yaml:"project_name"`
-	ProjectPath        string   `yaml:"project_path"`
-	OutputFile         string   `yaml:"output_file"`
-	MarkdownLang       string   `yaml:"markdown_lang,omitempty"`
-	Files              []string `yaml:"files,omitempty"`
-	Directories        []string `yaml:"directories,omitempty"`
-	ExcludeDirectories []string `yaml:"exclude_directories,omitempty"`
-	ExcludePatterns    []string `yaml:"exclude_patterns,omitempty"`
-	MaxFileSize        int64    `yaml:"max_file_size,omitempty"` // 0 = 不限制
+	ProjectName        string   `yaml:"project_name" json:"project_name"`
+	ProjectPath        string   `yaml:"project_path" json:"project_path"`
+	OutputFile         string   `yaml:"output_file" json:"output_file"`
+	MarkdownLang       string   `yaml:"markdown_lang,omitempty" json:"markdown_lang,omitempty"`
+	Files              []string `yaml:"files,omitempty" json:"files,omitempty"`
+	Directories        []string `yaml:"directories,omitempty" json:"directories,omitempty"`
+	ExcludeDirectories []string `yaml:"exclude_directories,omitempty" json:"exclude_directories,omitempty"`
+	ExcludePatterns    []string `yaml:"exclude_patterns,omitempty" json:"exclude_patterns,omitempty"`
+	MaxFileSize        int64    `yaml:"max_file_size,omitempty" json:"max_file_size,omitempty"` // 0 = 不限制
 	// v2 字段
-	ExportMode  string          `yaml:"export_mode,omitempty"` // full | files | symbols | signatures | custom
-	Redaction   RedactionConfig `yaml:"redaction,omitempty"`
-	SplitTokens int             `yaml:"split_tokens,omitempty"`
-	Template    string          `yaml:"template,omitempty"`
+	ExportMode  string          `yaml:"export_mode,omitempty" json:"export_mode,omitempty"` // full | files | symbols | signatures | custom
+	Redaction   RedactionConfig `yaml:"redaction,omitempty" json:"redaction,omitempty"`
+	SplitTokens int             `yaml:"split_tokens,omitempty" json:"split_tokens,omitempty"`
+	Template    string          `yaml:"template,omitempty" json:"template,omitempty"`
 }
 
 // supportedOutputExts 对齐 config.rs 的输出扩展名警告列表。
@@ -108,11 +110,11 @@ func (c *ProjectConfig) Validate() error {
 	return nil
 }
 
-// Save 将配置写回 YAML 文件。
+// Save 将配置写回 YAML 文件（注释模板序列化，与 GUI 预览一致）。
 func (c *ProjectConfig) Save(path string) error {
-	data, err := yaml.Marshal(c)
+	data, err := SerializeWithComments(c)
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration: %w", err)
 	}
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, []byte(data), 0o644)
 }

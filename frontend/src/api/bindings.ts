@@ -61,6 +61,18 @@ export interface SensitiveHit {
   masked: string;
 }
 
+export interface FieldError {
+  field: string;
+  message: string;
+}
+
+export interface ScanPreview {
+  fileCount: number;
+  totalBytes: number;
+  byLang: Record<string, number>;
+  warnings: string[];
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function go(): any {
   // Wails 运行时注入：App 结构体在 app 包下，绑定为 window['go']['app']['App']
@@ -87,8 +99,8 @@ export const api = {
   async runExport(cfg: ProjectConfig, opt: ExportOptions): Promise<ExportResult> {
     return go()?.RunExport(cfg, opt);
   },
-  async selectDirectory(): Promise<string> {
-    return (await go()?.SelectDirectory()) ?? '';
+  async selectDirectory(startDir = ''): Promise<string> {
+    return (await go()?.SelectDirectory(startDir)) ?? '';
   },
   async defaultProjectsDir(): Promise<string> {
     return (await go()?.DefaultProjectsDir()) ?? 'config/projects';
@@ -103,5 +115,14 @@ export const api = {
   },
   async scanSensitive(cfg: ProjectConfig, fileOverrides: string[]): Promise<SensitiveHit[]> {
     return (await go()?.ScanSensitive(cfg, fileOverrides)) ?? [];
+  },
+  async serializeYAML(cfg: ProjectConfig): Promise<string> {
+    return (await go()?.SerializeYAML(cfg)) ?? '';
+  },
+  async validateConfig(cfg: ProjectConfig): Promise<FieldError[]> {
+    return (await go()?.ValidateConfig(cfg)) ?? [];
+  },
+  async previewScan(cfg: ProjectConfig): Promise<ScanPreview | null> {
+    return (await go()?.PreviewScan(cfg)) ?? null;
   },
 };

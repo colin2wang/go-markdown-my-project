@@ -4,10 +4,12 @@ import { useRouter } from 'vue-router';
 import { useProjectsStore } from '../stores';
 import { api } from '../api/bindings';
 import type { ProjectConfig } from '../api/bindings';
-import NewProjectWizard from './NewProjectWizard.vue';
+import ProjectEditorDialog from '../components/editor/ProjectEditorDialog.vue';
+import { useLogStore } from '../stores/log';
 
 const router = useRouter();
 const projects = useProjectsStore();
+const log = useLogStore();
 
 // 向导状态：null = 关闭；configPath 为空串 = 新建
 const showWizard = ref(false);
@@ -24,12 +26,14 @@ onMounted(async () => {
 });
 
 function openCreate() {
+  log.info('打开新建项目向导');
   wizardInitial.value = null;
   wizardPath.value = '';
   showWizard.value = true;
 }
 
 async function openEdit(path: string) {
+  log.info(`编辑项目配置：${path}`);
   await projects.open(path);
   wizardInitial.value = { ...projects.current! };
   wizardPath.value = path;
@@ -37,14 +41,21 @@ async function openEdit(path: string) {
 }
 
 function enterWorkbench(path: string) {
+  log.info(`进入工作台：${path}`);
   router.push({ name: 'workbench', params: { configPath: path } });
 }
 
 async function onWizardSaved(path: string) {
+  log.info(`项目配置已保存：${path}`);
   showWizard.value = false;
   await projects.refresh();
   // 新建保存后直接进入工作台
   enterWorkbench(path);
+}
+
+async function refreshProjects() {
+  log.info(`刷新项目列表：${projects.projectsDir}`);
+  await projects.refresh();
 }
 
 function askDelete(path: string) {
@@ -53,6 +64,7 @@ function askDelete(path: string) {
 
 async function confirmDelete() {
   if (!deleteConfirm.value) return;
+  log.info(`删除项目配置：${deleteConfirm.value}`);
   await projects.remove(deleteConfirm.value);
   deleteConfirm.value = null;
 }
@@ -64,7 +76,7 @@ async function confirmDelete() {
       <label>项目目录:
         <input v-model="projects.projectsDir" placeholder="projects 目录" />
       </label>
-      <button @click="projects.refresh()">🔄 刷新</button>
+      <button @click="refreshProjects">🔄 刷新</button>
       <span class="spacer" />
       <button class="primary" @click="openCreate">＋ 新建项目配置</button>
     </div>
@@ -85,10 +97,10 @@ async function confirmDelete() {
       </div>
     </div>
 
-    <NewProjectWizard
+    <ProjectEditorDialog
       v-if="showWizard"
       :initial="wizardInitial"
-      :config-path="wizardPath || (projects.projectsDir.replace(/[\\/]+$/, '') + '/' + (wizardInitial?.project_name || 'new') + '.yml')"
+      :config-path="wizardPath || undefined"
       :projects-dir="projects.projectsDir"
       @close="showWizard = false"
       @saved="onWizardSaved"

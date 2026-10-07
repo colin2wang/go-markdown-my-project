@@ -7,7 +7,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -64,7 +66,14 @@ type App struct {
 func NewApp() *App { return &App{} }
 
 // Startup 由 Wails 注入上下文。
-func (a *App) Startup(ctx context.Context) { a.ctx = ctx }
+func (a *App) Startup(ctx context.Context) {
+	a.ctx = ctx
+	// 把全局日志转发为前端可监听的事件（core 保持无 Wails 依赖）。
+	logger.SetSink(func(e logger.Entry) {
+		runtime.EventsEmit(a.ctx, "app:log", e)
+	})
+	logger.Info("应用已启动，前端日志转发已启用")
+}
 
 // languagesDir 返回资源目录（langs.yml 所在）。
 func languagesPath() string { return "assets/langs.yml" }
@@ -103,10 +112,106 @@ func (a *App) LoadProject(configPath string) (*config.ProjectConfig, error) {
 
 // SaveProject 保存项目配置（新建或编辑），校验后写回。
 func (a *App) SaveProject(configPath string, cfg config.ProjectConfig) error {
-	if err := cfg.Validate(); err != nil {
-		return err
+	if errs := a.ValidateConfig(cfg); len(errs) > 0 {
+		return fmt.Errorf("%s: %s", errs[0].Field, errs[0].Message)
 	}
+	logger.Info("保存项目配置", "path", configPath, "name", cfg.ProjectName)
 	return cfg.Save(configPath)
+}
+
+// FieldError 字段级校验错误（编辑对话框按 field 映射到左栏控件）。
+type FieldError struct {
+	Field   string `json:"field"`
+	Message string `json:"message"`
+}
+
+// ValidateConfig 配置完整校验（保存前复检；glob/RE2 编译级别检查）。
+func (a *App) ValidateConfig(cfg config.ProjectConfig) []FieldError {
+	var errs []FieldError
+	add := func(field, msg string) { errs = append(errs, FieldError{Field: field, Message: msg}) }
+
+	if strings.TrimSpace(cfg.ProjectName) == "" {
+		add("project_name", "项目名称不能为空")
+	}
+	if cfg.ProjectPath == "" {
+		add("project_path", "项目路径不能为空")
+	} else if info, err := os.Stat(cfg.ProjectPath); err != nil {
+		add("project_path", "路径不存在: "+cfg.ProjectPath)
+	} else if !info.IsDir() {
+		add("project_path", "不是目录: "+cfg.ProjectPath)
+	}
+	if strings.TrimSpace(cfg.OutputFile) == "" {
+		add("output_file", "输出文件名不能为空")
+	} else if ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(cfg.OutputFile)), "."); ext != "" &&
+		!map[string]bool{"md": true, "markdown": true, "txt": true}[ext] {
+		add("output_file", "扩展名 ."+ext+" 可能为文档格式（.md/.markdown/.txt）")
+	}
+	if cfg.MaxFileSize < 0 {
+		add("max_file_size", "不能为负")
+	}
+	if cfg.SplitTokens < 0 {
+		add("split_tokens", "不能为负")
+	}
+	for _, p := range cfg.ExcludePatterns {
+		if strings.TrimSpace(p) == "" {
+			add("exclude_patterns", "排除规则不能为空")
+			break
+		}
+	}
+	for _, p := range cfg.Redaction.CustomPatterns {
+		if _, err := regexp.Compile(p); err != nil {
+			add("custom_patterns", "正则无效: "+err.Error())
+			break
+		}
+	}
+	return errs
+}
+
+// ScanPreview 预检结果（只统计不读内容）。
+type ScanPreview struct {
+	FileCount  int            `json:"fileCount"`
+	TotalBytes int64          `json:"totalBytes"`
+	ByLang     map[string]int `json:"byLang"`
+	Warnings   []string       `json:"warnings"`
+}
+
+// PreviewScan 保存前预检：文件数 / 总大小 / 语言分布 / 警告。
+func (a *App) PreviewScan(cfg config.ProjectConfig) (ScanPreview, error) {
+	results, err := scanner.ProcessFiles(scanner.Options{
+		ProjectPath:        cfg.ProjectPath,
+		Files:              cfg.Files,
+		Directories:        cfg.Directories,
+		ExcludeDirectories: cfg.ExcludeDirectories,
+		ExcludePatterns:    cfg.ExcludePatterns,
+		MaxFileSize:        cfg.MaxFileSize,
+	})
+	if err != nil {
+		return ScanPreview{}, err
+	}
+	langs, _ := generator.LoadLanguages(languagesPath())
+	prev := ScanPreview{ByLang: map[string]int{}}
+	noLang := 0
+	for _, r := range results {
+		l := generator.LanguageFor(langs, r.FullPath)
+		if l == "" {
+			l = "Unknown"
+			noLang++
+		}
+		prev.ByLang[l]++
+		if info, err := os.Stat(r.FullPath); err == nil {
+			prev.TotalBytes += info.Size()
+		}
+	}
+	prev.FileCount = len(results)
+	if noLang > 0 {
+		prev.Warnings = append(prev.Warnings, fmt.Sprintf("%d 个文件无符号提取器（符号/签名模式将跳过）", noLang))
+	}
+	return prev, nil
+}
+
+// SerializeYAML 配置 → 带注释 YAML 文本（GUI 右栏实时镜像，与保存落盘同源）。
+func (a *App) SerializeYAML(cfg config.ProjectConfig) (string, error) {
+	return config.SerializeWithComments(&cfg)
 }
 
 // DeleteProject 删除项目配置文件。
@@ -225,6 +330,7 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 			}
 		}
 	}
+	logger.Info("开始导出", "project", cfg.ProjectName, "mode", opt.Mode, "files", len(files), "dirs", len(dirs))
 
 	results, err := scanner.ProcessFiles(scanner.Options{
 		ProjectPath:        cfg.ProjectPath,
@@ -280,6 +386,8 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 		return ExportResult{}, err
 	}
 
+	logger.Info("导出完成", "mode", string(mode), "files", len(results), "chars", len([]rune(content)), "out", outPath, "ms", time.Since(start).Milliseconds())
+
 	return ExportResult{
 		OutputPaths: []string{outPath},
 		TotalChars:  len([]rune(content)),
@@ -320,10 +428,17 @@ func wd() string {
 }
 
 // SelectDirectory 弹出系统目录选择对话框，返回所选目录；取消返回空串。
-func (a *App) SelectDirectory() (string, error) {
-	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "选择目录",
-	})
+// startDir 为初始打开目录（可为空；不存在或非目录时忽略）。
+func (a *App) SelectDirectory(startDir string) (string, error) {
+	opts := runtime.OpenDialogOptions{Title: "选择目录"}
+	if startDir != "" {
+		if abs, err := filepath.Abs(startDir); err == nil {
+			if info, err := os.Stat(abs); err == nil && info.IsDir() {
+				opts.DefaultDirectory = abs
+			}
+		}
+	}
+	return runtime.OpenDirectoryDialog(a.ctx, opts)
 }
 
 // DefaultProjectsDir 返回 exe 工作目录下的默认 projects 目录（绝对路径）。

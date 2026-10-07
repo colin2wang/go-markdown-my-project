@@ -15,6 +15,8 @@ export function OpenPath(arg1:string):Promise<void>;
 
 export function PathExists(arg1:string):Promise<boolean|boolean>;
 
+export function PreviewScan(arg1:config.ProjectConfig):Promise<app.ScanPreview>;
+
 export function RunExport(arg1:config.ProjectConfig,arg2:app.ExportOptions):Promise<app.ExportResult>;
 
 export function SaveProject(arg1:string,arg2:config.ProjectConfig):Promise<void>;
@@ -23,4 +25,8 @@ export function ScanProject(arg1:config.ProjectConfig):Promise<Array<app.FileInf
 
 export function ScanSensitive(arg1:config.ProjectConfig,arg2:Array<string>):Promise<Array<app.SensitiveHit>>;
 
-export function SelectDirectory():Promise<string>;
+export function SelectDirectory(arg1:string):Promise<string>;
+
+export function SerializeYAML(arg1:config.ProjectConfig):Promise<string>;
+
+export function ValidateConfig(arg1:config.ProjectConfig):Promise<Array<app.FieldError>>;

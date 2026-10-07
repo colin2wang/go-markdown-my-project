@@ -33,7 +33,7 @@ function emptyProject(): ProjectConfig {
 const pathChecked = ref<null | { exists: boolean; isDir: boolean }>(null);
 
 async function browseDir() {
-  const dir = await api.selectDirectory();
+  const dir = await api.selectDirectory(form.value.project_path.trim());
   if (!dir) return;
   form.value.project_path = dir;
   if (!form.value.project_name) {

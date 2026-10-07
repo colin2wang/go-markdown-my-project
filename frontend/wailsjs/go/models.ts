@@ -38,6 +38,20 @@ export namespace app {
 	        this.durationMs = source["durationMs"];
 	    }
 	}
+	export class FieldError {
+	    field: string;
+	    message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FieldError(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.field = source["field"];
+	        this.message = source["message"];
+	    }
+	}
 	export class FileInfo {
 	    path: string;
 	    language: string;
@@ -78,6 +92,24 @@ export namespace app {
 	        this.markdownLang = source["markdownLang"];
 	    }
 	}
+	export class ScanPreview {
+	    fileCount: number;
+	    totalBytes: number;
+	    byLang: Record<string, number>;
+	    warnings: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ScanPreview(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.fileCount = source["fileCount"];
+	        this.totalBytes = source["totalBytes"];
+	        this.byLang = source["byLang"];
+	        this.warnings = source["warnings"];
+	    }
+	}
 	export class SensitiveHit {
 	    file: string;
 	    line: number;
@@ -102,11 +134,11 @@ export namespace app {
 export namespace config {
 	
 	export class RedactionConfig {
-	    Enabled: boolean;
-	    Placeholder: string;
-	    Strategy: string;
-	    Allowlist: string[];
-	    CustomPatterns: string[];
+	    enabled: boolean;
+	    placeholder?: string;
+	    strategy?: string;
+	    allowlist?: string[];
+	    custom_patterns?: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new RedactionConfig(source);
@@ -114,27 +146,27 @@ export namespace config {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.Enabled = source["Enabled"];
-	        this.Placeholder = source["Placeholder"];
-	        this.Strategy = source["Strategy"];
-	        this.Allowlist = source["Allowlist"];
-	        this.CustomPatterns = source["CustomPatterns"];
+	        this.enabled = source["enabled"];
+	        this.placeholder = source["placeholder"];
+	        this.strategy = source["strategy"];
+	        this.allowlist = source["allowlist"];
+	        this.custom_patterns = source["custom_patterns"];
 	    }
 	}
 	export class ProjectConfig {
-	    ProjectName: string;
-	    ProjectPath: string;
-	    OutputFile: string;
-	    MarkdownLang: string;
-	    Files: string[];
-	    Directories: string[];
-	    ExcludeDirectories: string[];
-	    ExcludePatterns: string[];
-	    MaxFileSize: number;
-	    ExportMode: string;
-	    Redaction: RedactionConfig;
-	    SplitTokens: number;
-	    Template: string;
+	    project_name: string;
+	    project_path: string;
+	    output_file: string;
+	    markdown_lang?: string;
+	    files?: string[];
+	    directories?: string[];
+	    exclude_directories?: string[];
+	    exclude_patterns?: string[];
+	    max_file_size?: number;
+	    export_mode?: string;
+	    redaction?: RedactionConfig;
+	    split_tokens?: number;
+	    template?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ProjectConfig(source);
@@ -142,19 +174,19 @@ export namespace config {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.ProjectName = source["ProjectName"];
-	        this.ProjectPath = source["ProjectPath"];
-	        this.OutputFile = source["OutputFile"];
-	        this.MarkdownLang = source["MarkdownLang"];
-	        this.Files = source["Files"];
-	        this.Directories = source["Directories"];
-	        this.ExcludeDirectories = source["ExcludeDirectories"];
-	        this.ExcludePatterns = source["ExcludePatterns"];
-	        this.MaxFileSize = source["MaxFileSize"];
-	        this.ExportMode = source["ExportMode"];
-	        this.Redaction = this.convertValues(source["Redaction"], RedactionConfig);
-	        this.SplitTokens = source["SplitTokens"];
-	        this.Template = source["Template"];
+	        this.project_name = source["project_name"];
+	        this.project_path = source["project_path"];
+	        this.output_file = source["output_file"];
+	        this.markdown_lang = source["markdown_lang"];
+	        this.files = source["files"];
+	        this.directories = source["directories"];
+	        this.exclude_directories = source["exclude_directories"];
+	        this.exclude_patterns = source["exclude_patterns"];
+	        this.max_file_size = source["max_file_size"];
+	        this.export_mode = source["export_mode"];
+	        this.redaction = this.convertValues(source["redaction"], RedactionConfig);
+	        this.split_tokens = source["split_tokens"];
+	        this.template = source["template"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
