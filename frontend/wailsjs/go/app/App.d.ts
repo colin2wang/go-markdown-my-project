@@ -3,14 +3,24 @@
 import {app} from '../models';
 import {config} from '../models';
 
+export function DefaultProjectsDir():Promise<string>;
+
 export function DeleteProject(arg1:string):Promise<void>;
 
 export function ListProjects(arg1:string):Promise<Array<app.ProjectSummary>>;
 
 export function LoadProject(arg1:string):Promise<config.ProjectConfig>;
 
+export function OpenPath(arg1:string):Promise<void>;
+
+export function PathExists(arg1:string):Promise<boolean|boolean>;
+
 export function RunExport(arg1:config.ProjectConfig,arg2:app.ExportOptions):Promise<app.ExportResult>;
 
 export function SaveProject(arg1:string,arg2:config.ProjectConfig):Promise<void>;
 
 export function ScanProject(arg1:config.ProjectConfig):Promise<Array<app.FileInfo>>;
+
+export function ScanSensitive(arg1:config.ProjectConfig,arg2:Array<string>):Promise<Array<app.SensitiveHit>>;
+
+export function SelectDirectory():Promise<string>;

@@ -5,13 +5,17 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"time"
 
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+
 	"go-markdown-my-project/core/config"
 	"go-markdown-my-project/core/generator"
 	"go-markdown-my-project/core/logger"
+	"go-markdown-my-project/core/redactor"
 	"go-markdown-my-project/core/scanner"
 )
 
@@ -33,12 +37,15 @@ type ProjectSummary struct {
 	MarkdownLang string `json:"markdownLang"`
 }
 
-// ExportOptions 导出选项（对齐设计文档 §5.2）。
+// ExportOptions 导出选项（对齐设计文档 §5.2/§9）。
 type ExportOptions struct {
 	Mode          string   `json:"mode"`
 	Redact        bool     `json:"redact"`
 	SplitTokens   int      `json:"splitTokens"`
 	FileOverrides []string `json:"fileOverrides"` // GUI 勾选覆盖配置（相对路径）
+	// symbols / signatures 模式子选项
+	IncludeLineNumbers *bool `json:"includeLineNumbers"` // nil → 默认 true
+	MaxSignatureLen    int   `json:"maxSignatureLen"`    // ≤0 → 默认 200
 }
 
 // ExportResult 导出结果。
@@ -105,6 +112,58 @@ func (a *App) SaveProject(configPath string, cfg config.ProjectConfig) error {
 // DeleteProject 删除项目配置文件。
 func (a *App) DeleteProject(configPath string) error {
 	return removeFile(configPath)
+}
+
+// SensitiveHit 敏感信息命中（掩码预览，绝不落盘明文）。
+type SensitiveHit struct {
+	File   string `json:"file"`
+	Line   int    `json:"line"`
+	Rule   string `json:"rule"`
+	Masked string `json:"masked"`
+}
+
+// ScanSensitive 扫描勾选文件的敏感信息（F99），返回掩码后的命中列表。
+func (a *App) ScanSensitive(cfg config.ProjectConfig, fileOverrides []string) ([]SensitiveHit, error) {
+	files, dirs := splitOverrides(cfg, fileOverrides)
+	results, err := scanner.ProcessFiles(scanner.Options{
+		ProjectPath:        cfg.ProjectPath,
+		Files:              files,
+		Directories:        dirs,
+		ExcludeDirectories: cfg.ExcludeDirectories,
+		ExcludePatterns:    cfg.ExcludePatterns,
+		MaxFileSize:        cfg.MaxFileSize,
+	})
+	if err != nil {
+		return nil, err
+	}
+	rcfg := redactor.DefaultConfig()
+	out := make([]SensitiveHit, 0)
+	for _, r := range results {
+		rel, err := filepath.Rel(cfg.ProjectPath, r.FullPath)
+		if err != nil {
+			rel = r.FullPath
+		}
+		for _, f := range redactor.ScanContent(filepath.ToSlash(rel), r.Content, rcfg) {
+			out = append(out, SensitiveHit{File: f.File, Line: f.Line, Rule: f.Rule, Masked: f.Masked})
+		}
+	}
+	return out, nil
+}
+
+// splitOverrides 把 GUI 勾选的相对路径拆回 files/directories（与 RunExport 同逻辑）。
+func splitOverrides(cfg config.ProjectConfig, overrides []string) (files, dirs []string) {
+	if len(overrides) == 0 {
+		return cfg.Files, cfg.Directories
+	}
+	for _, rel := range overrides {
+		full := filepath.Join(cfg.ProjectPath, filepath.FromSlash(rel))
+		if info, err := statIsDir(full); err == nil && info {
+			dirs = append(dirs, rel)
+		} else {
+			files = append(files, rel)
+		}
+	}
+	return files, dirs
 }
 
 // ScanProject 扫描项目，返回文件树条目（不读内容）。
@@ -194,12 +253,23 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 		}
 	}
 
+	includeLineNumbers := true
+	if opt.IncludeLineNumbers != nil {
+		includeLineNumbers = *opt.IncludeLineNumbers
+	}
+	maxSig := opt.MaxSignatureLen
+	if maxSig <= 0 {
+		maxSig = 200
+	}
+
 	content, err := generator.Generate(results, generator.Options{
-		ProjectName: cfg.ProjectName,
-		ProjectRoot: cfg.ProjectPath,
-		Lang:        cfg.MarkdownLang,
-		Mode:        mode,
-		Languages:   langs,
+		ProjectName:        cfg.ProjectName,
+		ProjectRoot:        cfg.ProjectPath,
+		Lang:               cfg.MarkdownLang,
+		Mode:               mode,
+		Languages:          langs,
+		IncludeLineNumbers: includeLineNumbers,
+		MaxSignatureLen:    maxSig,
 	})
 	if err != nil {
 		return ExportResult{}, err
@@ -247,4 +317,37 @@ func wd() string {
 		return "?"
 	}
 	return dir
+}
+
+// SelectDirectory 弹出系统目录选择对话框，返回所选目录；取消返回空串。
+func (a *App) SelectDirectory() (string, error) {
+	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "选择目录",
+	})
+}
+
+// DefaultProjectsDir 返回 exe 工作目录下的默认 projects 目录（绝对路径）。
+func (a *App) DefaultProjectsDir() string {
+	return filepath.Join(wd(), "config", "projects")
+}
+
+// PathExists 判断路径是否存在；是目录时 second 返回 true。
+func (a *App) PathExists(path string) (bool, bool) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false, false
+	}
+	return true, info.IsDir()
+}
+
+// OpenPath 用系统默认程序打开文件所在目录（select 不选中文件）或目录本身。
+func (a *App) OpenPath(path string) error {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return err
+	}
+	if info, err := os.Stat(abs); err == nil && !info.IsDir() {
+		abs = filepath.Dir(abs)
+	}
+	return exec.Command("explorer", abs).Start()
 }

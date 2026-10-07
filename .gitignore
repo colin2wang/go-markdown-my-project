@@ -8,3 +8,6 @@ frontend/node_modules/
 
 # IDEs
 .idea/
+
+# Commit
+COMMIT.md

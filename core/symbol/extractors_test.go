@@ -32,6 +32,10 @@ func (s *Server) Start(ctx context.Context) error {
 	assertContains(t, "method", kinds, "Start")
 	assertContains(t, "struct", kinds, "Server")
 	assertContains(t, "interface", kinds, "Handler")
+
+	if s, ok := findSym(syms, "method", "Start"); !ok || s.Parent != "Server" {
+		t.Errorf("Start 应归属 Server，got %+v", s)
+	}
 }
 
 func TestPythonExtract(t *testing.T) {
@@ -51,7 +55,7 @@ def helper():
 		names = append(names, s.Kind+":"+s.Name)
 	}
 	assertContains(t, "class", mapName(syms), "Reader")
-	assertContains(t, "func", mapName(syms), "read_all")
+	assertContains(t, "method", mapName(syms), "read_all") // 类内 def → method
 	assertContains(t, "func", mapName(syms), "helper")
 }
 
@@ -99,7 +103,7 @@ fn helper() {}
 	m := mapName(syms)
 	assertContains(t, "struct", m, "Config")
 	assertContains(t, "trait", m, "Processor")
-	assertContains(t, "class", m, "Mode")
+	assertContains(t, "enum", m, "Mode")
 	assertContains(t, "func", m, "run")
 	assertContains(t, "func", m, "helper")
 }
@@ -159,6 +163,15 @@ func mapName(syms []Symbol) map[string][]string {
 		m[s.Kind] = append(m[s.Kind], s.Name)
 	}
 	return m
+}
+
+func findSym(syms []Symbol, kind, name string) (Symbol, bool) {
+	for _, s := range syms {
+		if s.Kind == kind && s.Name == name {
+			return s, true
+		}
+	}
+	return Symbol{}, false
 }
 
 func assertContains(t *testing.T, kind string, m map[string][]string, name string) {

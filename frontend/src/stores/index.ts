@@ -44,6 +44,8 @@ export const useExportStore = defineStore('export', () => {
   const mode = ref<string>('full');
   const redact = ref(true);
   const splitTokens = ref(0);
+  const includeLineNumbers = ref(true);
+  const maxSignatureLen = ref(200);
   const result = ref<ExportResult | null>(null);
 
   async function scan(cfg: ProjectConfig) {
@@ -57,10 +59,12 @@ export const useExportStore = defineStore('export', () => {
       redact: redact.value,
       splitTokens: splitTokens.value,
       fileOverrides: [...checkedPaths.value],
+      includeLineNumbers: includeLineNumbers.value,
+      maxSignatureLen: maxSignatureLen.value,
     };
     result.value = await api.runExport(cfg, opt);
     return result.value;
   }
 
-  return { files, checkedPaths, mode, redact, splitTokens, result, scan, run };
+  return { files, checkedPaths, mode, redact, splitTokens, includeLineNumbers, maxSignatureLen, result, scan, run };
 });

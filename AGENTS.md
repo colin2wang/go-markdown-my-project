@@ -5,8 +5,8 @@ Go + Wails v2 桌面应用（GUI）+ Vue3/TS 前端，把项目源码聚合为 M
 ## 常用命令
 
 ```powershell
-.\build.ps1                # 一键构建 → dist/（pnpm build → wails build → CLI → 拷配置）
-.\build.ps1 -Clean         # 先清空 dist/（exe 被占用时先关掉正在运行的 GUI）
+.\build.ps1                # 一键构建 → build/bin/（pnpm build → wails build → 拷 assets）
+.\build.ps1 -Clean         # 先清空 build/bin/（exe 被占用时先关掉正在运行的 GUI）
 go build ./...             # 仅编译后端
 go test ./core/...         # 全部单测（generator/symbol/redactor/token）
 go test ./core/generator/ -update   # 重新生成黄金快照（仅在有意变更输出格式时）
@@ -18,7 +18,12 @@ cd frontend && pnpm dev    # 纯前端开发
 
 - `core/` 各包是纯 Go，**禁止 import Wails**；进度/事件抽象在 `app/` 绑定层适配。新逻辑放 `core/`，`app/app.go` 只做薄转发。
 - 绑定层方法必须可导出（`Startup` 而非 `startup`），否则 Wails 不生成前端绑定。
-- 前端通过 `frontend/src/api/bindings.ts` 手写封装访问 `window.go.main.App`，新增后端方法需同步在此补类型。
+- 前端通过 `frontend/src/api/bindings.ts` 手写封装访问 `window.go.app.App`（App 结构体在 `app` 包下），新增后端方法需同步在此补类型。
+
+## 协作约定
+
+- **不要主动编译和验证**（`go build`、`go test`、`vue-tsc`、`pnpm build` 等一律不跑），用户自己做；仅当用户明确要求时才执行。
+- **Commit message**：英文、Conventional Commit（`type(scope): summary`）、祈使语气、subject ≤72 字符、无句尾句号；一次提交只含一个逻辑变更。待提交的 message 文本写入 `COMMIT.md`。
 
 ## 项目特有注意事项
 
@@ -28,7 +33,7 @@ cd frontend && pnpm dev    # 纯前端开发
 - **pnpm 12**：构建脚本白名单在 `frontend/pnpm-workspace.yaml` 的 `allowBuilds`（package.json 里旧 `pnpm` 字段已失效）；build.ps1 用 ASCII 输出，PowerShell 5.1 下非 BOM 中文会解析失败。
 - **路径约定**：落盘/展示用 `/` 相对路径；仅 `full` 模式的文件标题保留原生分隔符（见上）。
 - **正则限制**：所有规则用 RE2（Go `regexp`），不支持反向引用；symbol 提取器为逐行正则（允许漏报），Go 方法规则靠 `nameGroup: 2` 取名。
-- `config/` 是示例配置来源，build.ps1 整体拷到 `dist/config/`；GUI 默认路径 `config/projects` 相对 exe 工作目录。
+- `config/projects/` 是示例项目配置来源（`config/languages.yml`、`log4rs.yml` 与 `cmd/` CLI 已删除，仅保留 GUI）；build.ps1 拷 `assets/` 与 `config/` 到 `build/bin/`；GUI 默认路径 `config/projects` 相对 exe 工作目录。
 - 测试进程在 Windows 上偶发 `unlinkat ... being used by another process`，是临时目录文件锁，与代码无关。
 
 ## 指令文件维护规则

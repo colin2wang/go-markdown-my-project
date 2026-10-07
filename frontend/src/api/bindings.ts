@@ -44,6 +44,8 @@ export interface ExportOptions {
   redact: boolean;
   splitTokens: number;
   fileOverrides: string[];
+  includeLineNumbers?: boolean;
+  maxSignatureLen?: number;
 }
 
 export interface ExportResult {
@@ -52,11 +54,18 @@ export interface ExportResult {
   durationMs: number;
 }
 
+export interface SensitiveHit {
+  file: string;
+  line: number;
+  rule: string;
+  masked: string;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function go(): any {
-  // Wails 运行时注入
+  // Wails 运行时注入：App 结构体在 app 包下，绑定为 window['go']['app']['App']
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (window as any).go?.main?.App;
+  return (window as any).go?.app?.App;
 }
 
 export const api = {
@@ -77,5 +86,22 @@ export const api = {
   },
   async runExport(cfg: ProjectConfig, opt: ExportOptions): Promise<ExportResult> {
     return go()?.RunExport(cfg, opt);
+  },
+  async selectDirectory(): Promise<string> {
+    return (await go()?.SelectDirectory()) ?? '';
+  },
+  async defaultProjectsDir(): Promise<string> {
+    return (await go()?.DefaultProjectsDir()) ?? 'config/projects';
+  },
+  async pathExists(path: string): Promise<{ exists: boolean; isDir: boolean }> {
+    // Go 多返回值 (bool, bool) 绑定为 [boolean, boolean]
+    const r = await go()?.PathExists(path);
+    return { exists: !!r?.[0], isDir: !!r?.[1] };
+  },
+  async openPath(path: string): Promise<void> {
+    return go()?.OpenPath(path);
+  },
+  async scanSensitive(cfg: ProjectConfig, fileOverrides: string[]): Promise<SensitiveHit[]> {
+    return (await go()?.ScanSensitive(cfg, fileOverrides)) ?? [];
   },
 };

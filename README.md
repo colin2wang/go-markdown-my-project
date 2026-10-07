@@ -1,6 +1,6 @@
 # Project Docs GUI
 
-Aggregate source code from your projects into a single, clean Markdown file — ready to feed to online LLMs for analysis. Desktop GUI (Wails) + headless CLI, written in Go with a Vue 3 + TypeScript frontend. Rewritten from the original Rust console tool `markdown_my_project`.
+Aggregate source code from your projects into a single, clean Markdown file — ready to feed to online LLMs for analysis. Desktop GUI (Wails), written in Go with a Vue 3 + TypeScript frontend. Rewritten from the original Rust console tool `markdown_my_project`.
 
 ## Features
 
@@ -32,11 +32,10 @@ Export modes: `full` · `files` · `symbols` · `signatures` · `custom`.
 │   ├── redactor/            # Secret detection & redaction engine
 │   ├── token/               # Token estimation & chunk splitting
 │   └── logger/              # slog console + rolling file
-├── cmd/project-docs/        # Headless CLI
 ├── assets/langs.yml         # Extension → language mapping
-├── config/                  # Sample config: projects/*.yml + languages.yml + log4rs.yml
+├── config/projects/         # Sample project configs (*.yml)
 ├── frontend/                # Vue 3 + TS (pnpm)
-└── build.ps1                # One-click build script (Go + pnpm → dist/)
+└── build.ps1                # One-click build script (Go + pnpm → build/bin/)
 ```
 
 ## Build
@@ -44,41 +43,24 @@ Export modes: `full` · `files` · `symbols` · `signatures` · `custom`.
 Requirements: **Go 1.22+**, **Node + pnpm**, optional **Wails v2 CLI** (`go install github.com/wailsapp/wails/v2/cmd/wails@latest`).
 
 ```powershell
-.\build.ps1                # full build → dist/
-.\build.ps1 -Clean         # wipe dist/ first
+.\build.ps1                # full build → build/bin/
+.\build.ps1 -Clean         # wipe build/bin/ first
 .\build.ps1 -SkipFrontend  # skip frontend build
 ```
 
-Output in `dist/`:
+Output in `build/bin/`:
 
 ```
-dist/
+build/bin/
 ├── project-docs-gui.exe    # Desktop GUI (Wails)
-├── project-docs.exe        # Headless CLI
-├── assets/langs.yml
-└── config/                 # projects/*.yml + languages.yml + log4rs.yml
+└── assets/langs.yml
 ```
 
 ## Usage
 
 ### GUI
 
-Run `dist\project-docs-gui.exe`. Default projects directory is `config/projects` (relative to the exe's working directory). Flow: pick a project → scan & check files → choose mode → export. Progress and errors are shown inline; empty/bad paths produce explicit error messages.
-
-### CLI (headless)
-
-```powershell
-# Single project
-project-docs.exe --config config/projects/project1.yml --langs config/languages.yml --out output
-
-# Batch: all *.yml in a directory
-project-docs.exe --projects config/projects --langs config/languages.yml --out output
-
-# Override export mode
-project-docs.exe --config config/projects/project1.yml --mode files
-```
-
-Modes: `full` (default) | `files` | `symbols` | `signatures`. If the config sets `split_tokens > 0`, output is chunked into `name.part1.md … name.partN.md`.
+Run `build\bin\project-docs-gui.exe`. Default projects directory is `config/projects` (relative to the exe's working directory). Flow: pick a project → scan & check files → choose mode → export. Progress and errors are shown inline; empty/bad paths produce explicit error messages.
 
 ## Configuration
 

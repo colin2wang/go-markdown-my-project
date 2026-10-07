@@ -5,6 +5,8 @@ export namespace app {
 	    redact: boolean;
 	    splitTokens: number;
 	    fileOverrides: string[];
+	    includeLineNumbers?: boolean;
+	    maxSignatureLen: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new ExportOptions(source);
@@ -16,6 +18,8 @@ export namespace app {
 	        this.redact = source["redact"];
 	        this.splitTokens = source["splitTokens"];
 	        this.fileOverrides = source["fileOverrides"];
+	        this.includeLineNumbers = source["includeLineNumbers"];
+	        this.maxSignatureLen = source["maxSignatureLen"];
 	    }
 	}
 	export class ExportResult {
@@ -72,6 +76,24 @@ export namespace app {
 	        this.outputFile = source["outputFile"];
 	        this.exportMode = source["exportMode"];
 	        this.markdownLang = source["markdownLang"];
+	    }
+	}
+	export class SensitiveHit {
+	    file: string;
+	    line: number;
+	    rule: string;
+	    masked: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SensitiveHit(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.file = source["file"];
+	        this.line = source["line"];
+	        this.rule = source["rule"];
+	        this.masked = source["masked"];
 	    }
 	}
 

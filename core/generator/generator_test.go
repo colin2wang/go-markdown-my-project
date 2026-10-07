@@ -171,6 +171,73 @@ func normalizeCRLF(s string) string {
 	return strings.ReplaceAll(s, "\r\n", "\n")
 }
 
+// TestSymbolModes 锁定 symbols / signatures 两种导出模式的输出（设计文档 §6）。
+func TestSymbolModes(t *testing.T) {
+	root := "/proj"
+	results := []scanner.FileResult{
+		{
+			FullPath: filepath.Join(root, "src", "main.go"),
+			Content: `package main
+
+type Server struct {
+	Port int
+}
+
+func (s *Server) Start() error {
+	return nil
+}
+
+func main() {
+}
+`,
+		},
+		{
+			FullPath: filepath.Join(root, "assets", "logo.svg"),
+			Content:  `<svg></svg>`,
+		},
+	}
+	langs := map[string]string{"go": "go"}
+
+	symOut, err := Generate(results, Options{
+		ProjectName: "demo", ProjectRoot: root, Lang: "zh_cn",
+		Mode: ModeSymbols, Languages: langs,
+		IncludeLineNumbers: true, MaxSignatureLen: 200,
+	})
+	if err != nil {
+		t.Fatalf("symbols 生成失败: %v", err)
+	}
+	if !strings.Contains(symOut, "## 符号目录") {
+		t.Errorf("symbols 缺少标题，got:\n%s", symOut)
+	}
+	if !strings.Contains(symOut, "- [method] Start · L7") {
+		t.Errorf("symbols 应包含分组方法 Start，got:\n%s", symOut)
+	}
+	if !strings.Contains(symOut, "未识别到符号") {
+		t.Errorf("svg 应标记未识别符号，got:\n%s", symOut)
+	}
+
+	sigOut, err := Generate(results, Options{
+		ProjectName: "demo", ProjectRoot: root, Lang: "zh_cn",
+		Mode: ModeSignatures, Languages: langs,
+		IncludeLineNumbers: true, MaxSignatureLen: 200,
+	})
+	if err != nil {
+		t.Fatalf("signatures 生成失败: %v", err)
+	}
+	if !strings.Contains(sigOut, "## API 签名") {
+		t.Errorf("signatures 缺少标题，got:\n%s", sigOut)
+	}
+	if !strings.Contains(sigOut, "```go") {
+		t.Errorf("signatures 应有 go 代码块，got:\n%s", sigOut)
+	}
+	if !strings.Contains(sigOut, "func (s *Server) Start() error") {
+		t.Errorf("signatures 应包含规范化方法签名，got:\n%s", sigOut)
+	}
+	if strings.Contains(sigOut, "logo.svg") {
+		t.Errorf("signatures 应跳过无符号文件，got:\n%s", sigOut)
+	}
+}
+
 func ctxRange(r []rune, i int) string {
 	lo := i - 30
 	if lo < 0 {
