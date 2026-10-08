@@ -91,9 +91,17 @@ func (a *App) ListProjects(projectsDir string) ([]ProjectSummary, error) {
 		logger.Warn(i18n.T("log.listProjectsDirNotFound"), "dir", projectsDir)
 		return nil, fmt.Errorf("%s", i18n.T("err.projectsDirNotFound", "dir", projectsDir, "wd", wd()))
 	}
-	matches, err := filepath.Glob(filepath.Join(projectsDir, "*.yml"))
+	// 用 ReadDir + 后缀过滤而非 Glob：Glob 会把路径里的 [ ] * ? 当元字符，
+	// 导致含 [] 的目录（如 [OpsTools]）匹配不到任何配置
+	entries, err := os.ReadDir(projectsDir)
 	if err != nil {
 		return nil, err
+	}
+	var matches []string
+	for _, e := range entries {
+		if !e.IsDir() && strings.EqualFold(filepath.Ext(e.Name()), ".yml") {
+			matches = append(matches, filepath.Join(projectsDir, e.Name()))
+		}
 	}
 	sort.Strings(matches)
 	var out []ProjectSummary
@@ -113,9 +121,9 @@ func (a *App) ListProjects(projectsDir string) ([]ProjectSummary, error) {
 	return out, nil
 }
 
-// LoadProject 加载单个项目配置。
+// LoadProject 加载单个项目配置（仅解析不校验：project_path 失效等也应能打开编辑器修复）。
 func (a *App) LoadProject(configPath string) (*config.ProjectConfig, error) {
-	return config.Load(configPath)
+	return config.Parse(configPath)
 }
 
 // SaveProject 保存项目配置（新建或编辑），校验后写回。
