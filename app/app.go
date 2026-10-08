@@ -331,8 +331,8 @@ func (a *App) ScanProject(cfg config.ProjectConfig) ([]FileInfo, error) {
 	return out, nil
 }
 
-// buildExport 扫描并生成导出内容（RunExport 与 PreviewExport 共用）。
-func buildExport(cfg config.ProjectConfig, opt ExportOptions) (string, generator.ExportMode, int, error) {
+// prepareExport 导出前公共准备：解析勾选覆盖、扫描、语言映射、模式判定与压缩预处理。
+func prepareExport(cfg config.ProjectConfig, opt ExportOptions) ([]scanner.FileResult, map[string]string, generator.ExportMode, int, error) {
 	// GUI 勾选覆盖配置
 	files, dirs := cfg.Files, cfg.Directories
 	if len(opt.FileOverrides) > 0 {
@@ -351,13 +351,13 @@ func buildExport(cfg config.ProjectConfig, opt ExportOptions) (string, generator
 
 	results, err := scanner.ProcessFiles(scanOpts(cfg, files, dirs))
 	if err != nil {
-		return "", "", 0, err
+		return nil, nil, "", 0, err
 	}
 	scanner.SortByRelPath(results)
 
 	langs, err := generator.LoadLanguages(languagesPath())
 	if err != nil {
-		return "", "", 0, fmt.Errorf("加载语言映射失败: %w", err)
+		return nil, nil, "", 0, fmt.Errorf("加载语言映射失败: %w", err)
 	}
 
 	mode := generator.ExportMode(opt.Mode)
@@ -369,65 +369,120 @@ func buildExport(cfg config.ProjectConfig, opt ExportOptions) (string, generator
 		}
 	}
 
-	includeLineNumbers := true
-	if opt.IncludeLineNumbers != nil {
-		includeLineNumbers = *opt.IncludeLineNumbers
-	}
-	maxSig := opt.MaxSignatureLen
-	if maxSig <= 0 {
-		maxSig = 200
-	}
-
 	// 压缩输出 T2：大括号类语言（缩进不承载语法）剥除行首缩进，
-	// 仅作用于源码文件内容；Markdown 结构（列表/引用缩进）不受影响
+	// 仅作用于源码文件内容；Markdown 结构（列表/引用缩进）不受影响。
+	// T1 逐文件精简：分片路径按文件单元装箱，逐文件处理保证每片同样精简
 	if opt.Compress {
 		for i := range results {
 			if compress.IsBraceLanguage(generator.LanguageFor(langs, results[i].FullPath)) {
 				results[i].Content = compress.StripIndent(results[i].Content)
 			}
+			results[i].Content = compress.Minify(results[i].Content)
 		}
 	}
+	return results, langs, mode, len(results), nil
+}
 
+// maxSignatureLen 导出签名长度上限（≤0 → 默认 200）。
+func maxSignatureLen(opt ExportOptions) int {
+	if opt.MaxSignatureLen <= 0 {
+		return 200
+	}
+	return opt.MaxSignatureLen
+}
+
+// buildExport 扫描并生成完整导出内容（PreviewExport 使用；分片见 RunExport）。
+func buildExport(cfg config.ProjectConfig, opt ExportOptions) (string, generator.ExportMode, int, error) {
+	results, langs, mode, fileCount, err := prepareExport(cfg, opt)
+	if err != nil {
+		return "", "", 0, err
+	}
 	content, err := generator.Generate(results, generator.Options{
 		ProjectName:        cfg.ProjectName,
 		ProjectRoot:        cfg.ProjectPath,
 		Lang:               cfg.MarkdownLang,
 		Mode:               mode,
 		Languages:          langs,
-		IncludeLineNumbers: includeLineNumbers,
-		MaxSignatureLen:    maxSig,
+		IncludeLineNumbers: opt.IncludeLineNumbers == nil || *opt.IncludeLineNumbers,
+		MaxSignatureLen:    maxSignatureLen(opt),
 	})
 	if err != nil {
 		return "", "", 0, err
 	}
-	// 压缩输出：空白精简（裁行尾空白、折叠连续空行），保持代码语法不变
+	// 压缩输出：整篇空白精简（与逐文件精简叠加，覆盖脚手架文本）
 	if opt.Compress {
 		content = compress.Minify(content)
 	}
-	return content, mode, len(results), nil
+	return content, mode, fileCount, nil
 }
 
 // RunExport 执行导出（GUI 主流程）。结果与进度经事件推送，此处同步返回结果。
 func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResult, error) {
 	start := time.Now()
 
-	content, mode, fileCount, err := buildExport(cfg, opt)
+	results, langs, mode, fileCount, err := prepareExport(cfg, opt)
 	if err != nil {
 		return ExportResult{}, err
 	}
-
-	outPath, err := generator.WriteOutput("output", cfg.OutputFile, content)
-	if err != nil {
-		return ExportResult{}, err
+	genOpts := generator.Options{
+		ProjectName:        cfg.ProjectName,
+		ProjectRoot:        cfg.ProjectPath,
+		Lang:               cfg.MarkdownLang,
+		Mode:               mode,
+		Languages:          langs,
+		IncludeLineNumbers: opt.IncludeLineNumbers == nil || *opt.IncludeLineNumbers,
+		MaxSignatureLen:    maxSignatureLen(opt),
 	}
-	if opt.Compress {
-		logger.Info(i18n.T("log.compressDone"), "out", outPath, "bytes", len(content))
+
+	var outPaths []string
+	var content string
+
+	if mode == generator.ModeFull && opt.SplitTokens > 0 {
+		// Token 限制分片（§7.5）：以文件为最小单位贪心装箱，产出 xxx.partN.md；
+		// 单文件超过上限时独占一片，内容不截断
+		preamble, parts := generator.FullParts(results, genOpts)
+		if opt.Compress {
+			preamble = compress.Minify(preamble)
+		}
+		units := make([]token.FileUnit, len(parts))
+		for i, p := range parts {
+			units[i] = token.FileUnit{Path: p.RelPath, Content: p.Content}
+		}
+		chunks := token.Split(units, opt.SplitTokens, preamble)
+		ext := filepath.Ext(cfg.OutputFile)
+		base := strings.TrimSuffix(cfg.OutputFile, ext)
+		for _, c := range chunks {
+			name := fmt.Sprintf("%s.part%d%s", base, c.Index, ext)
+			p, werr := generator.WriteOutput("output", name, c.Content)
+			if werr != nil {
+				return ExportResult{}, werr
+			}
+			outPaths = append(outPaths, p)
+			content += c.Content
+		}
+		logger.Info(i18n.T("log.exportSplit"), "parts", len(chunks), "limit", opt.SplitTokens)
+	} else {
+		content, err = generator.Generate(results, genOpts)
+		if err != nil {
+			return ExportResult{}, err
+		}
+		if opt.Compress {
+			content = compress.Minify(content)
+		}
+		outPath, werr := generator.WriteOutput("output", cfg.OutputFile, content)
+		if werr != nil {
+			return ExportResult{}, werr
+		}
+		outPaths = []string{outPath}
+		if opt.Compress {
+			logger.Info(i18n.T("log.compressDone"), "out", outPath, "bytes", len(content))
+		}
 	}
 
-	logger.Info(i18n.T("log.exportDone"), "mode", string(mode), "files", fileCount, "chars", len([]rune(content)), "out", outPath, "ms", time.Since(start).Milliseconds())
+	logger.Info(i18n.T("log.exportDone"), "mode", string(mode), "files", fileCount, "chars", len([]rune(content)), "out", strings.Join(outPaths, ","), "ms", time.Since(start).Milliseconds())
 
 	return ExportResult{
-		OutputPaths: []string{outPath},
+		OutputPaths: outPaths,
 		TotalChars:  len([]rune(content)),
 		TokenCount:  token.EstimateTokens(content),
 		OutputBytes: int64(len(content)),

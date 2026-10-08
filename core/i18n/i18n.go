@@ -69,6 +69,11 @@ var dicts = map[string]map[Locale]string{
 		EnUS: "Preview export content (no file written)",
 		JaJP: "エクスポート内容をプレビュー（ファイル未書き込み）",
 	},
+	"log.exportSplit": {
+		ZhCN: "已按 token 限制分片输出",
+		EnUS: "Output split by token limit",
+		JaJP: "トークン制限により出力を分割しました",
+	},
 	"log.compressDone": {
 		ZhCN: "输出已压缩",
 		EnUS: "Output compressed",

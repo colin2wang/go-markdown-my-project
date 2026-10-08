@@ -137,8 +137,15 @@ func Generate(results []scanner.FileResult, opts Options) (string, error) {
 	}
 }
 
-// generateFull 对齐 generate_markdown 的完整输出。
-func generateFull(sorted []scanner.FileResult, opts Options) string {
+// FullPart full 模式下可装箱的文件章节。
+type FullPart struct {
+	RelPath string // 展示路径（原生分隔符，与章节标题一致）
+	Content string // 完整章节（### 标题 + 代码块 + 尾空行）
+}
+
+// FullParts 拆解 full 模式输出：preamble（标题+文件树+清单标题）+ 逐文件章节。
+// preamble 与全部章节按序拼接后，与 generateFull 的输出逐字节一致。
+func FullParts(sorted []scanner.FileResult, opts Options) (string, []FullPart) {
 	title := localizedText("project_documentation", opts.Lang)
 	var b strings.Builder
 	fmt.Fprintf(&b, "# %s for %s\n\n", title, opts.ProjectName)
@@ -153,11 +160,26 @@ func generateFull(sorted []scanner.FileResult, opts Options) string {
 	filesHeading := localizedText("project_files", opts.Lang)
 	fileLabel := localizedText("file_label", opts.Lang)
 	fmt.Fprintf(&b, "## %s\n\n", filesHeading)
+
+	parts := make([]FullPart, 0, len(sorted))
 	for _, fr := range sorted {
 		// 对齐旧版：display_path 用原生分隔符（Windows 下为 \），保证 byte-equal
 		rel := relPathNative(fr.FullPath, opts.ProjectRoot)
 		lang := languageFor(opts.Languages, fr.FullPath)
-		fmt.Fprintf(&b, "### %s: `%s`\n\n```%s\n%s\n```\n\n", fileLabel, rel, lang, fr.Content)
+		var s strings.Builder
+		fmt.Fprintf(&s, "### %s: `%s`\n\n```%s\n%s\n```\n\n", fileLabel, rel, lang, fr.Content)
+		parts = append(parts, FullPart{RelPath: rel, Content: s.String()})
+	}
+	return b.String(), parts
+}
+
+// generateFull 对齐 generate_markdown 的完整输出。
+func generateFull(sorted []scanner.FileResult, opts Options) string {
+	preamble, parts := FullParts(sorted, opts)
+	var b strings.Builder
+	b.WriteString(preamble)
+	for _, p := range parts {
+		b.WriteString(p.Content)
 	}
 	return b.String()
 }
