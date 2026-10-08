@@ -150,6 +150,7 @@ async function doPreview() {
   if (!projects.current) return;
   previewing.value = true;
   exp.redact = redactEnabled.value;
+  exp.result = null; // 预览优先于旧导出结果卡片（与 doExport 清 previewData 对称）
   try {
     previewData.value = await exp.preview(projects.current);
     if (previewData.value) log.info(t('wb.logPreviewOk', { chars: fmtNum(previewData.value.totalChars) }));
