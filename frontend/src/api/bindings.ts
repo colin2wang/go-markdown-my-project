@@ -106,9 +106,12 @@ export const api = {
     return (await go()?.DefaultProjectsDir()) ?? 'config/projects';
   },
   async pathExists(path: string): Promise<{ exists: boolean; isDir: boolean }> {
-    // Go 多返回值 (bool, bool) 绑定为 [boolean, boolean]
+    // 后端返回结构体 PathCheck {exists, isDir}
     const r = await go()?.PathExists(path);
-    return { exists: !!r?.[0], isDir: !!r?.[1] };
+    return { exists: !!r?.exists, isDir: !!r?.isDir };
+  },
+  async listSubdirs(path: string): Promise<string[]> {
+    return (await go()?.ListSubdirs(path)) ?? [];
   },
   async openPath(path: string): Promise<void> {
     return go()?.OpenPath(path);

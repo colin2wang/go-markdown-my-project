@@ -18,6 +18,8 @@ const emit = defineEmits<{ (e: 'update:modelValue', v: string[]): void }>();
 
 const log = useLogStore();
 const input = ref('');
+const multi = ref(false); // 勾选后「从磁盘选…」进入连续添加模式
+const allSubdirs = ref(false); // 勾选后「从磁盘选…」一次性加入所选目录的全部直接子目录
 
 function add(raw: string) {
   const items = raw.split(/[,\n]/).map((s) => s.trim().replace(/\\/g, '/')).filter(Boolean);
@@ -63,10 +65,27 @@ function toRelative(dir: string): string {
   return dir;
 }
 
+// 多选框勾选时进入连续选择模式：每选中一个目录立即加入列表并继续弹窗，
+// 取消（返回空）时结束；未勾选则单选一次。
+// 「添加所有子文件夹」勾选时，选中目录后改为一次性加入其全部直接子目录。
 async function browse() {
-  const dir = await api.selectDirectory(props.basePath ?? '');
-  if (!dir) return;
-  add(toRelative(dir));
+  let start = props.basePath ?? '';
+  let count = 0;
+  do {
+    const dir = await api.selectDirectory(start);
+    if (!dir) break;
+    if (allSubdirs.value) {
+      const subs = await api.listSubdirs(dir);
+      if (subs.length) add(subs.map((s) => toRelative(s)).join('\n'));
+      else log.warn(t('editor.noSubdirs', { dir }));
+      count += subs.length;
+    } else {
+      add(toRelative(dir));
+      count++;
+    }
+    start = dir; // 下一次从刚选的目录打开，便于选同级/子目录
+  } while (multi.value);
+  if (count > 1) log.info(t('editor.dirsPicked', { n: count }));
 }
 </script>
 
@@ -87,7 +106,11 @@ async function browse() {
         @blur="input.trim() && add(input)"
       />
     </div>
-    <button v-if="dirSelect" type="button" class="browse" :disabled="disabled" @click="browse">📂 {{ t('editor.browseDisk') }}</button>
+    <div v-if="dirSelect" class="browse-row">
+      <button type="button" class="browse" :disabled="disabled" @click="browse">📂 {{ t('editor.browseDisk') }}</button>
+      <label class="multi"><input v-model="multi" type="checkbox" :disabled="disabled" />{{ t('editor.multiPick') }}</label>
+      <label class="multi"><input v-model="allSubdirs" type="checkbox" :disabled="disabled" />{{ t('editor.allSubdirs') }}</label>
+    </div>
     <p v-if="error" class="field-error">{{ error }}</p>
   </div>
 </template>
@@ -101,6 +124,9 @@ async function browse() {
 .tags input.invalid { border: 1px solid #c53030; border-radius: 3px; }
 .browse { margin-top: 4px; background: #1f2d3d; color: #eee; border: 1px solid #3a4a5c; border-radius: 4px; padding: 3px 8px; font-size: 12px; cursor: pointer; }
 .browse:disabled { opacity: .4; cursor: not-allowed; }
+.browse-row { display: flex; align-items: center; gap: 10px; }
+.multi { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #8fa3b8; cursor: pointer; user-select: none; }
+.multi input { cursor: pointer; }
 .disabled { opacity: .5; }
 input.invalid { border-color: #c53030; }
 .field-error { color: #ff8383; font-size: 11px; margin: 3px 0 0 2px; }

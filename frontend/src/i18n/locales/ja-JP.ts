@@ -183,6 +183,9 @@ const jaJP: Messages = {
     strategyDropLine: '行全体を削除',
     exportModeCustom: 'カスタムテンプレート',
     browseDisk: 'ディスクから選択…',
+    multiPick: '連続追加',
+    allSubdirs: 'すべてのサブフォルダを追加',
+    noSubdirs: 'サブフォルダがありません: {dir}',
     pathChecking: '検証中…',
     pathValid: '● 有効なディレクトリ',
     pathNotFound: '● パスが存在しません',
@@ -222,6 +225,7 @@ const jaJP: Messages = {
     errExcludeEmpty: '除外パターンを空にできません',
     errRegex: '正規表現が無効: {err}',
     tagDupIgnored: '重複 {n} 件を無視しました',
+    dirsPicked: '{n} 件のディレクトリを追加しました',
   },
   wizard: {
     titleNew: '新規プロジェクトウィザード',

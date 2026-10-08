@@ -183,6 +183,9 @@ const enUS: Messages = {
     strategyDropLine: 'Drop the whole line',
     exportModeCustom: 'Custom template',
     browseDisk: 'Pick from disk…',
+    multiPick: 'Multi-pick',
+    allSubdirs: 'Add all subfolders',
+    noSubdirs: 'No subfolders in: {dir}',
     pathChecking: 'Checking…',
     pathValid: '● Directory valid',
     pathNotFound: '● Path not found',
@@ -222,6 +225,7 @@ const enUS: Messages = {
     errExcludeEmpty: 'Exclude patterns must not be empty',
     errRegex: 'Invalid regex: {err}',
     tagDupIgnored: '{n} duplicate item(s) ignored',
+    dirsPicked: 'Added {n} directories',
   },
   wizard: {
     titleNew: 'New project wizard',

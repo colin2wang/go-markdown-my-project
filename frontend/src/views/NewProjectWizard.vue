@@ -52,6 +52,13 @@ async function checkPath() {
   const p = form.value.project_path.trim();
   if (!p) { pathChecked.value = null; return; }
   pathChecked.value = await api.pathExists(p);
+  // 路径有效且名称未填时，用路径最后的文件夹名作为项目名称
+  if (pathChecked.value.exists && pathChecked.value.isDir && !form.value.project_name) {
+    form.value.project_name = p.split(/[\\/]/).filter(Boolean).pop() ?? '';
+    if (!form.value.output_file || form.value.output_file === 'output.md') {
+      form.value.output_file = (form.value.project_name || 'output') + '.md';
+    }
+  }
 }
 
 watch(() => form.value.project_path, () => { pathChecked.value = null; });

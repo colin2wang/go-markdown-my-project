@@ -98,7 +98,8 @@ func (a *App) ListProjects(projectsDir string) ([]ProjectSummary, error) {
 	sort.Strings(matches)
 	var out []ProjectSummary
 	for _, p := range matches {
-		cfg, err := config.Load(p)
+		// 仅解析不校验：路径失效/部分字段缺失的配置也要在列表中展示，便于用户修复
+		cfg, err := config.Parse(p)
 		if err != nil {
 			// 单个配置损坏不阻断列表，但要记录原因便于排查
 			logger.Warn(i18n.T("log.listProjectsLoadFail"), "path", p, "err", err)
@@ -453,13 +454,37 @@ func (a *App) DefaultProjectsDir() string {
 	return filepath.Join(wd(), "config", "projects")
 }
 
-// PathExists 判断路径是否存在；是目录时 second 返回 true。
-func (a *App) PathExists(path string) (bool, bool) {
+// PathCheck 路径存在性校验结果。
+type PathCheck struct {
+	Exists bool `json:"exists"`
+	IsDir  bool `json:"isDir"`
+}
+
+// PathExists 判断路径是否存在；是目录时 IsDir 为 true。
+// 返回结构体而非多返回值：Wails 对 (bool, bool) 的绑定易生歧义。
+func (a *App) PathExists(path string) PathCheck {
 	info, err := os.Stat(path)
 	if err != nil {
-		return false, false
+		return PathCheck{}
 	}
-	return true, info.IsDir()
+	return PathCheck{Exists: true, IsDir: info.IsDir()}
+}
+
+// ListSubdirs 返回目录下所有直接子目录的完整路径（不递归）；目录不存在或无子目录时返回空。
+// 供「添加所有子文件夹」一键填充包含目录列表。
+func (a *App) ListSubdirs(path string) []string {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return []string{}
+	}
+	var out []string
+	for _, e := range entries {
+		if e.IsDir() {
+			out = append(out, filepath.Join(path, e.Name()))
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // OpenPath 用系统默认程序打开文件所在目录（select 不选中文件）或目录本身。

@@ -182,6 +182,9 @@ const zhCN = {
     strategyDropLine: '删除整行',
     exportModeCustom: '自定义模板',
     browseDisk: '从磁盘选…',
+    multiPick: '连续添加',
+    allSubdirs: '添加所有子文件夹',
+    noSubdirs: '该目录下没有子文件夹：{dir}',
     pathChecking: '校验中…',
     pathValid: '● 目录有效',
     pathNotFound: '● 路径不存在',
@@ -221,6 +224,7 @@ const zhCN = {
     errExcludeEmpty: '排除规则不能为空',
     errRegex: '正则无效: {err}',
     tagDupIgnored: '重复项已忽略 {n} 条',
+    dirsPicked: '已添加 {n} 个目录',
   },
   wizard: {
     titleNew: '新建项目向导',

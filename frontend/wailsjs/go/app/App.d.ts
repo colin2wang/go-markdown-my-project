@@ -9,11 +9,13 @@ export function DeleteProject(arg1:string):Promise<void>;
 
 export function ListProjects(arg1:string):Promise<Array<app.ProjectSummary>>;
 
+export function ListSubdirs(arg1:string):Promise<Array<string>>;
+
 export function LoadProject(arg1:string):Promise<config.ProjectConfig>;
 
 export function OpenPath(arg1:string):Promise<void>;
 
-export function PathExists(arg1:string):Promise<boolean|boolean>;
+export function PathExists(arg1:string):Promise<app.PathCheck>;
 
 export function PreviewScan(arg1:config.ProjectConfig):Promise<app.ScanPreview>;
 

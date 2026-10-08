@@ -5,7 +5,13 @@ import { api } from '../../api/bindings';
 import { useI18n } from '../../i18n';
 
 const { t } = useI18n();
-const props = defineProps<{ modelValue: string; placeholder?: string; error?: string }>();
+const props = defineProps<{
+  modelValue: string;
+  placeholder?: string;
+  error?: string;
+  /** 校验完成时回调，携带结果（供父组件联动填充，如自动填项目名） */
+  validated?: (r: { exists: boolean; isDir: boolean }) => void;
+}>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>();
 
 const checkState = ref<'idle' | 'checking' | 'valid' | 'notfound' | 'notdir'>('idle');
@@ -23,6 +29,7 @@ watch(
         if (!r.exists) checkState.value = 'notfound';
         else if (!r.isDir) checkState.value = 'notdir';
         else checkState.value = 'valid';
+        props.validated?.(r);
       } catch {
         checkState.value = 'idle';
       }

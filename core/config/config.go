@@ -50,6 +50,18 @@ var supportedOutputExts = map[string]bool{
 
 // Load 从 YAML 文件读取并校验配置。
 func Load(configPath string) (*ProjectConfig, error) {
+	cfg, err := Parse(configPath)
+	if err != nil {
+		return nil, err
+	}
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid configuration in: %s: %w", configPath, err)
+	}
+	return cfg, nil
+}
+
+// Parse 仅解析 YAML 不做语义校验（供项目列表展示损坏/路径失效的配置）。
+func Parse(configPath string) (*ProjectConfig, error) {
 	content, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration file: %s: %w", configPath, err)
@@ -58,8 +70,8 @@ func Load(configPath string) (*ProjectConfig, error) {
 	if err := yaml.Unmarshal(content, cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse configuration file: %s: %w", configPath, err)
 	}
-	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid configuration in: %s: %w", configPath, err)
+	if cfg.MarkdownLang == "" {
+		cfg.MarkdownLang = "en_us"
 	}
 	return cfg, nil
 }

@@ -14,6 +14,10 @@ export function ListProjects(arg1) {
   return window['go']['app']['App']['ListProjects'](arg1);
 }
 
+export function ListSubdirs(arg1) {
+  return window['go']['app']['App']['ListSubdirs'](arg1);
+}
+
 export function LoadProject(arg1) {
   return window['go']['app']['App']['LoadProject'](arg1);
 }

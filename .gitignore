@@ -5,9 +5,13 @@ dist/
 # Frontend
 frontend/dist/
 frontend/node_modules/
+frontend/package.json.md5
 
 # IDEs
 .idea/
 
 # Commit
 COMMIT.md
+
+# Logs
+logs/

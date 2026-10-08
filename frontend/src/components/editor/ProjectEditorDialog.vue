@@ -45,6 +45,18 @@ function scrollTo(id: string) {
   leftPane.value?.querySelector(`#${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// 项目路径校验通过后，名称为空则自动填入路径最后的文件夹名（新建时顺带联动输出文件）
+function onPathValidated(r: { exists: boolean; isDir: boolean }) {
+  if (!ed.draft || !r.exists || !r.isDir) return;
+  if (ed.draft.project_name.trim()) return;
+  const name = ed.draft.project_path.trim().split(/[\\/]/).filter(Boolean).pop() ?? '';
+  if (!name) return;
+  ed.draft.project_name = name;
+  if (!ed.draft.output_file || ed.draft.output_file === 'output.md') {
+    ed.draft.output_file = `${name}.md`;
+  }
+}
+
 async function onSave() {
   saveError.value = '';
   saving.value = true;
@@ -103,7 +115,7 @@ function onCancel() {
               </label>
               <p v-if="ed.errors.project_name" class="field-error">{{ ed.errors.project_name }}</p>
               <label>{{ t('editor.projectPath') }}</label>
-              <PathInput v-model="ed.draft!.project_path" placeholder="F:/path/to/project" :error="ed.errors.project_path" />
+              <PathInput v-model="ed.draft!.project_path" placeholder="F:/path/to/project" :error="ed.errors.project_path" :validated="onPathValidated" />
               <label>{{ t('editor.outputFile') }}
                 <input :value="ed.draft.output_file" :class="{ invalid: !!ed.errors.output_file }" @input="ed.draft!.output_file = ($event.target as HTMLInputElement).value" />
               </label>

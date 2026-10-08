@@ -70,6 +70,20 @@ export namespace app {
 	        this.lines = source["lines"];
 	    }
 	}
+	export class PathCheck {
+	    exists: boolean;
+	    isDir: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new PathCheck(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.exists = source["exists"];
+	        this.isDir = source["isDir"];
+	    }
+	}
 	export class ProjectSummary {
 	    configPath: string;
 	    name: string;
