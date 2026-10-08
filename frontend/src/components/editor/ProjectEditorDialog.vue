@@ -103,6 +103,7 @@ function onCancel() {
             <a @click="scrollTo('sec-basic')">{{ t('editor.anchorBasic') }}</a>
             <a @click="scrollTo('sec-scope')">{{ t('editor.anchorScope') }}</a>
             <a @click="scrollTo('sec-exclude')">{{ t('editor.anchorExclude') }}</a>
+            <a @click="scrollTo('sec-include')">{{ t('editor.anchorInclude') }}</a>
             <a @click="scrollTo('sec-export')">{{ t('editor.anchorExport') }}</a>
             <a @click="scrollTo('sec-redaction')">{{ t('editor.anchorRedaction') }}</a>
             <a @click="scrollTo('sec-preview')">{{ t('editor.anchorPreview') }}</a>
@@ -142,6 +143,14 @@ function onCancel() {
                 <input :value="ed.draft.max_file_size ?? 0" type="number" class="num" :class="{ invalid: !!ed.errors.max_file_size }" @input="ed.draft!.max_file_size = Number(($event.target as HTMLInputElement).value)" />
                 {{ t('editor.maxSizeSuffix') }}
               </label>
+            </EditorSection>
+
+            <EditorSection id="sec-include" icon="📥" :title="t('editor.sectionInclude')" :error-count="ed.errors.include_patterns ? 1 : 0">
+              <label class="inline"><input v-model="ed.includeEnabled" type="checkbox" /> {{ t('editor.includeEnabled') }}</label>
+              <template v-if="ed.includeEnabled">
+                <label>{{ t('editor.includePatterns') }}</label>
+                <TagListInput v-model="ed.draft!.include_patterns!" :placeholder="t('editor.phIncludePatterns')" :error="ed.errors.include_patterns" />
+              </template>
             </EditorSection>
 
             <EditorSection id="sec-export" icon="📤" :title="t('editor.sectionExport')">

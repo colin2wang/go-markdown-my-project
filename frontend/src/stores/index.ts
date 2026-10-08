@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import type { ProjectSummary, ProjectConfig, FileInfo, ExportOptions, ExportResult } from '../api/bindings';
+import type { ProjectSummary, ProjectConfig, FileInfo, ExportOptions, ExportResult, PreviewResult } from '../api/bindings';
 import { api } from '../api/bindings';
 
 export const useProjectsStore = defineStore('projects', () => {
@@ -44,6 +44,7 @@ export const useExportStore = defineStore('export', () => {
   const mode = ref<string>('full');
   const redact = ref(true);
   const splitTokens = ref(0);
+  const compress = ref(false); // 压缩输出（.gz），默认关
   const includeLineNumbers = ref(true);
   const maxSignatureLen = ref(200);
   const result = ref<ExportResult | null>(null);
@@ -53,18 +54,27 @@ export const useExportStore = defineStore('export', () => {
     checkedPaths.value = new Set(files.value.map((f) => f.path));
   }
 
-  async function run(cfg: ProjectConfig) {
-    const opt: ExportOptions = {
+  function buildOptions(): ExportOptions {
+    return {
       mode: mode.value,
       redact: redact.value,
       splitTokens: splitTokens.value,
+      compress: compress.value,
       fileOverrides: [...checkedPaths.value],
       includeLineNumbers: includeLineNumbers.value,
       maxSignatureLen: maxSignatureLen.value,
     };
-    result.value = await api.runExport(cfg, opt);
+  }
+
+  async function run(cfg: ProjectConfig) {
+    result.value = await api.runExport(cfg, buildOptions());
     return result.value;
   }
 
-  return { files, checkedPaths, mode, redact, splitTokens, includeLineNumbers, maxSignatureLen, result, scan, run };
+  /** 干跑预览：生成完整内容但不写盘 */
+  async function preview(cfg: ProjectConfig): Promise<PreviewResult | null> {
+    return api.previewExport(cfg, buildOptions());
+  }
+
+  return { files, checkedPaths, mode, redact, splitTokens, compress, includeLineNumbers, maxSignatureLen, result, scan, run, preview };
 });

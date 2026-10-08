@@ -10,6 +10,9 @@ export interface ProjectConfig {
   directories?: string[];
   exclude_directories?: string[];
   exclude_patterns?: string[];
+  /** 包含规则：激活时仅加载匹配 include_patterns 的文件 */
+  include_enabled?: boolean;
+  include_patterns?: string[];
   max_file_size?: number;
   export_mode?: string;
   redaction?: {
@@ -43,6 +46,8 @@ export interface ExportOptions {
   mode: string;
   redact: boolean;
   splitTokens: number;
+  /** 精简空白输出（裁剪行尾空白、折叠空行，保持语法） */
+  compress?: boolean;
   fileOverrides: string[];
   includeLineNumbers?: boolean;
   maxSignatureLen?: number;
@@ -51,7 +56,19 @@ export interface ExportOptions {
 export interface ExportResult {
   outputPaths: string[];
   totalChars: number;
+  /** 按实际导出内容估算的 token 数（后端计算） */
+  tokenCount: number;
+  /** 输出文件字节数（启用空白精简后为精简后大小） */
+  outputBytes?: number;
   durationMs: number;
+}
+
+export interface PreviewResult {
+  /** 展示用内容（超长截断） */
+  content: string;
+  totalChars: number;
+  tokenCount: number;
+  truncated: boolean;
 }
 
 export interface SensitiveHit {
@@ -98,6 +115,9 @@ export const api = {
   },
   async runExport(cfg: ProjectConfig, opt: ExportOptions): Promise<ExportResult> {
     return go()?.RunExport(cfg, opt);
+  },
+  async previewExport(cfg: ProjectConfig, opt: ExportOptions): Promise<PreviewResult | null> {
+    return (await go()?.PreviewExport(cfg, opt)) ?? null;
   },
   async selectDirectory(startDir = ''): Promise<string> {
     return (await go()?.SelectDirectory(startDir)) ?? '';

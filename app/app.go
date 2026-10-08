@@ -14,12 +14,14 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"go-markdown-my-project/core/compress"
 	"go-markdown-my-project/core/config"
 	"go-markdown-my-project/core/generator"
 	"go-markdown-my-project/core/i18n"
 	"go-markdown-my-project/core/logger"
 	"go-markdown-my-project/core/redactor"
 	"go-markdown-my-project/core/scanner"
+	"go-markdown-my-project/core/token"
 )
 
 // FileInfo 前端展示的文件条目（ScanProject 结果）。
@@ -45,6 +47,7 @@ type ExportOptions struct {
 	Mode          string   `json:"mode"`
 	Redact        bool     `json:"redact"`
 	SplitTokens   int      `json:"splitTokens"`
+	Compress      bool     `json:"compress"`      // 空白精简输出（裁行尾空白、折叠空行，保持语法）
 	FileOverrides []string `json:"fileOverrides"` // GUI 勾选覆盖配置（相对路径）
 	// symbols / signatures 模式子选项
 	IncludeLineNumbers *bool `json:"includeLineNumbers"` // nil → 默认 true
@@ -55,7 +58,18 @@ type ExportOptions struct {
 type ExportResult struct {
 	OutputPaths []string `json:"outputPaths"`
 	TotalChars  int      `json:"totalChars"`
-	DurationMs  int64    `json:"durationMs"`
+	// TokenCount 按实际导出内容估算（CJK 1 字 ≈ 1 token，ASCII 4 字符 ≈ 1 token）
+	TokenCount  int   `json:"tokenCount"`
+	OutputBytes int64 `json:"outputBytes"` // 输出文件字节数
+	DurationMs  int64 `json:"durationMs"`
+}
+
+// PreviewResult 导出内容预览（干跑，不写盘）。
+type PreviewResult struct {
+	Content    string `json:"content"`    // 展示用内容（超长截断）
+	TotalChars int    `json:"totalChars"` // 完整内容字符数
+	TokenCount int    `json:"tokenCount"`
+	Truncated  bool   `json:"truncated"`
 }
 
 // App 暴露给前端的所有方法。
@@ -191,16 +205,24 @@ type ScanPreview struct {
 	Warnings   []string       `json:"warnings"`
 }
 
-// PreviewScan 保存前预检：文件数 / 总大小 / 语言分布 / 警告。
-func (a *App) PreviewScan(cfg config.ProjectConfig) (ScanPreview, error) {
-	results, err := scanner.ProcessFiles(scanner.Options{
+// scanOpts 由配置构造扫描选项（各入口共用，避免字段透传遗漏）。
+func scanOpts(cfg config.ProjectConfig, files, dirs []string) scanner.Options {
+	includeEnabled := cfg.IncludeEnabled != nil && *cfg.IncludeEnabled
+	return scanner.Options{
 		ProjectPath:        cfg.ProjectPath,
-		Files:              cfg.Files,
-		Directories:        cfg.Directories,
+		Files:              files,
+		Directories:        dirs,
 		ExcludeDirectories: cfg.ExcludeDirectories,
 		ExcludePatterns:    cfg.ExcludePatterns,
 		MaxFileSize:        cfg.MaxFileSize,
-	})
+		IncludeEnabled:     includeEnabled,
+		IncludePatterns:    cfg.IncludePatterns,
+	}
+}
+
+// PreviewScan 保存前预检：文件数 / 总大小 / 语言分布 / 警告。
+func (a *App) PreviewScan(cfg config.ProjectConfig) (ScanPreview, error) {
+	results, err := scanner.ProcessFiles(scanOpts(cfg, cfg.Files, cfg.Directories))
 	if err != nil {
 		return ScanPreview{}, err
 	}
@@ -246,14 +268,7 @@ type SensitiveHit struct {
 // ScanSensitive 扫描勾选文件的敏感信息（F99），返回掩码后的命中列表。
 func (a *App) ScanSensitive(cfg config.ProjectConfig, fileOverrides []string) ([]SensitiveHit, error) {
 	files, dirs := splitOverrides(cfg, fileOverrides)
-	results, err := scanner.ProcessFiles(scanner.Options{
-		ProjectPath:        cfg.ProjectPath,
-		Files:              files,
-		Directories:        dirs,
-		ExcludeDirectories: cfg.ExcludeDirectories,
-		ExcludePatterns:    cfg.ExcludePatterns,
-		MaxFileSize:        cfg.MaxFileSize,
-	})
+	results, err := scanner.ProcessFiles(scanOpts(cfg, files, dirs))
 	if err != nil {
 		return nil, err
 	}
@@ -289,14 +304,7 @@ func splitOverrides(cfg config.ProjectConfig, overrides []string) (files, dirs [
 
 // ScanProject 扫描项目，返回文件树条目（不读内容）。
 func (a *App) ScanProject(cfg config.ProjectConfig) ([]FileInfo, error) {
-	results, err := scanner.ProcessFiles(scanner.Options{
-		ProjectPath:        cfg.ProjectPath,
-		Files:              cfg.Files,
-		Directories:        cfg.Directories,
-		ExcludeDirectories: cfg.ExcludeDirectories,
-		ExcludePatterns:    cfg.ExcludePatterns,
-		MaxFileSize:        cfg.MaxFileSize,
-	})
+	results, err := scanner.ProcessFiles(scanOpts(cfg, cfg.Files, cfg.Directories))
 	if err != nil {
 		return nil, err
 	}
@@ -323,23 +331,16 @@ func (a *App) ScanProject(cfg config.ProjectConfig) ([]FileInfo, error) {
 	return out, nil
 }
 
-// RunExport 执行导出（GUI 主流程）。结果与进度经事件推送，此处同步返回结果。
-func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResult, error) {
-	start := time.Now()
-
+// buildExport 扫描并生成导出内容（RunExport 与 PreviewExport 共用）。
+func buildExport(cfg config.ProjectConfig, opt ExportOptions) (string, generator.ExportMode, int, error) {
 	// GUI 勾选覆盖配置
 	files, dirs := cfg.Files, cfg.Directories
 	if len(opt.FileOverrides) > 0 {
 		files, dirs = nil, nil
-		langs := map[string]bool{}
-		for _, f := range opt.FileOverrides {
-			langs[f] = true
-		}
-		_ = langs
 		// 简化：把勾选的相对路径分为文件与目录（无子路径标记的作为文件）
 		for _, rel := range opt.FileOverrides {
 			full := filepath.Join(cfg.ProjectPath, filepath.FromSlash(rel))
-			if info, err := statIsDir(full); err == nil && info {
+			if info, serr := statIsDir(full); serr == nil && info {
 				dirs = append(dirs, rel)
 			} else {
 				files = append(files, rel)
@@ -348,22 +349,15 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 	}
 	logger.Info(i18n.T("log.exportStart"), "project", cfg.ProjectName, "mode", opt.Mode, "files", len(files), "dirs", len(dirs))
 
-	results, err := scanner.ProcessFiles(scanner.Options{
-		ProjectPath:        cfg.ProjectPath,
-		Files:              files,
-		Directories:        dirs,
-		ExcludeDirectories: cfg.ExcludeDirectories,
-		ExcludePatterns:    cfg.ExcludePatterns,
-		MaxFileSize:        cfg.MaxFileSize,
-	})
+	results, err := scanner.ProcessFiles(scanOpts(cfg, files, dirs))
 	if err != nil {
-		return ExportResult{}, err
+		return "", "", 0, err
 	}
 	scanner.SortByRelPath(results)
 
 	langs, err := generator.LoadLanguages(languagesPath())
 	if err != nil {
-		return ExportResult{}, fmt.Errorf("加载语言映射失败: %w", err)
+		return "", "", 0, fmt.Errorf("加载语言映射失败: %w", err)
 	}
 
 	mode := generator.ExportMode(opt.Mode)
@@ -384,6 +378,16 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 		maxSig = 200
 	}
 
+	// 压缩输出 T2：大括号类语言（缩进不承载语法）剥除行首缩进，
+	// 仅作用于源码文件内容；Markdown 结构（列表/引用缩进）不受影响
+	if opt.Compress {
+		for i := range results {
+			if compress.IsBraceLanguage(generator.LanguageFor(langs, results[i].FullPath)) {
+				results[i].Content = compress.StripIndent(results[i].Content)
+			}
+		}
+	}
+
 	content, err := generator.Generate(results, generator.Options{
 		ProjectName:        cfg.ProjectName,
 		ProjectRoot:        cfg.ProjectPath,
@@ -394,6 +398,21 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 		MaxSignatureLen:    maxSig,
 	})
 	if err != nil {
+		return "", "", 0, err
+	}
+	// 压缩输出：空白精简（裁行尾空白、折叠连续空行），保持代码语法不变
+	if opt.Compress {
+		content = compress.Minify(content)
+	}
+	return content, mode, len(results), nil
+}
+
+// RunExport 执行导出（GUI 主流程）。结果与进度经事件推送，此处同步返回结果。
+func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResult, error) {
+	start := time.Now()
+
+	content, mode, fileCount, err := buildExport(cfg, opt)
+	if err != nil {
 		return ExportResult{}, err
 	}
 
@@ -401,13 +420,40 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 	if err != nil {
 		return ExportResult{}, err
 	}
+	if opt.Compress {
+		logger.Info(i18n.T("log.compressDone"), "out", outPath, "bytes", len(content))
+	}
 
-	logger.Info(i18n.T("log.exportDone"), "mode", string(mode), "files", len(results), "chars", len([]rune(content)), "out", outPath, "ms", time.Since(start).Milliseconds())
+	logger.Info(i18n.T("log.exportDone"), "mode", string(mode), "files", fileCount, "chars", len([]rune(content)), "out", outPath, "ms", time.Since(start).Milliseconds())
 
 	return ExportResult{
 		OutputPaths: []string{outPath},
 		TotalChars:  len([]rune(content)),
+		TokenCount:  token.EstimateTokens(content),
+		OutputBytes: int64(len(content)),
 		DurationMs:  time.Since(start).Milliseconds(),
+	}, nil
+}
+
+// PreviewExport 干跑导出：生成完整内容但不写盘，返回（截断后的）预览。
+func (a *App) PreviewExport(cfg config.ProjectConfig, opt ExportOptions) (PreviewResult, error) {
+	content, _, _, err := buildExport(cfg, opt)
+	if err != nil {
+		return PreviewResult{}, err
+	}
+	runes := []rune(content)
+	tokens := token.EstimateTokens(content)
+	const maxPreview = 100_000
+	truncated := len(runes) > maxPreview
+	if truncated {
+		content = string(runes[:maxPreview])
+	}
+	logger.Info(i18n.T("log.exportPreview"), "chars", len(runes), "truncated", truncated)
+	return PreviewResult{
+		Content:    content,
+		TotalChars: len(runes),
+		TokenCount: tokens,
+		Truncated:  truncated,
 	}, nil
 }
 

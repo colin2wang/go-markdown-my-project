@@ -36,6 +36,9 @@ type ProjectConfig struct {
 	ExcludeDirectories []string `yaml:"exclude_directories,omitempty" json:"exclude_directories,omitempty"`
 	ExcludePatterns    []string `yaml:"exclude_patterns,omitempty" json:"exclude_patterns,omitempty"`
 	MaxFileSize        int64    `yaml:"max_file_size,omitempty" json:"max_file_size,omitempty"` // 0 = 不限制
+	// 包含规则：激活时仅保留扩展名匹配 include_patterns 的文件（如 *.java）
+	IncludeEnabled  *bool    `yaml:"include_enabled,omitempty" json:"include_enabled,omitempty"`
+	IncludePatterns []string `yaml:"include_patterns,omitempty" json:"include_patterns,omitempty"`
 	// v2 字段
 	ExportMode  string          `yaml:"export_mode,omitempty" json:"export_mode,omitempty"` // full | files | symbols | signatures | custom
 	Redaction   RedactionConfig `yaml:"redaction,omitempty" json:"redaction,omitempty"`
@@ -112,6 +115,13 @@ func (c *ProjectConfig) Validate() error {
 	for _, p := range c.ExcludePatterns {
 		if strings.TrimSpace(p) == "" {
 			return fmt.Errorf("exclude pattern cannot be empty")
+		}
+	}
+
+	// 包含模式不能为空串（激活时才参与过滤，但格式随时校验）
+	for _, p := range c.IncludePatterns {
+		if strings.TrimSpace(p) == "" {
+			return fmt.Errorf("include pattern cannot be empty")
 		}
 	}
 

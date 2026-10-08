@@ -39,6 +39,9 @@ type Options struct {
 	ExcludeDirectories []string
 	ExcludePatterns    []string
 	MaxFileSize        int64 // 0 = 不限制
+	// 包含规则：IncludeEnabled 为 true 时，仅保留扩展名匹配 IncludePatterns（如 *.java）的文件
+	IncludeEnabled  bool
+	IncludePatterns []string
 }
 
 // ProcessFiles 处理配置指定的文件与目录，返回 (路径, 内容) 列表。
@@ -51,7 +54,7 @@ func ProcessFiles(opts Options) ([]FileResult, error) {
 	for _, file := range opts.Files {
 		fullPath := filepath.Join(opts.ProjectPath, filepath.FromSlash(file))
 		if info, err := os.Stat(fullPath); err == nil && !info.IsDir() {
-			include, err := ShouldIncludeFile(fullPath, opts.ExcludePatterns, opts.MaxFileSize, opts.ProjectPath)
+			include, err := shouldIncludeFile(fullPath, opts.ExcludePatterns, opts.MaxFileSize, opts.ProjectPath, opts.IncludeEnabled, opts.IncludePatterns)
 			if err != nil {
 				return nil, err
 			}
@@ -92,6 +95,16 @@ func parallelProcessDirectory(dir string, results *[]FileResult, opts Options) {
 			}
 			return nil
 		}
+		// 符号链接/junction 的 DirEntry.IsDir() 返回 false，会被误当文件读取；
+		// 对非普通文件再 Stat 解析真实类型，指向目录的链接按目录处理（剪枝+跳过）
+		if d.Type()&os.ModeSymlink != 0 || d.Type()&os.ModeIrregular != 0 {
+			if info, serr := os.Stat(p); serr == nil && info.IsDir() {
+				if ShouldExcludeDirectory(p, opts.ExcludeDirectories) {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+		}
 		paths = append(paths, p)
 		return nil
 	})
@@ -118,7 +131,7 @@ func parallelProcessDirectory(dir string, results *[]FileResult, opts Options) {
 		go func() {
 			defer wg.Done()
 			for p := range jobs {
-				include, err := ShouldIncludeFile(p, opts.ExcludePatterns, opts.MaxFileSize, opts.ProjectPath)
+				include, err := shouldIncludeFile(p, opts.ExcludePatterns, opts.MaxFileSize, opts.ProjectPath, opts.IncludeEnabled, opts.IncludePatterns)
 				if err != nil || !include {
 					continue
 				}
@@ -144,9 +157,14 @@ func parallelProcessDirectory(dir string, results *[]FileResult, opts Options) {
 	}
 }
 
-// ShouldIncludeFile 判断文件是否应包含：大小限制 → 排除模式。
+// ShouldIncludeFile 判断文件是否应包含：大小限制 → 排除模式 → 包含模式（激活时白名单）。
 // 对齐 should_include_file。
 func ShouldIncludeFile(filePath string, excludePatterns []string, maxSize int64, projectRoot string) (bool, error) {
+	return shouldIncludeFile(filePath, excludePatterns, maxSize, projectRoot, false, nil)
+}
+
+// shouldIncludeFile 完整判定：大小限制 → 排除模式 → 包含模式（includeEnabled 激活时白名单）。
+func shouldIncludeFile(filePath string, excludePatterns []string, maxSize int64, projectRoot string, includeEnabled bool, includePatterns []string) (bool, error) {
 	// 大小限制
 	if maxSize > 0 {
 		info, err := os.Stat(filePath)
@@ -168,9 +186,9 @@ func ShouldIncludeFile(filePath string, excludePatterns []string, maxSize int64,
 
 	for _, pattern := range excludePatterns {
 		if strings.ContainsAny(pattern, "*?") {
-			// glob 匹配（对齐 glob::Pattern：对整个相对路径匹配）
-			ok, err := matchGlob(pattern, relSlash)
-			if err == nil && ok {
+			// glob 匹配（对齐 glob::Pattern：对整个相对路径匹配），
+			// 另支持 "**/" 前缀跨层匹配与按文件名匹配（*.log 排除任意层级的日志）
+			if matchExcludeGlob(pattern, relSlash) {
 				logger.Debug(i18n.T("log.skipByPattern"), "pattern", pattern, "path", filePath)
 				return false, nil
 			}
@@ -181,14 +199,70 @@ func ShouldIncludeFile(filePath string, excludePatterns []string, maxSize int64,
 				logger.Debug(i18n.T("log.skipByPattern"), "pattern", pattern, "path", filePath)
 				return false, nil
 			}
+			// 裸名（如 target）：匹配相对路径中的任一路径组件，
+			// 使嵌套子目录下的同名目录/文件也被排除
+			if matchPathSegment(relSlash, pattern) {
+				logger.Debug(i18n.T("log.skipByPattern"), "pattern", pattern, "path", filePath)
+				return false, nil
+			}
+		}
+	}
+
+	// 包含规则（激活时白名单）：仅保留扩展名匹配任一模式的文件
+	if includeEnabled && len(includePatterns) > 0 {
+		matched := false
+		for _, p := range includePatterns {
+			if ok, err := path.Match(filepath.ToSlash(p), path.Base(relSlash)); err == nil && ok {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			logger.Debug(i18n.T("log.skipNotIncluded"), "path", filePath)
+			return false, nil
 		}
 	}
 	return true, nil
 }
 
-// matchGlob 使用 path.Match 对整个相对路径匹配（旧版 glob crate 语义近似）。
-func matchGlob(pattern, name string) (bool, error) {
-	return path.Match(pattern, name)
+// matchPathSegment 判断任一路径组件是否等于 name（"a/target/x" 对 "target" 为 true）。
+func matchPathSegment(relSlash, name string) bool {
+	for _, comp := range strings.Split(relSlash, "/") {
+		if comp == name {
+			return true
+		}
+	}
+	return false
+}
+
+// matchExcludeGlob glob 排除匹配：
+//   - "**/" 前缀：对相对路径的任意后缀（按组件边界）用剩余模式匹配；
+//   - 普通模式：对整个相对路径匹配外，无 "/" 的模式再对文件名匹配（*.log 任意层级生效）。
+func matchExcludeGlob(pattern, relSlash string) bool {
+	if rest, ok := strings.CutPrefix(pattern, "**/"); ok {
+		rest = filepath.ToSlash(rest)
+		suffix := relSlash
+		for {
+			if ok, err := path.Match(rest, suffix); err == nil && ok {
+				return true
+			}
+			idx := strings.Index(suffix, "/")
+			if idx < 0 {
+				return false
+			}
+			suffix = suffix[idx+1:]
+		}
+	}
+	if ok, err := path.Match(pattern, relSlash); err == nil && ok {
+		return true
+	}
+	// 无 "/" 的 glob（如 *.log）按文件名匹配任意层级
+	if !strings.Contains(pattern, "/") {
+		if ok, err := path.Match(pattern, path.Base(relSlash)); err == nil && ok {
+			return true
+		}
+	}
+	return false
 }
 
 // ShouldExcludeDirectory 判断目录是否应排除，逻辑逐条对齐 should_exclude_directory。

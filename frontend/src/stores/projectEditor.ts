@@ -16,6 +16,8 @@ export function emptyConfig(): ProjectConfig {
     directories: [],
     exclude_directories: [],
     exclude_patterns: [],
+    include_enabled: false,
+    include_patterns: [],
     max_file_size: 0,
     export_mode: 'full',
     split_tokens: 0,
@@ -34,6 +36,7 @@ function localValidate(cfg: ProjectConfig): Record<string, string> {
   if ((cfg.max_file_size ?? 0) < 0) e.max_file_size = t('editor.errMaxSize');
   if ((cfg.split_tokens ?? 0) < 0) e.split_tokens = t('editor.errSplitTokens');
   if ((cfg.exclude_patterns ?? []).some((p) => !p.trim())) e.exclude_patterns = t('editor.errExcludeEmpty');
+  if ((cfg.include_patterns ?? []).some((p) => !p.trim())) e.include_patterns = t('editor.errIncludeEmpty');
   for (const p of cfg.redaction?.custom_patterns ?? []) {
     try {
       new RegExp(p);
@@ -65,6 +68,15 @@ export const useProjectEditor = defineStore('projectEditor', () => {
   const syncing = ref(false);
 
   const isNew = computed(() => original.value === null);
+
+  // 包含规则激活开关（对应 yml include_enabled）：checkbox 与 draft 双向绑定
+  const includeEnabled = computed({
+    get: () => draft.value?.include_enabled ?? false,
+    set: (v: boolean) => {
+      if (draft.value) draft.value.include_enabled = v;
+    },
+  });
+
   const dirty = computed(
     () => JSON.stringify(original.value ?? emptyConfig()) !== JSON.stringify(draft.value ?? emptyConfig())
   );
@@ -73,22 +85,31 @@ export const useProjectEditor = defineStore('projectEditor', () => {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let prevYaml = '';
 
-  watch(draft, () => {
-    clearTimeout(timer);
+  // 序列化比对触发：TagListInput 等子组件对数组整体赋值时，
+  // Pinia ref 上的 deep watch 可能漏触发嵌套数组变更，用 JSON 串做源最可靠。
+  // 注意：draft 内容与上次完全相同时（如二次打开同一配置）不会触发，故打开后需显式 syncYaml。
+  watch(
+    () => (draft.value ? JSON.stringify(draft.value) : ''),
+    () => {
+      clearTimeout(timer);
+      timer = setTimeout(syncYaml, 300);
+    }
+  );
+
+  /** 由当前 draft 重建校验与 YAML 镜像。 */
+  async function syncYaml() {
     syncing.value = true;
-    timer = setTimeout(async () => {
+    try {
       if (!draft.value) return;
       errors.value = localValidate(draft.value);
-      try {
-        const y = await api.serializeYAML(draft.value);
-        changedLines.value = diffLines(prevYaml, y);
-        prevYaml = y;
-        yamlText.value = y;
-      } finally {
-        syncing.value = false;
-      }
-    }, 300);
-  }, { deep: true });
+      const y = await api.serializeYAML(draft.value);
+      changedLines.value = diffLines(prevYaml, y);
+      prevYaml = y;
+      yamlText.value = y;
+    } finally {
+      syncing.value = false;
+    }
+  }
 
   function resetDerived() {
     prevYaml = '';
@@ -100,9 +121,12 @@ export const useProjectEditor = defineStore('projectEditor', () => {
 
   function openForEdit(path: string, cfg: ProjectConfig) {
     configPath.value = path;
-    original.value = JSON.parse(JSON.stringify(cfg));
-    draft.value = JSON.parse(JSON.stringify(cfg));
+    // original 与 draft 走同一归一化，保证 dirty 比较口径一致
+    original.value = normalizeConfig(cfg);
+    draft.value = normalizeConfig(cfg);
     resetDerived();
+    // 与上次会话内容相同时 watch 不触发，显式同步一次填充右侧 YAML
+    syncYaml();
   }
 
   function openForCreate(path: string) {
@@ -110,6 +134,24 @@ export const useProjectEditor = defineStore('projectEditor', () => {
     original.value = null;
     draft.value = emptyConfig();
     resetDerived();
+    syncYaml();
+  }
+
+  // YAML 中省略的数组字段经反序列化后为 undefined，模板里的非空断言与
+  // TagListInput 等子组件都假设数组存在，打开时统一归一化
+  function normalizeConfig(cfg: ProjectConfig): ProjectConfig {
+    const copy = JSON.parse(JSON.stringify(cfg));
+    copy.files ??= [];
+    copy.directories ??= [];
+    copy.exclude_directories ??= [];
+    copy.exclude_patterns ??= [];
+    copy.include_patterns ??= [];
+    copy.include_enabled ??= false;
+    if (copy.redaction) {
+      copy.redaction.custom_patterns ??= [];
+      copy.redaction.allowlist ??= [];
+    }
+    return copy;
   }
 
   function updateConfigPath(p: string) {
@@ -135,7 +177,7 @@ export const useProjectEditor = defineStore('projectEditor', () => {
 
   return {
     original, draft, configPath, errors, errorCount, yamlText, changedLines,
-    preview, syncing, isNew, dirty,
+    preview, syncing, isNew, includeEnabled, dirty,
     openForEdit, openForCreate, updateConfigPath, reset, runPreview, save,
   };
 });

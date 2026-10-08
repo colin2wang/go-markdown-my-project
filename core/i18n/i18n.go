@@ -64,6 +64,16 @@ var dicts = map[string]map[Locale]string{
 		EnUS: "Export finished",
 		JaJP: "エクスポート完了",
 	},
+	"log.exportPreview": {
+		ZhCN: "预览导出内容（不写盘）",
+		EnUS: "Preview export content (no file written)",
+		JaJP: "エクスポート内容をプレビュー（ファイル未書き込み）",
+	},
+	"log.compressDone": {
+		ZhCN: "输出已压缩",
+		EnUS: "Output compressed",
+		JaJP: "出力を圧縮しました",
+	},
 	"log.walkError": {
 		ZhCN: "遍历出错",
 		EnUS: "Walk error",
@@ -88,6 +98,11 @@ var dicts = map[string]map[Locale]string{
 		ZhCN: "按排除规则跳过文件",
 		EnUS: "Skipping file due to exclude pattern",
 		JaJP: "除外ルールによりファイルをスキップ",
+	},
+	"log.skipNotIncluded": {
+		ZhCN: "文件不匹配包含规则，已跳过",
+		EnUS: "File does not match include patterns, skipped",
+		JaJP: "ファイルが包含パターンに一致しないためスキップ",
 	},
 	"err.projectsDirNotFound": {
 		ZhCN: "projects 目录不存在: {dir}（当前工作目录: {wd}）",

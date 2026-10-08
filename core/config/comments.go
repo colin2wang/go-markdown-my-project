@@ -79,6 +79,10 @@ func SerializeWithComments(c *ProjectConfig) (string, error) {
 	pair("List of directories to include (collected recursively)", "directories", strSeq(c.Directories))
 	pair("Directories to exclude (supports **/name)", "exclude_directories", strSeq(c.ExcludeDirectories))
 	pair("File patterns to exclude (supports *.log)", "exclude_patterns", strSeq(c.ExcludePatterns))
+	if c.IncludeEnabled != nil && *c.IncludeEnabled {
+		pair("Include rules activated: only files matching the patterns below are loaded", "include_enabled", boolNode(true))
+		pair("Include patterns (supports *.java); active only when include_enabled is true", "include_patterns", strSeq(c.IncludePatterns))
+	}
 	if c.MaxFileSize != 0 {
 		pair("Maximum file size in bytes (0 = no limit)", "max_file_size", intNode(c.MaxFileSize))
 	}

@@ -7,6 +7,8 @@ export interface LogEntry {
   level: string;
   msg: string;
   source: string;
+  /** 后端 slog 结构化字段（path/err 等），仅转发日志携带 */
+  attrs?: Record<string, string>;
 }
 
 export const useLogStore = defineStore('log', () => {

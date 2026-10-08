@@ -17,6 +17,8 @@ export function OpenPath(arg1:string):Promise<void>;
 
 export function PathExists(arg1:string):Promise<app.PathCheck>;
 
+export function PreviewExport(arg1:config.ProjectConfig,arg2:app.ExportOptions):Promise<app.PreviewResult>;
+
 export function PreviewScan(arg1:config.ProjectConfig):Promise<app.ScanPreview>;
 
 export function RunExport(arg1:config.ProjectConfig,arg2:app.ExportOptions):Promise<app.ExportResult>;

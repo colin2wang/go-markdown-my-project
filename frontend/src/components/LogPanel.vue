@@ -56,7 +56,7 @@ function levelClass(level: string) {
       <div v-for="(e, i) in log.entries" :key="i" class="log-line" :class="levelClass(e.level)">
         <span class="t">{{ e.time }}</span>
         <span class="lv">{{ e.level }}</span>
-        <span class="m">{{ e.msg }}</span>
+        <span class="m">{{ e.msg }}</span><template v-if="e.attrs"><span v-for="(v, k) in e.attrs" :key="k" class="attr"> {{ k }}={{ v }}</span></template>
         <span v-if="e.source" class="src">{{ e.source }}</span>
       </div>
       <div v-if="log.entries.length === 0" class="empty">{{ t('log.empty') }}</div>
@@ -104,6 +104,7 @@ function levelClass(level: string) {
 .log-line .t { color: #6b7c8f; margin-right: 8px; }
 .log-line .lv { display: inline-block; width: 52px; margin-right: 8px; font-weight: bold; }
 .log-line .src { color: #6b7c8f; margin-left: 8px; }
+.log-line .attr { color: #8fa3b8; }
 .lvl-debug .lv { color: #6b7c8f; }
 .lvl-info .lv { color: #63b3ed; }
 .lvl-warn .lv, .lvl-warn { color: #f6ad55; }

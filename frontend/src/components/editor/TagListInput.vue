@@ -23,7 +23,8 @@ const allSubdirs = ref(false); // 勾选后「从磁盘选…」一次性加入�
 
 function add(raw: string) {
   const items = raw.split(/[,\n]/).map((s) => s.trim().replace(/\\/g, '/')).filter(Boolean);
-  const next = [...props.modelValue];
+  // modelValue 可能是 undefined（YAML 中省略的数组字段），兜底为空数组
+  const next = [...(props.modelValue ?? [])];
   let dup = 0;
   for (const it of items) {
     if (next.includes(it)) { dup++; continue; }
@@ -35,7 +36,7 @@ function add(raw: string) {
 }
 
 function remove(idx: number) {
-  const next = [...props.modelValue];
+  const next = [...(props.modelValue ?? [])];
   next.splice(idx, 1);
   emit('update:modelValue', next);
 }

@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProjectsStore, useExportStore } from '../stores';
 import { api } from '../api/bindings';
-import type { FileInfo, ProjectConfig } from '../api/bindings';
+import type { FileInfo, ProjectConfig, PreviewResult } from '../api/bindings';
 import FileTree from './FileTree.vue';
 import SensitiveDrawer from './SensitiveDrawer.vue';
 import { estimateTokensFromSize, fmtNum } from '../estimate';
@@ -52,6 +52,7 @@ async function rescan() {
 
 // 导出模式切换
 watch(() => exp.mode, (m, old) => {
+  previewData.value = null; // 选项变化后旧预览失效
   if (old) log.info(t('wb.logModeSwitch', { from: old, to: m }));
 });
 
@@ -63,7 +64,7 @@ const debouncedFiles = ref<FileInfo[]>(rawChecked.value);
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 watch(rawChecked, (v) => {
   clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => { debouncedFiles.value = v; }, 300);
+  debounceTimer = setTimeout(() => { debouncedFiles.value = v; previewData.value = null; }, 300);
 }, { deep: false });
 onUnmounted(() => clearTimeout(debounceTimer));
 
@@ -129,6 +130,7 @@ async function doExport() {
     redact: redactEnabled.value ? t('wb.redactOn') : t('wb.redactOff'),
     n: checkedFiles.value.length,
   }));
+  previewData.value = null; // 导出后右栏切换到结果卡片
   exporting.value = true;
   exp.redact = redactEnabled.value;
   exp.splitTokens = splitEnabled.value ? splitTokens.value : 0;
@@ -140,7 +142,26 @@ async function doExport() {
   }
 }
 
-// —— 右栏：大纲预览（导出前）/ 结果卡片（导出后）——
+// —— 干跑预览：后端生成完整内容但不写盘 ——
+const previewing = ref(false);
+const previewData = ref<PreviewResult | null>(null);
+
+async function doPreview() {
+  if (!projects.current) return;
+  previewing.value = true;
+  exp.redact = redactEnabled.value;
+  try {
+    previewData.value = await exp.preview(projects.current);
+    if (previewData.value) log.info(t('wb.logPreviewOk', { chars: fmtNum(previewData.value.totalChars) }));
+  } catch (e) {
+    log.warn(t('wb.logPreviewFail', { err: String(e) }));
+    previewData.value = null;
+  } finally {
+    previewing.value = false;
+  }
+}
+
+// —— 右栏：干跑预览内容 / 本地大纲（未预览时）/ 结果卡片（导出后）——
 const outline = computed(() => buildOutline(projects.current, checkedFiles.value, exp.mode));
 
 function buildOutline(cfg: ProjectConfig | null, files: FileInfo[], mode: string): string[] {
@@ -250,6 +271,10 @@ async function copyResult() {
           <input v-model="splitEnabled" type="checkbox" />
           {{ t('wb.overTokens') }} <input v-model.number="splitTokens" type="number" class="num" :disabled="!splitEnabled" /> token
         </label>
+        <label class="inline">
+          <input v-model="exp.compress" type="checkbox" />
+          {{ t('wb.compressOutput') }}
+        </label>
         <p v-if="splitEnabled" class="muted">{{ t('wb.estParts', { n: estParts }) }}</p>
       </section>
 
@@ -261,7 +286,8 @@ async function copyResult() {
             <table>
               <tr><th>{{ t('wb.resultOutput') }}</th><td>{{ exp.result.outputPaths.join(', ') }}</td></tr>
               <tr><th>{{ t('wb.resultChars') }}</th><td>{{ fmtNum(exp.result.totalChars) }}</td></tr>
-              <tr><th>{{ t('wb.resultTokens') }}</th><td>{{ fmtNum(estTokens) }}</td></tr>
+              <tr v-if="exp.result.outputBytes"><th>{{ t('wb.resultBytes') }}</th><td>{{ fmtSize(exp.result.outputBytes) }}</td></tr>
+              <tr><th>{{ t('wb.resultTokens') }}</th><td>{{ fmtNum(exp.result.tokenCount ?? estTokens) }}</td></tr>
               <tr><th>{{ t('wb.resultDuration') }}</th><td>{{ exp.result.durationMs }} ms</td></tr>
               <tr><th>{{ t('wb.resultRedaction') }}</th><td>{{ redactEnabled ? t('wb.hitsShort', { n: sensitive.count }) : t('common.off') }}</td></tr>
             </table>
@@ -271,6 +297,11 @@ async function copyResult() {
               <button @click="doExport" :disabled="exporting">{{ t('wb.reExport') }}</button>
             </div>
           </div>
+        </template>
+        <template v-else-if="previewData">
+          <h3>{{ t('wb.previewTitle') }}</h3>
+          <p class="muted">{{ t('wb.previewStats', { chars: fmtNum(previewData.totalChars), tokens: fmtNum(previewData.tokenCount) }) }}<template v-if="previewData.truncated"> · {{ t('wb.previewTruncated') }}</template></p>
+          <pre class="outline preview-content">{{ previewData.content }}</pre>
         </template>
         <template v-else>
           <h3>{{ t('wb.previewTitle') }}</h3>
@@ -289,7 +320,7 @@ async function copyResult() {
         <span class="muted">{{ t('wb.statusStats', { count: checkedFiles.length, size: fmtSize(checkedBytes), tokens: fmtNum(estTokens) }) }}</span>
       </span>
       <span class="status-right">
-        <button :disabled="exporting" @click="doExport">{{ t('wb.previewBtn') }}</button>
+        <button :disabled="exporting || previewing" @click="doPreview">{{ previewing ? t('wb.previewing') : t('wb.previewBtn') }}</button>
         <button class="primary" :disabled="exporting" @click="onExportClick">{{ t('wb.exportBtn') }}</button>
       </span>
     </footer>
@@ -343,6 +374,7 @@ async function copyResult() {
 .chip.hit { background: #3a2a1a; color: #f6ad55; }
 .chip.unscanned { background: #1f2d3d; color: #8fa3b8; }
 .outline { background: #0f1720; padding: 10px; border-radius: 6px; font-size: 12px; line-height: 1.7; overflow-x: auto; }
+.outline.preview-content { white-space: pre-wrap; word-break: break-word; }
 .result-card { border-radius: 8px; padding: 14px; }
 .result-card.ok { border: 1px solid #2f855a; background: rgba(47, 133, 90, .1); }
 .result-card h3 { margin: 0 0 10px; color: #68d391; }

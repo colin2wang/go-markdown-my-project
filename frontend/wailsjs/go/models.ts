@@ -4,6 +4,7 @@ export namespace app {
 	    mode: string;
 	    redact: boolean;
 	    splitTokens: number;
+	    compress: boolean;
 	    fileOverrides: string[];
 	    includeLineNumbers?: boolean;
 	    maxSignatureLen: number;
@@ -17,6 +18,7 @@ export namespace app {
 	        this.mode = source["mode"];
 	        this.redact = source["redact"];
 	        this.splitTokens = source["splitTokens"];
+	        this.compress = source["compress"];
 	        this.fileOverrides = source["fileOverrides"];
 	        this.includeLineNumbers = source["includeLineNumbers"];
 	        this.maxSignatureLen = source["maxSignatureLen"];
@@ -25,6 +27,8 @@ export namespace app {
 	export class ExportResult {
 	    outputPaths: string[];
 	    totalChars: number;
+	    tokenCount: number;
+	    outputBytes: number;
 	    durationMs: number;
 	
 	    static createFrom(source: any = {}) {
@@ -35,6 +39,8 @@ export namespace app {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.outputPaths = source["outputPaths"];
 	        this.totalChars = source["totalChars"];
+	        this.tokenCount = source["tokenCount"];
+	        this.outputBytes = source["outputBytes"];
 	        this.durationMs = source["durationMs"];
 	    }
 	}
@@ -82,6 +88,24 @@ export namespace app {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.exists = source["exists"];
 	        this.isDir = source["isDir"];
+	    }
+	}
+	export class PreviewResult {
+	    content: string;
+	    totalChars: number;
+	    tokenCount: number;
+	    truncated: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new PreviewResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.content = source["content"];
+	        this.totalChars = source["totalChars"];
+	        this.tokenCount = source["tokenCount"];
+	        this.truncated = source["truncated"];
 	    }
 	}
 	export class ProjectSummary {
@@ -177,6 +201,8 @@ export namespace config {
 	    exclude_directories?: string[];
 	    exclude_patterns?: string[];
 	    max_file_size?: number;
+	    include_enabled?: boolean;
+	    include_patterns?: string[];
 	    export_mode?: string;
 	    redaction?: RedactionConfig;
 	    split_tokens?: number;
@@ -197,6 +223,8 @@ export namespace config {
 	        this.exclude_directories = source["exclude_directories"];
 	        this.exclude_patterns = source["exclude_patterns"];
 	        this.max_file_size = source["max_file_size"];
+	        this.include_enabled = source["include_enabled"];
+	        this.include_patterns = source["include_patterns"];
 	        this.export_mode = source["export_mode"];
 	        this.redaction = this.convertValues(source["redaction"], RedactionConfig);
 	        this.split_tokens = source["split_tokens"];

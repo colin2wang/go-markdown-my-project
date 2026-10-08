@@ -30,6 +30,10 @@ export function PathExists(arg1) {
   return window['go']['app']['App']['PathExists'](arg1);
 }
 
+export function PreviewExport(arg1, arg2) {
+  return window['go']['app']['App']['PreviewExport'](arg1, arg2);
+}
+
 export function PreviewScan(arg1) {
   return window['go']['app']['App']['PreviewScan'](arg1);
 }

@@ -19,10 +19,11 @@ var global *slog.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 
 // Entry 一条日志的结构化表示，用于转发到前端日志窗口。
 type Entry struct {
-	Time   string `json:"time"`
-	Level  string `json:"level"`
-	Msg    string `json:"msg"`
-	Source string `json:"source"`
+	Time   string            `json:"time"`
+	Level  string            `json:"level"`
+	Msg    string            `json:"msg"`
+	Source string            `json:"source"`
+	Attrs  map[string]string `json:"attrs,omitempty"` // 结构化字段（path/err 等）
 }
 
 // sink 日志转发回调；由 app 层注入（core 不依赖 Wails）。
@@ -151,6 +152,14 @@ func (h *sinkHandler) Handle(ctx context.Context, r slog.Record) error {
 		if src := r.Source(); src != nil {
 			e.Source = filepath.Base(src.File) + ":" + itoa(src.Line)
 		}
+		// 结构化字段（path/err 等）以 key=value 形式随事件转发，供前端展示
+		r.Attrs(func(a slog.Attr) bool {
+			if e.Attrs == nil {
+				e.Attrs = map[string]string{}
+			}
+			e.Attrs[a.Key] = a.Value.String()
+			return true
+		})
 		sink(e)
 	}
 	return err
