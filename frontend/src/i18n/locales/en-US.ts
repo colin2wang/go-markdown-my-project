@@ -6,6 +6,88 @@ const enUS: Messages = {
     projects: 'Projects',
     workbench: 'Workbench',
     language: 'Language',
+    help: 'Help',
+    helpConfig: 'Config file guide',
+    helpAbout: 'About',
+    helpConfigSample: 'Project config file',
+  },
+  help: {
+    configTitle: 'Config file guide',
+    configBody: `A project config is a YAML file stored in the projects directory (default config/projects), one file per project:
+- project_name: project name (card title in the list)
+- project_path: root directory of the project sources
+- output_file: file name of the exported Markdown
+- markdown_lang: document language (zh_cn / en)
+- files / directories: included files and directories (directories are collected recursively)
+- exclude_directories / exclude_patterns: excluded directories and patterns (e.g. *.log, RE2 regex)
+- include_enabled / include_patterns: when enabled, only matching files are loaded
+- max_file_size: per-file size limit in bytes (0 = unlimited)
+- export_mode: export mode (full / files / symbols / signatures)
+- redaction: sensitive data filter (enabled, placeholder, strategy, custom_patterns, allowlist)
+- split_tokens: split output when exceeding this token count (0 = no split)
+- template: custom export template (used when export_mode is the custom template)
+
+Edit and save in the UI, or edit the YAML directly and click "Refresh".`,
+    aboutTitle: 'About',
+    aboutBody: `ProjectDocs aggregates project sources into a Markdown document for LLM analysis.
+
+Workflow:
+1. On the Projects page, choose the config directory and create/edit a project config;
+2. Enter the workbench and check the files to include;
+3. Pick an export mode (full code / file list / symbol index / signatures); sensitive data filtering is optional;
+4. Preview, then export to get the Markdown file.
+
+Note: the sensitive data filter runs in two phases (scan report -> confirm -> replace on export); logs only record counts and rule names, never plaintext.`,
+    configSampleTitle: 'Project config file',
+    configSampleBody: `Project config files live in the projects directory (default config/projects); each .yml file is one project. Full example:
+
+# Project name (card title in the list)
+project_name: My Project
+# Root directory of the project sources (absolute path)
+project_path: F:/code/my-project
+# Exported Markdown file name (.md/.markdown/.txt)
+output_file: my_project.md
+# Document language: zh_cn / en
+markdown_lang: zh_cn
+
+# Included files (relative to project_path, optional)
+files: []
+# Included directories (collected recursively)
+directories:
+  - src
+  - go.mod
+
+# Excluded directories (**/name supported)
+exclude_directories:
+  - "**/node_modules"
+  - "**/dist"
+# Exclude patterns (RE2 regex, e.g. *.log)
+exclude_patterns:
+  - '*.log'
+  - '**/*_test.go'
+
+# When enabled, only files matching include_patterns are loaded
+include_enabled: false
+include_patterns: []
+
+# Per-file size limit in bytes (0 = unlimited)
+max_file_size: 0
+# Export mode: full / files / symbols / signatures
+export_mode: full
+# Split output when exceeding this token count (0 = no split)
+split_tokens: 0
+
+# Sensitive data filter
+redaction:
+  enabled: false
+  # Placeholder used for replacement
+  placeholder: '[REDACTED]'
+  # Strategy: placeholder (replace) / drop_line (drop the whole line)
+  strategy: placeholder
+  # Custom regex rules (RE2)
+  custom_patterns: []
+  # Allowlist, format: relative path:line:rule name
+  allowlist: []`,
   },
   common: {
     cancel: 'Cancel',
@@ -33,6 +115,8 @@ const enUS: Messages = {
   projects: {
     dir: 'Projects directory',
     refresh: 'Refresh',
+    open: '📂 Open',
+    logOpenDir: 'Opening config directory: {dir}',
     create: '＋ New project config',
     empty: 'No project config found (check the directory)',
     enter: 'Open workbench ▸',

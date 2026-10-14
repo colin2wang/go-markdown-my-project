@@ -5,6 +5,88 @@ const zhCN = {
     projects: '项目管理',
     workbench: '工作台',
     language: '界面语言',
+    help: '帮助',
+    helpConfig: '配置文件说明',
+    helpAbout: '程序说明',
+    helpConfigSample: '项目配置文件说明',
+  },
+  help: {
+    configTitle: '配置文件说明',
+    configBody: `项目配置为 YAML 文件，保存在项目目录（默认 config/projects），每个项目一个文件：
+- project_name：项目名称（列表卡片标题）
+- project_path：项目源码根目录
+- output_file：导出的 Markdown 文件名
+- markdown_lang：文档语言（zh_cn / en）
+- files / directories：包含的文件与目录（directories 递归收集）
+- exclude_directories / exclude_patterns：排除目录与排除规则（如 *.log，RE2 正则）
+- include_enabled / include_patterns：激活后仅加载匹配的文件
+- max_file_size：单文件大小上限（字节，0 = 不限制）
+- export_mode：导出模式（full / files / symbols / signatures）
+- redaction：敏感信息过滤（enabled、placeholder、strategy、custom_patterns、allowlist）
+- split_tokens：超过该 token 数自动分片（0 = 不分片）
+- template：自定义导出模板（export_mode 为自定义模板时使用）
+
+可在界面中编辑并保存，也可直接修改 YAML 后点击"刷新"。`,
+    aboutTitle: '程序说明',
+    aboutBody: `ProjectDocs 用于把项目源码聚合为 Markdown 文档，交给 LLM 分析。
+
+使用流程：
+1. 在"项目管理"页选择配置目录，新建或编辑项目配置；
+2. 进入工作台，勾选要包含的文件；
+3. 选择导出模式（完整代码 / 文件名清单 / 符号目录 / 签名导出），可开启敏感信息过滤；
+4. 预览确认后执行导出，得到 Markdown 文件。
+
+注意：敏感信息过滤采用两阶段流程（扫描报告 → 确认 → 导出替换），日志中只记录数量与规则名，不会落盘明文。`,
+    configSampleTitle: '项目配置文件说明',
+    configSampleBody: `项目配置文件位于配置目录（默认 config/projects），每个 .yml 文件对应一个项目。完整示例：
+
+# 项目名称（列表卡片标题）
+project_name: My Project
+# 项目源码根目录（绝对路径）
+project_path: F:/code/my-project
+# 导出的 Markdown 文件名（.md/.markdown/.txt）
+output_file: my_project.md
+# 文档语言：zh_cn / en
+markdown_lang: zh_cn
+
+# 包含的文件（相对 project_path，可省略）
+files: []
+# 包含的目录（递归收集）
+directories:
+  - src
+  - go.mod
+
+# 排除的目录（支持 **/name）
+exclude_directories:
+  - "**/node_modules"
+  - "**/dist"
+# 排除规则（RE2 正则，如 *.log）
+exclude_patterns:
+  - '*.log'
+  - '**/*_test.go'
+
+# 激活后仅加载匹配 include_patterns 的文件
+include_enabled: false
+include_patterns: []
+
+# 单文件大小上限（字节，0 = 不限制）
+max_file_size: 0
+# 导出模式：full / files / symbols / signatures
+export_mode: full
+# 超过该 token 数自动分片（0 = 不分片）
+split_tokens: 0
+
+# 敏感信息过滤
+redaction:
+  enabled: false
+  # 替换用的占位符
+  placeholder: '[REDACTED]'
+  # 策略：placeholder（占位符替换）/ drop_line（删除整行）
+  strategy: placeholder
+  # 自定义正则规则（RE2）
+  custom_patterns: []
+  # 放行清单，格式：相对路径:行号:规则名
+  allowlist: []`,
   },
   common: {
     cancel: '取消',
@@ -32,6 +114,8 @@ const zhCN = {
   projects: {
     dir: '项目目录',
     refresh: '刷新',
+    open: '📂 打开',
+    logOpenDir: '打开配置目录：{dir}',
     create: '＋ 新建项目配置',
     empty: '未找到项目配置（检查目录是否正确）',
     enter: '进入工作台 ▸',

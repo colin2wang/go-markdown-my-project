@@ -60,6 +60,11 @@ async function refreshProjects() {
   await projects.refresh();
 }
 
+async function openConfigDir() {
+  log.info(t('projects.logOpenDir', { dir: projects.projectsDir }));
+  await api.openPath(projects.projectsDir);
+}
+
 function askDelete(path: string) {
   deleteConfirm.value = path;
 }
@@ -79,6 +84,7 @@ async function confirmDelete() {
         <input v-model="projects.projectsDir" placeholder="projects" />
       </label>
       <button @click="refreshProjects">🔄 {{ t('projects.refresh') }}</button>
+      <button @click="openConfigDir">{{ t('projects.open') }}</button>
       <span class="spacer" />
       <button class="primary" @click="openCreate">{{ t('projects.create') }}</button>
     </div>

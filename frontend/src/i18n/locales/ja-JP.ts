@@ -6,6 +6,88 @@ const jaJP: Messages = {
     projects: 'プロジェクト管理',
     workbench: 'ワークベンチ',
     language: '表示言語',
+    help: 'ヘルプ',
+    helpConfig: '設定ファイルの説明',
+    helpAbout: 'プログラムについて',
+    helpConfigSample: 'プロジェクト設定ファイル',
+  },
+  help: {
+    configTitle: '設定ファイルの説明',
+    configBody: `プロジェクト設定は YAML ファイルで、プロジェクトディレクトリ（既定 config/projects）にプロジェクトごとに 1 ファイル保存されます：
+- project_name：プロジェクト名（一覧カードのタイトル）
+- project_path：プロジェクトソースのルートディレクトリ
+- output_file：エクスポートする Markdown のファイル名
+- markdown_lang：ドキュメント言語（zh_cn / en）
+- files / directories：含めるファイルとディレクトリ（directories は再帰的に収集）
+- exclude_directories / exclude_patterns：除外ディレクトリと除外パターン（例: *.log、RE2 正規表現）
+- include_enabled / include_patterns：有効時は一致するファイルのみ読み込み
+- max_file_size：1 ファイルのサイズ上限（バイト、0 = 無制限）
+- export_mode：エクスポートモード（full / files / symbols / signatures）
+- redaction：機密情報フィルタ（enabled、placeholder、strategy、custom_patterns、allowlist）
+- split_tokens：このトークン数を超えると自動分割（0 = 分割しない）
+- template：カスタムエクスポートテンプレート（export_mode がカスタムテンプレート時に使用）
+
+UI で編集・保存するか、YAML を直接編集して「更新」をクリックしてください。`,
+    aboutTitle: 'プログラムについて',
+    aboutBody: `ProjectDocs はプロジェクトのソースを Markdown に集約し、LLM 分析に渡すためのツールです。
+
+使用手順：
+1. 「プロジェクト管理」ページで設定ディレクトリを選び、プロジェクト設定を新規作成・編集する；
+2. ワークベンチに入り、含めるファイルにチェックを入れる；
+3. エクスポートモードを選択（全コード / ファイル一覧 / シンボル一覧 / シグネチャ）。機密情報フィルタは任意；
+4. プレビューで確認後、エクスポートを実行して Markdown を取得。
+
+注意：機密情報フィルタは 2 段階（スキャンレポート → 確認 → エクスポート時に置換）で動作し、ログには件数とルール名のみ記録され、平文は書き込まれません。`,
+    configSampleTitle: 'プロジェクト設定ファイル',
+    configSampleBody: `プロジェクト設定ファイルは設定ディレクトリ（既定 config/projects）にあり、.yml ファイル 1 件が 1 プロジェクトに対応します。完全な例：
+
+# プロジェクト名（一覧カードのタイトル）
+project_name: My Project
+# プロジェクトソースのルートディレクトリ（絶対パス）
+project_path: F:/code/my-project
+# エクスポートする Markdown のファイル名（.md/.markdown/.txt）
+output_file: my_project.md
+# ドキュメント言語：zh_cn / en
+markdown_lang: zh_cn
+
+# 含めるファイル（project_path 相対、省略可）
+files: []
+# 含めるディレクトリ（再帰的に収集）
+directories:
+  - src
+  - go.mod
+
+# 除外ディレクトリ（**/name をサポート）
+exclude_directories:
+  - "**/node_modules"
+  - "**/dist"
+# 除外パターン（RE2 正規表現、例: *.log）
+exclude_patterns:
+  - '*.log'
+  - '**/*_test.go'
+
+# 有効時は include_patterns に一致するファイルのみ読み込み
+include_enabled: false
+include_patterns: []
+
+# 1 ファイルのサイズ上限（バイト、0 = 無制限）
+max_file_size: 0
+# エクスポートモード：full / files / symbols / signatures
+export_mode: full
+# このトークン数を超えると自動分割（0 = 分割しない）
+split_tokens: 0
+
+# 機密情報フィルタ
+redaction:
+  enabled: false
+  # 置換に使うプレースホルダ
+  placeholder: '[REDACTED]'
+  # 方針：placeholder（置換）/ drop_line（行ごと削除）
+  strategy: placeholder
+  # カスタム正規表現ルール（RE2）
+  custom_patterns: []
+  # 放行リスト、形式：相対パス:行:ルール名
+  allowlist: []`,
   },
   common: {
     cancel: 'キャンセル',
@@ -33,6 +115,8 @@ const jaJP: Messages = {
   projects: {
     dir: 'プロジェクトディレクトリ',
     refresh: '更新',
+    open: '📂 開く',
+    logOpenDir: '設定ディレクトリを開く：{dir}',
     create: '＋ 新規プロジェクト設定',
     empty: 'プロジェクト設定が見つかりません（ディレクトリを確認してください）',
     enter: 'ワークベンチへ ▸',
