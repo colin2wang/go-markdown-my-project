@@ -38,6 +38,9 @@ export const useLogStore = defineStore('log', () => {
   function warn(msg: string) {
     push({ time: now(), level: 'WARN', msg, source: 'ui' });
   }
+  function error(msg: string) {
+    push({ time: now(), level: 'ERROR', msg, source: 'ui' });
+  }
 
   // 监听后端转发的日志事件。Wails v2 的 runtime 由 wailsjs 模块提供，
   // 不依赖 window.runtime；桌面环境下 EventsOn 始终可用（浏览器 dev 下仅收不到事件，无副作用）。
@@ -47,5 +50,5 @@ export const useLogStore = defineStore('log', () => {
     listening = true;
   }
 
-  return { entries, clear, listen, push, info, warn };
+  return { entries, clear, listen, push, info, warn, error };
 });

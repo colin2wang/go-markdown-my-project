@@ -20,6 +20,8 @@ const enUS: Messages = {
 - markdown_lang: document language (zh_cn / en)
 - files / directories: included files and directories (directories are collected recursively)
 - exclude_directories / exclude_patterns: excluded directories and patterns (e.g. *.log, RE2 regex)
+- use_default_excludes: merge the global default excludes (config/exclude_defaults.yml, true by default; node_modules, dist, images, build artifacts, etc. — no need to list them manually)
+- skip_binary_files: auto-skip binary files by content (NUL byte within the first 8KB, true by default; avoids exporting fonts and similar files as garbage)
 - include_enabled / include_patterns: when enabled, only matching files are loaded
 - max_file_size: per-file size limit in bytes (0 = unlimited)
 - export_mode: export mode (full / files / symbols / signatures)
@@ -65,6 +67,12 @@ exclude_directories:
 exclude_patterns:
   - '*.log'
   - '**/*_test.go'
+
+# Merge the global default excludes (config/exclude_defaults.yml: node_modules, dist,
+# images, build artifacts, etc., merged and deduplicated with the rules above); true by default, set false to disable
+use_default_excludes: true
+# Auto-skip binary files by content (NUL byte within the first 8KB, e.g. font files); true by default
+skip_binary_files: true
 
 # When enabled, only files matching include_patterns are loaded
 include_enabled: false
@@ -217,6 +225,7 @@ redaction:
     logSensitiveFail: 'Sensitive scan failed: {err}',
     logExport: 'Export triggered: mode={mode}, redact={redact}, files={n}',
     logExportOk: 'Export finished: {paths} ({ms} ms)',
+    logExportFail: 'Export failed: {err}',
     logOpenDir: 'Opening output folder: {path}',
     logCopyPath: 'Output path copied: {paths}',
     logCopyFail: 'Copy failed: clipboard permission unavailable',
@@ -266,6 +275,10 @@ redaction:
     includeDirs: 'Included directories',
     excludeDirs: 'Excluded directories',
     excludePatterns: 'Exclude patterns',
+    useDefaultExcludes: 'Enable global default excludes',
+    skipBinary: 'Auto-skip binary files (content-based, on by default)',
+    defaultExcludes: 'Default excludes (automatic, read-only)',
+    defaultExcludesHint: 'These are merged with your custom rules above; set use_default_excludes: false in the project config to disable them.',
     maxSize: 'Maximum size',
     maxSizeSuffix: 'bytes (0 = no limit)',
     exportMode: 'Export mode',

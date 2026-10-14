@@ -91,6 +91,14 @@ func SerializeWithComments(c *ProjectConfig) (string, error) {
 	if c.ExportMode != "" && c.ExportMode != "full" {
 		pair("Export mode: full | files | symbols | signatures | custom", "export_mode", strNode(false, c.ExportMode))
 	}
+	if c.UseDefaultExcludes != nil && !*c.UseDefaultExcludes {
+		// 默认 true（省略即生效）；仅显式关闭时输出
+		pair("Set to false to disable the global default excludes (config/exclude_defaults.yml)", "use_default_excludes", boolNode(false))
+	}
+	if c.SkipBinaryFiles != nil && !*c.SkipBinaryFiles {
+		// 默认 true（省略即生效）；仅显式关闭时输出
+		pair("Set to false to include binary files (detected by content: NUL byte in the first 8KB)", "skip_binary_files", boolNode(false))
+	}
 	if c.SplitTokens > 0 {
 		pair("Split output into parts of at most this many tokens (0 = no split)", "split_tokens", intNode(int64(c.SplitTokens)))
 	}

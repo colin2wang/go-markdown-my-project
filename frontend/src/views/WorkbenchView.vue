@@ -137,6 +137,8 @@ async function doExport() {
   try {
     await exp.run(projects.current);
     if (exp.result) log.info(t('wb.logExportOk', { paths: exp.result.outputPaths.join(', '), ms: exp.result.durationMs }));
+  } catch (e) {
+    log.error(t('wb.logExportFail', { err: e instanceof Error ? e.message : String(e) }));
   } finally {
     exporting.value = false;
   }

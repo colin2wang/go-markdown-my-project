@@ -33,7 +33,7 @@ cd frontend && pnpm dev    # 纯前端开发
 - **pnpm 12**：构建脚本白名单在 `frontend/pnpm-workspace.yaml` 的 `allowBuilds`（package.json 里旧 `pnpm` 字段已失效）；build.ps1 用 ASCII 输出，PowerShell 5.1 下非 BOM 中文会解析失败。
 - **路径约定**：落盘/展示用 `/` 相对路径；仅 `full` 模式的文件标题保留原生分隔符（见上）。
 - **正则限制**：所有规则用 RE2（Go `regexp`），不支持反向引用；symbol 提取器为逐行正则（允许漏报），Go 方法规则靠 `nameGroup: 2` 取名。
-- `config/projects/` 是示例项目配置来源（`config/languages.yml`、`log4rs.yml` 与 `cmd/` CLI 已删除，仅保留 GUI）；build.ps1 拷 `assets/` 与 `config/` 到 `build/bin/`；GUI 默认路径 `config/projects` 相对 exe 工作目录。
+- `config/` 是 GUI 运行时配置来源（`config/langs.yml` 语言映射 + `config/projects/` 示例配置 + `config/exclude_defaults.yml` 全局默认排除，自动与项目 exclude_* 合并去重，项目内 `use_default_excludes: false` 可整体关闭；项目内 `skip_binary_files` 按内容跳过二进制（前 8KB 含 NUL），默认开启、仅显式 false 时输出；`log4rs.yml` 与 `cmd/` CLI 已删除，仅保留 GUI；原 `assets/` 已并入 `config/`）；build.ps1 拷 `config/` 到 `build/bin/`（先删旧目录再拷，避免 Copy-Item -Recurse 嵌套成 config/config）；GUI 默认路径 `config/projects` 相对 exe 工作目录。
 - 测试进程在 Windows 上偶发 `unlinkat ... being used by another process`，是临时目录文件锁，与代码无关。
 
 ## 指令文件维护规则

@@ -59,6 +59,16 @@ var dicts = map[string]map[Locale]string{
 		EnUS: "Export started",
 		JaJP: "エクスポートを開始",
 	},
+	"log.exportFail": {
+		ZhCN: "导出失败",
+		EnUS: "Export failed",
+		JaJP: "エクスポートに失敗しました",
+	},
+	"log.redactApplied": {
+		ZhCN: "脱敏替换完成",
+		EnUS: "Redaction applied",
+		JaJP: "マスキング置換が完了しました",
+	},
 	"log.exportDone": {
 		ZhCN: "导出完成",
 		EnUS: "Export finished",
@@ -104,10 +114,20 @@ var dicts = map[string]map[Locale]string{
 		EnUS: "Skipping file due to exclude pattern",
 		JaJP: "除外ルールによりファイルをスキップ",
 	},
+	"log.skipBinary": {
+		ZhCN: "跳过二进制文件",
+		EnUS: "Skipping binary file",
+		JaJP: "バイナリファイルをスキップ",
+	},
 	"log.skipNotIncluded": {
 		ZhCN: "文件不匹配包含规则，已跳过",
 		EnUS: "File does not match include patterns, skipped",
 		JaJP: "ファイルが包含パターンに一致しないためスキップ",
+	},
+	"log.excludeDefaultsFail": {
+		ZhCN: "默认排除规则加载失败，本次忽略默认排除",
+		EnUS: "Failed to load default excludes; they are ignored for this run",
+		JaJP: "デフォルト除外ルールの読み込みに失敗したため無視します",
 	},
 	"err.projectsDirNotFound": {
 		ZhCN: "projects 目录不存在: {dir}（当前工作目录: {wd}）",

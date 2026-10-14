@@ -19,6 +19,8 @@ const zhCN = {
 - markdown_lang：文档语言（zh_cn / en）
 - files / directories：包含的文件与目录（directories 递归收集）
 - exclude_directories / exclude_patterns：排除目录与排除规则（如 *.log，RE2 正则）
+- use_default_excludes：是否合并全局默认排除（config/exclude_defaults.yml，默认 true；含 node_modules、dist、图片、编译产物等，无需手动排除）
+- skip_binary_files：按内容自动跳过二进制文件（前 8KB 含 NUL 即判定，默认 true；避免字体等文件导出成乱码）
 - include_enabled / include_patterns：激活后仅加载匹配的文件
 - max_file_size：单文件大小上限（字节，0 = 不限制）
 - export_mode：导出模式（full / files / symbols / signatures）
@@ -64,6 +66,12 @@ exclude_directories:
 exclude_patterns:
   - '*.log'
   - '**/*_test.go'
+
+# 是否合并全局默认排除（config/exclude_defaults.yml：node_modules、dist、图片、
+# 编译产物等常见排除项，自动与上方规则合并去重）；默认 true，设为 false 可整体关闭
+use_default_excludes: true
+# 按内容自动跳过二进制文件（前 8KB 含 NUL，如字体文件）；默认 true
+skip_binary_files: true
 
 # 激活后仅加载匹配 include_patterns 的文件
 include_enabled: false
@@ -216,6 +224,7 @@ redaction:
     logSensitiveFail: '敏感信息扫描失败：{err}',
     logExport: '触发导出：模式={mode}，脱敏={redact}，文件={n}',
     logExportOk: '导出成功：{paths}（{ms} ms）',
+    logExportFail: '导出失败：{err}',
     logOpenDir: '打开输出目录：{path}',
     logCopyPath: '已复制输出路径：{paths}',
     logCopyFail: '复制路径失败：剪贴板权限不可用',
@@ -265,6 +274,10 @@ redaction:
     includeDirs: '包含目录',
     excludeDirs: '排除目录',
     excludePatterns: '排除规则',
+    useDefaultExcludes: '启用全局默认排除',
+    skipBinary: '自动跳过二进制文件（按内容检测，默认开启）',
+    defaultExcludes: '默认排除（自动生效，只读）',
+    defaultExcludesHint: '以上规则自动与上方自定义规则合并；写入项目配置 use_default_excludes: false 可整体关闭。',
     maxSize: '大小上限',
     maxSizeSuffix: '字节（0 = 不限制）',
     exportMode: '导出模式',

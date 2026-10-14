@@ -24,6 +24,10 @@ export interface ProjectConfig {
   };
   split_tokens?: number;
   template?: string;
+  /** 是否合并全局默认排除（config/exclude_defaults.yml）；省略 = true */
+  use_default_excludes?: boolean;
+  /** 按内容跳过二进制文件（前 8KB 含 NUL）；省略 = true */
+  skip_binary_files?: boolean;
 }
 
 export interface FileInfo {
@@ -90,6 +94,12 @@ export interface ScanPreview {
   warnings: string[];
 }
 
+/** 全局默认排除规则（config/exclude_defaults.yml），编辑器只读展示 */
+export interface ExcludeDefaults {
+  directories: string[];
+  files: string[];
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function go(): any {
   // Wails 运行时注入：App 结构体在 app 包下，绑定为 window['go']['app']['App']
@@ -151,5 +161,8 @@ export const api = {
   },
   async previewScan(cfg: ProjectConfig): Promise<ScanPreview | null> {
     return (await go()?.PreviewScan(cfg)) ?? null;
+  },
+  async defaultExcludes(): Promise<ExcludeDefaults | null> {
+    return (await go()?.DefaultExcludes()) ?? null;
   },
 };

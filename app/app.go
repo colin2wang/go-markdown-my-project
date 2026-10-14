@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -96,8 +97,8 @@ func (a *App) SetLocale(code string) {
 	logger.Info(i18n.T("log.localeSwitched"), "locale", code)
 }
 
-// languagesDir 返回资源目录（langs.yml 所在）。
-func languagesPath() string { return "assets/langs.yml" }
+// languagesPath 返回语言映射文件路径（langs.yml 与项目配置同在 config/ 下）。
+func languagesPath() string { return "config/langs.yml" }
 
 // ListProjects 列出 projectsDir 下所有 *.yml 项目配置。
 func (a *App) ListProjects(projectsDir string) ([]ProjectSummary, error) {
@@ -208,7 +209,7 @@ type ScanPreview struct {
 // scanOpts 由配置构造扫描选项（各入口共用，避免字段透传遗漏）。
 func scanOpts(cfg config.ProjectConfig, files, dirs []string) scanner.Options {
 	includeEnabled := cfg.IncludeEnabled != nil && *cfg.IncludeEnabled
-	return scanner.Options{
+	opts := scanner.Options{
 		ProjectPath:        cfg.ProjectPath,
 		Files:              files,
 		Directories:        dirs,
@@ -217,7 +218,53 @@ func scanOpts(cfg config.ProjectConfig, files, dirs []string) scanner.Options {
 		MaxFileSize:        cfg.MaxFileSize,
 		IncludeEnabled:     includeEnabled,
 		IncludePatterns:    cfg.IncludePatterns,
+		SkipBinary:         cfg.SkipBinaryFiles == nil || *cfg.SkipBinaryFiles,
 	}
+	// 全局默认排除（config/exclude_defaults.yml）：与项目配置合并去重后注入，
+	// 单点覆盖所有扫描/导出入口；项目内可增量追加，use_default_excludes: false 可整体关闭。
+	if cfg.UseDefaultsEnabled() {
+		if d := loadExcludeDefaults(); d != nil {
+			opts.ExcludeDirectories = mergeUnique(opts.ExcludeDirectories, d.Directories)
+			opts.ExcludePatterns = mergeUnique(opts.ExcludePatterns, d.Files)
+		}
+	}
+	return opts
+}
+
+// mergeUnique 追加并去重（保持原顺序，首次出现优先）。
+func mergeUnique(base, extra []string) []string {
+	seen := make(map[string]bool, len(base)+len(extra))
+	out := make([]string, 0, len(base)+len(extra))
+	for _, s := range base {
+		if !seen[s] {
+			seen[s] = true
+			out = append(out, s)
+		}
+	}
+	for _, s := range extra {
+		if !seen[s] {
+			seen[s] = true
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+var (
+	excludeDefaultsOnce sync.Once
+	excludeDefaults     *config.ExcludeDefaults
+)
+
+// loadExcludeDefaults 进程内加载一次全局默认排除；解析失败记 WARN 并视为无默认规则。
+func loadExcludeDefaults() *config.ExcludeDefaults {
+	excludeDefaultsOnce.Do(func() {
+		d, err := config.LoadExcludeDefaults("config/exclude_defaults.yml")
+		if err != nil {
+			logger.Warn(i18n.T("log.excludeDefaultsFail"), "err", err.Error())
+		}
+		excludeDefaults = d
+	})
+	return excludeDefaults
 }
 
 // PreviewScan 保存前预检：文件数 / 总大小 / 语言分布 / 警告。
@@ -351,12 +398,33 @@ func prepareExport(cfg config.ProjectConfig, opt ExportOptions) ([]scanner.FileR
 
 	results, err := scanner.ProcessFiles(scanOpts(cfg, files, dirs))
 	if err != nil {
+		logger.Error(i18n.T("log.exportFail"), "err", err.Error())
 		return nil, nil, "", 0, err
 	}
 	scanner.SortByRelPath(results)
 
+	// 敏感信息替换（F99 两阶段第二阶段）：前端已确认报告，导出时替换；
+	// 日志只记数量与规则名，绝不落盘明文。
+	if opt.Redact {
+		rcfg := redactorConfig(cfg.Redaction)
+		total := 0
+		for i := range results {
+			rel, rerr := filepath.Rel(cfg.ProjectPath, results[i].FullPath)
+			if rerr != nil {
+				rel = results[i].FullPath
+			}
+			out, n := redactor.RedactContent(filepath.ToSlash(rel), results[i].Content, rcfg)
+			if n > 0 {
+				results[i].Content = out
+				total += n
+			}
+		}
+		logger.Info(i18n.T("log.redactApplied"), "count", total)
+	}
+
 	langs, err := generator.LoadLanguages(languagesPath())
 	if err != nil {
+		logger.Error(i18n.T("log.exportFail"), "err", err.Error())
 		return nil, nil, "", 0, fmt.Errorf("加载语言映射失败: %w", err)
 	}
 
@@ -389,6 +457,31 @@ func maxSignatureLen(opt ExportOptions) int {
 		return 200
 	}
 	return opt.MaxSignatureLen
+}
+
+// redactorConfig 把项目脱敏配置转为 redactor.Config；
+// 自定义正则编译失败时忽略该条（保存时已校验过）。
+func redactorConfig(rc config.RedactionConfig) redactor.Config {
+	cfg := redactor.DefaultConfig()
+	if rc.Placeholder != "" {
+		cfg.Placeholder = rc.Placeholder
+	}
+	if rc.Strategy != "" {
+		cfg.Strategy = rc.Strategy
+	}
+	if len(rc.Allowlist) > 0 {
+		m := make(map[string]bool, len(rc.Allowlist))
+		for _, k := range rc.Allowlist {
+			m[k] = true
+		}
+		cfg.Allowlist = m
+	}
+	for _, p := range rc.CustomPatterns {
+		if re, err := regexp.Compile(p); err == nil {
+			cfg.CustomPatterns = append(cfg.CustomPatterns, re)
+		}
+	}
+	return cfg
 }
 
 // buildExport 扫描并生成完整导出内容（PreviewExport 使用；分片见 RunExport）。
@@ -424,6 +517,9 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 	if err != nil {
 		return ExportResult{}, err
 	}
+	logExportFail := func(err error) {
+		logger.Error(i18n.T("log.exportFail"), "err", err.Error())
+	}
 	genOpts := generator.Options{
 		ProjectName:        cfg.ProjectName,
 		ProjectRoot:        cfg.ProjectPath,
@@ -455,6 +551,7 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 			name := fmt.Sprintf("%s.part%d%s", base, c.Index, ext)
 			p, werr := generator.WriteOutput("output", name, c.Content)
 			if werr != nil {
+				logExportFail(werr)
 				return ExportResult{}, werr
 			}
 			outPaths = append(outPaths, p)
@@ -464,6 +561,7 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 	} else {
 		content, err = generator.Generate(results, genOpts)
 		if err != nil {
+			logExportFail(err)
 			return ExportResult{}, err
 		}
 		if opt.Compress {
@@ -471,6 +569,7 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 		}
 		outPath, werr := generator.WriteOutput("output", cfg.OutputFile, content)
 		if werr != nil {
+			logExportFail(werr)
 			return ExportResult{}, werr
 		}
 		outPaths = []string{outPath}
@@ -556,6 +655,20 @@ func (a *App) SelectDirectory(startDir string) (string, error) {
 		}
 	}
 	return runtime.OpenDirectoryDialog(a.ctx, opts)
+}
+
+// ExcludeDefaultsResult DefaultExcludes 的返回（Wails 绑定使用具名结构体避免多返回值歧义）。
+type ExcludeDefaultsResult struct {
+	Directories []string `json:"directories"`
+	Files       []string `json:"files"`
+}
+
+// DefaultExcludes 返回全局默认排除规则（config/exclude_defaults.yml），供编辑器只读展示。
+func (a *App) DefaultExcludes() ExcludeDefaultsResult {
+	if d := loadExcludeDefaults(); d != nil {
+		return ExcludeDefaultsResult{Directories: d.Directories, Files: d.Files}
+	}
+	return ExcludeDefaultsResult{Directories: []string{}, Files: []string{}}
 }
 
 // DefaultProjectsDir 返回 exe 工作目录下的默认 projects 目录（绝对路径）。

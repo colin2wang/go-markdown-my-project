@@ -44,6 +44,15 @@ type ProjectConfig struct {
 	Redaction   RedactionConfig `yaml:"redaction,omitempty" json:"redaction,omitempty"`
 	SplitTokens int             `yaml:"split_tokens,omitempty" json:"split_tokens,omitempty"`
 	Template    string          `yaml:"template,omitempty" json:"template,omitempty"`
+	// UseDefaultExcludes 是否合并全局默认排除（config/exclude_defaults.yml）；nil = true
+	UseDefaultExcludes *bool `yaml:"use_default_excludes,omitempty" json:"use_default_excludes,omitempty"`
+	// SkipBinaryFiles 按内容跳过二进制文件（前 8KB 含 NUL）；nil = true
+	SkipBinaryFiles *bool `yaml:"skip_binary_files,omitempty" json:"skip_binary_files,omitempty"`
+}
+
+// UseDefaultsEnabled 判断是否合并全局默认排除（nil 视为 true）。
+func (c *ProjectConfig) UseDefaultsEnabled() bool {
+	return c.UseDefaultExcludes == nil || *c.UseDefaultExcludes
 }
 
 // supportedOutputExts 对齐 config.rs 的输出扩展名警告列表。

@@ -20,6 +20,8 @@ const jaJP: Messages = {
 - markdown_lang：ドキュメント言語（zh_cn / en）
 - files / directories：含めるファイルとディレクトリ（directories は再帰的に収集）
 - exclude_directories / exclude_patterns：除外ディレクトリと除外パターン（例: *.log、RE2 正規表現）
+- use_default_excludes：グローバル既定除外（config/exclude_defaults.yml）を統合するか（既定 true；node_modules、dist、画像、ビルド成果物などを手動で書く必要なし）
+- skip_binary_files：内容によりバイナリファイルを自動スキップ（先頭 8KB に NUL があればバイナリ、既定 true；フォント等の文字化けエクスポートを防止）
 - include_enabled / include_patterns：有効時は一致するファイルのみ読み込み
 - max_file_size：1 ファイルのサイズ上限（バイト、0 = 無制限）
 - export_mode：エクスポートモード（full / files / symbols / signatures）
@@ -65,6 +67,12 @@ exclude_directories:
 exclude_patterns:
   - '*.log'
   - '**/*_test.go'
+
+# グローバル既定除外（config/exclude_defaults.yml：node_modules、dist、画像、
+# ビルド成果物など）を統合するか。既定 true、false で無効化
+use_default_excludes: true
+# 内容によりバイナリファイルを自動スキップ（先頭 8KB に NUL、例: フォント）；既定 true
+skip_binary_files: true
 
 # 有効時は include_patterns に一致するファイルのみ読み込み
 include_enabled: false
@@ -217,6 +225,7 @@ redaction:
     logSensitiveFail: '機密情報スキャン失敗：{err}',
     logExport: 'エクスポート開始：モード={mode}，マスキング={redact}，ファイル={n}',
     logExportOk: 'エクスポート成功：{paths}（{ms} ms）',
+    logExportFail: 'エクスポート失敗：{err}',
     logOpenDir: '出力フォルダを開く：{path}',
     logCopyPath: '出力パスをコピーしました：{paths}',
     logCopyFail: 'コピー失敗：クリップボード権限がありません',
@@ -266,6 +275,10 @@ redaction:
     includeDirs: '含めるディレクトリ',
     excludeDirs: '除外ディレクトリ',
     excludePatterns: '除外パターン',
+    useDefaultExcludes: 'グローバル既定除外を有効化',
+    skipBinary: 'バイナリファイルを自動スキップ（内容判定、既定オン）',
+    defaultExcludes: '既定除外（自動・読み取り専用）',
+    defaultExcludesHint: '上のカスタムルールと自動的に統合されます。プロジェクト設定で use_default_excludes: false にすると無効化できます。',
     maxSize: 'サイズ上限',
     maxSizeSuffix: 'バイト（0 = 無制限）',
     exportMode: 'エクスポートモード',

@@ -76,7 +76,10 @@ func Init(opts Options) error {
 
 	var writers []io.Writer
 	if opts.Console {
-		writers = append(writers, os.Stdout)
+		// GUI 子系统（wails build 默认 -H windowsgui）下 stdout 是无效句柄，写入必失败；
+		// io.MultiWriter 会在第一个 writer 报错时中断，导致文件日志也写不进去，
+		// 因此控制台 writer 吞掉写失败，只保证文件日志不受牵连。
+		writers = append(writers, consoleWriter{w: os.Stdout})
 	}
 	// 目录创建失败不应阻断整个日志系统：降级为仅控制台输出，
 	// 并始终挂上 sinkHandler，保证前端日志转发与后续文件日志可用。
@@ -129,6 +132,14 @@ func itoa(n int) string {
 		n /= 10
 	}
 	return string(b[i:])
+}
+
+// consoleWriter 忽略控制台写入失败（仍返回 len(p), nil，保证 MultiWriter 继续写文件日志）。
+type consoleWriter struct{ w io.Writer }
+
+func (c consoleWriter) Write(p []byte) (int, error) {
+	n, _ := c.w.Write(p)
+	return n, nil
 }
 
 // L 返回全局 logger。

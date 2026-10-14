@@ -3,6 +3,8 @@
 import {app} from '../models';
 import {config} from '../models';
 
+export function DefaultExcludes():Promise<app.ExcludeDefaultsResult>;
+
 export function DefaultProjectsDir():Promise<string>;
 
 export function DeleteProject(arg1:string):Promise<void>;

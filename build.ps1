@@ -117,16 +117,19 @@ try {
     wails @buildArgs
     Invoke-Checked 'Go backend compilation failed'
 
-    # Copy assets/ and sample project configs next to the wails output executable
-    # (GUI reads assets/langs.yml and config/projects relative to the exe's working directory)
-    Write-Step 'Copy assets and sample configs to build/bin/'
+    # Copy sample project configs + language mapping next to the wails output executable
+    # (GUI reads config/langs.yml and config/projects relative to the exe's working directory)
+    Write-Step 'Copy configs to build/bin/'
     if (-not (Test-Path (Join-Path $root "build\bin\$exeName"))) {
         Write-Fail "wails build output not found: build\bin\$exeName"
         exit 1
     }
-    Copy-Item (Join-Path $root 'assets') (Join-Path $root 'build\bin\assets') -Recurse -Force
-    Copy-Item (Join-Path $root 'config') (Join-Path $root 'build\bin\config') -Recurse -Force
-    Write-Ok 'assets/, config/ -> build/bin'
+    # Copy-Item -Recurse 的坑：目标已存在时会把源目录整个拷进目标内部（config/config），
+    # 因此先删旧目录再整目录拷贝，保证结构始终是 build/bin/config/*
+    $configDest = Join-Path $root 'build\bin\config'
+    if (Test-Path $configDest) { Remove-Item $configDest -Recurse -Force }
+    Copy-Item (Join-Path $root 'config') $configDest -Recurse -Force
+    Write-Ok 'config/ -> build/bin'
 
     Write-Step 'Build completed'
     Get-ChildItem -Path $binDir -Recurse -File |

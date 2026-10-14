@@ -1,7 +1,7 @@
 <!-- 编辑项目对话框：左表单 + 右 YAML 实时镜像（设计文档 2026-10-07-edit-dialog.md） -->
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import type { ProjectConfig } from '../../api/bindings';
+import { api, type ExcludeDefaults, type ProjectConfig } from '../../api/bindings';
 import { useProjectEditor } from '../../stores/projectEditor';
 import { useLogStore } from '../../stores/log';
 import { useI18n } from '../../i18n';
@@ -25,6 +25,9 @@ const showCloseConfirm = ref(false);
 const saveError = ref('');
 const saving = ref(false);
 
+// 全局默认排除（config/exclude_defaults.yml）：只读展示，自动与项目规则合并
+const excludeDefaults = ref<ExcludeDefaults | null>(null);
+
 // 新建模式：保存路径随项目名联动
 const savePath = computed(() => {
   if (props.configPath) return props.configPath;
@@ -36,6 +39,7 @@ const savePath = computed(() => {
 onMounted(() => {
   if (props.configPath && props.initial) ed.openForEdit(props.configPath, props.initial);
   else ed.openForCreate(savePath.value);
+  api.defaultExcludes().then((d) => (excludeDefaults.value = d));
   log.info(ed.isNew ? t('editor.logOpenCreate') : t('editor.logOpenEdit', { path: props.configPath }));
 });
 
@@ -143,6 +147,22 @@ function onCancel() {
                 <input :value="ed.draft.max_file_size ?? 0" type="number" class="num" :class="{ invalid: !!ed.errors.max_file_size }" @input="ed.draft!.max_file_size = Number(($event.target as HTMLInputElement).value)" />
                 {{ t('editor.maxSizeSuffix') }}
               </label>
+              <label class="inline">
+                <input type="checkbox" :checked="ed.draft.use_default_excludes !== false" @change="ed.draft!.use_default_excludes = ($event.target as HTMLInputElement).checked" />
+                {{ t('editor.useDefaultExcludes') }}
+              </label>
+              <label class="inline">
+                <input type="checkbox" :checked="ed.draft.skip_binary_files !== false" @change="ed.draft!.skip_binary_files = ($event.target as HTMLInputElement).checked" />
+                {{ t('editor.skipBinary') }}
+              </label>
+              <template v-if="ed.draft.use_default_excludes !== false && excludeDefaults">
+                <label>{{ t('editor.defaultExcludes') }}</label>
+                <div class="default-excludes">
+                  <span v-for="d in excludeDefaults.directories" :key="'d-' + d" class="default-tag dir">{{ d }}</span>
+                  <span v-for="p in excludeDefaults.files" :key="'f-' + p" class="default-tag">{{ p }}</span>
+                </div>
+                <p class="default-hint">{{ t('editor.defaultExcludesHint') }}</p>
+              </template>
             </EditorSection>
 
             <EditorSection id="sec-include" icon="📥" :title="t('editor.sectionInclude')" :error-count="ed.errors.include_patterns ? 1 : 0">
@@ -254,6 +274,13 @@ button.danger { background: #742a2a; }
 input.invalid { border-color: #c53030 !important; }
 .field-error { color: #ff8383; font-size: 11px; margin: 2px 0 6px 2px; }
 .num { width: 110px; }
+.default-excludes { display: flex; flex-wrap: wrap; gap: 4px; }
+.default-tag {
+  font-size: 11px; padding: 2px 7px; border-radius: 10px;
+  background: #1f2d3d; border: 1px solid #3a4a5c; color: #8fa3b8;
+}
+.default-tag.dir { border-style: dashed; }
+.default-hint { font-size: 11px; color: #6b7f93; margin: 4px 0 0; }
 .modal.sub { z-index: 50; }
 .confirm { background: #16222e; border: 1px solid #742a2a; border-radius: 10px; padding: 18px 20px; width: 360px; }
 .confirm h4 { margin: 0 0 8px; }

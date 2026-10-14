@@ -42,6 +42,9 @@ type Options struct {
 	// 包含规则：IncludeEnabled 为 true 时，仅保留扩展名匹配 IncludePatterns（如 *.java）的文件
 	IncludeEnabled  bool
 	IncludePatterns []string
+	// SkipBinary 按内容跳过二进制文件（前 8KB 含 NUL 字节即判定），
+	// 覆盖没有常见扩展名的二进制（如字体、无后缀的编译产物），导出后只会是乱码。
+	SkipBinary bool
 }
 
 // ProcessFiles 处理配置指定的文件与目录，返回 (路径, 内容) 列表。
@@ -62,6 +65,10 @@ func ProcessFiles(opts Options) ([]FileResult, error) {
 				content, err := ReadFileContent(fullPath)
 				if err != nil {
 					return nil, err
+				}
+				if opts.SkipBinary && isBinary(content) {
+					logger.Debug(i18n.T("log.skipBinary"), "path", fullPath)
+					continue
 				}
 				results = append(results, FileResult{FullPath: fullPath, Content: content})
 			}
@@ -141,6 +148,10 @@ func parallelProcessDirectory(dir string, results *[]FileResult, opts Options) {
 					logger.Warn(i18n.T("log.readFileFail"), "path", p, "err", err)
 					continue
 				}
+				if opts.SkipBinary && isBinary(content) {
+					logger.Debug(i18n.T("log.skipBinary"), "path", p)
+					continue
+				}
 				out <- item{path: p, content: content}
 			}
 		}()
@@ -155,6 +166,16 @@ func parallelProcessDirectory(dir string, results *[]FileResult, opts Options) {
 	for it := range out {
 		*results = append(*results, FileResult{FullPath: it.path, Content: it.content})
 	}
+}
+
+// isBinary 二进制嗅探：前 8KB 内出现 NUL 字节即判定为二进制（对齐 git 的启发式；
+// UTF-8/UTF-16 之外的文本不会含 NUL，UTF-16 文件本就无法按文本导出）。
+func isBinary(content string) bool {
+	n := len(content)
+	if n > 8192 {
+		n = 8192
+	}
+	return strings.IndexByte(content[:n], 0x00) >= 0
 }
 
 // ShouldIncludeFile 判断文件是否应包含：大小限制 → 排除模式 → 包含模式（激活时白名单）。

@@ -1,5 +1,19 @@
 export namespace app {
 	
+	export class ExcludeDefaultsResult {
+	    directories: string[];
+	    files: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ExcludeDefaultsResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.directories = source["directories"];
+	        this.files = source["files"];
+	    }
+	}
 	export class ExportOptions {
 	    mode: string;
 	    redact: boolean;
@@ -207,6 +221,8 @@ export namespace config {
 	    redaction?: RedactionConfig;
 	    split_tokens?: number;
 	    template?: string;
+	    use_default_excludes?: boolean;
+	    skip_binary_files?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ProjectConfig(source);
@@ -229,6 +245,8 @@ export namespace config {
 	        this.redaction = this.convertValues(source["redaction"], RedactionConfig);
 	        this.split_tokens = source["split_tokens"];
 	        this.template = source["template"];
+	        this.use_default_excludes = source["use_default_excludes"];
+	        this.skip_binary_files = source["skip_binary_files"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

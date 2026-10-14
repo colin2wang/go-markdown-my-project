@@ -57,8 +57,10 @@ Two views, switched via the top tabs:
 │   ├── redactor/                 # Secret detection & redaction engine
 │   ├── token/                    # Token estimation & chunk splitting
 │   └── logger/                   # slog console + rolling file
-├── assets/langs.yml              # Extension → language mapping
-├── config/projects/              # Sample project configs (*.yml)
+├── config/
+│   ├── langs.yml                # Extension → language mapping
+│   ├── exclude_defaults.yml     # Global default exclude rules (merged automatically)
+│   └── projects/                # Sample project configs (*.yml)
 ├── frontend/
 │   ├── src/views/                # ProjectsView / Workbench / FileTree / Wizard / SensitiveDrawer
 │   ├── src/components/editor/    # WYSIWYG project editor (form + live YAML preview)
@@ -86,8 +88,10 @@ Output in `build/bin/`:
 ```
 build/bin/
 ├── project-docs-gui.exe    # Desktop GUI (Wails)
-├── assets/langs.yml        # runtime language mapping (required by the exe)
-└── config/projects/*.yml   # sample project configs
+└── config/
+    ├── langs.yml           # runtime language mapping (required by the exe)
+    ├── exclude_defaults.yml # default exclude rules (applied to every scan)
+    └── projects/*.yml      # sample project configs
 ```
 
 ## Usage
