@@ -1,6 +1,12 @@
 # Project Docs GUI
 
-Aggregate source code from your projects into a single, clean Markdown file — ready to feed to online LLMs for analysis. Desktop GUI (Wails), written in Go with a Vue 3 + TypeScript frontend. Rewritten from the original Rust console tool `markdown_my_project`.
+English | [简体中文](README.zh-CN.md)
+
+Turn any local project into one clean, well-structured Markdown document — full source with file tree, a file manifest, or a symbol index — ready to paste into an online LLM for code review, Q&A, or documentation.
+
+The whole workflow lives in a single desktop app: point at a project directory, tick the files that matter, pick an export mode, and export. Secrets are stripped before anything is written, token usage is estimated before you commit, and oversized output can be split into chunks automatically.
+
+- UI in **English / 中文 / 日本語**; documents in **简体中文 (zh_cn)** or **English (en_us)**
 
 ## Screenshots
 
@@ -8,13 +14,17 @@ Aggregate source code from your projects into a single, clean Markdown file — 
 
 ![Projects view](dosc/images/projects-view.png)
 
-**Project editor** — visual form (left) mirroring `project.yml` in real time (right):
+**Project editor** — visual form (left) mirroring the project config in real time (right); scope, exclude, include, export and sensitive-info tabs:
 
 ![Edit dialog](dosc/images/edit-dialog.png)
 
 **Workbench** — file tree, export options and result in one screen:
 
 ![Workbench](dosc/images/workbench.png)
+
+**Export modes & sensitive-data scan** — pick full / files / symbols / signatures; exporting with redaction on but unscanned prompts first:
+
+![Workbench export modes](dosc/images/workbench-export.png)
 
 ## Features
 
@@ -24,9 +34,9 @@ Aggregate source code from your projects into a single, clean Markdown file — 
 | F2 | File manifest export | Paths/file tree only, with per-file language, line count and size |
 | F99 | Secret redaction | Detects passwords/API keys/tokens and strips them before export; in-app scan with masked-hit drawer |
 | F4 | Token estimate & split | ≈Token estimation (±20%) and greedy chunking by file units |
-| F3 | Symbol export | Function/class/struct names per file (regex-based) — **planned, under development** (UI entry exists, backend pending) |
+| F3 | Symbol & signature export | Per-file symbol index (functions/classes/structs) plus normalized API signatures — two lightweight structural-overview modes |
 
-Export modes: `full` · `files` · `symbols`\* · `signatures`\* · `custom` (\* = not yet implemented in the backend; selecting them returns an error).
+Export modes: `full` · `files` · `symbols` · `signatures`.
 
 ## UI Structure
 
@@ -153,8 +163,7 @@ Design documents (UI redesign, output modes, editor dialog) live in `dosc/`.
 
 ## Notes & Limitations
 
-- `symbols` / `signatures` export modes have UI entries but the backend templates are still under development (see `dosc/2026-10-07-output-mode.md`); selecting them returns an error for now.
-- Regex-based symbol extraction is heuristic (directory-level reference for LLMs, misses are acceptable); a tree-sitter upgrade path is planned.
+- Regex-based symbol extraction is heuristic (a directory-level reference for LLMs; misses are acceptable); a tree-sitter upgrade path is planned.
 - Token estimation is ±20%, for capacity planning only.
 - `full` mode on huge projects may produce very large files — prefer `split_tokens`.
 - Scanned paths are stored with `/` separators for cross-platform output; only `full`-mode file headings keep native separators (byte-compat with the legacy Rust output).
