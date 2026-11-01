@@ -12,12 +12,19 @@ import "strings"
 //   - 裁剪每行行尾空白（含 \r，兼容 CRLF）；
 //   - 连续空行折叠为一个空行；
 //   - 行首缩进不动（缩进即语法的语言保持有效）。
-func Minify(text string) string {
+func Minify(text string) string { return MinifyWith(text, 0) }
+
+// MinifyWith 空白精简，并可选截断超长行（maxLineLen > 0 时按 rune 计数截断，
+// 尾部追加省略标记）。用于压制压缩产物（*.min.js、超长单行 JSON）吞掉预算。
+func MinifyWith(text string, maxLineLen int) string {
 	lines := strings.Split(text, "\n")
 	out := make([]string, 0, len(lines))
 	prevBlank := false
 	for _, line := range lines {
 		t := strings.TrimRight(line, " \t\r")
+		if maxLineLen > 0 && len([]rune(t)) > maxLineLen {
+			t = string([]rune(t)[:maxLineLen]) + " …"
+		}
 		if t == "" {
 			if prevBlank {
 				continue // 折叠连续空行

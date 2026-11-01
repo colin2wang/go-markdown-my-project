@@ -44,9 +44,14 @@ export const useExportStore = defineStore('export', () => {
   const mode = ref<string>('full');
   const redact = ref(true);
   const splitTokens = ref(0);
-  const compress = ref(false); // 压缩输出（.gz），默认关
+  const compress = ref(false); // 空白精简输出
   const includeLineNumbers = ref(true);
   const maxSignatureLen = ref(200);
+  // 省 token 策略（用更少 token 承载更多有效信息）
+  const budgetTokens = ref(0); // 0 = 不裁剪
+  const stripComments = ref(false);
+  const maxLineLen = ref(0); // 0 = 不截断
+  const smartFullTokens = ref(0); // 0 = 后端默认
   const result = ref<ExportResult | null>(null);
 
   async function scan(cfg: ProjectConfig) {
@@ -63,6 +68,10 @@ export const useExportStore = defineStore('export', () => {
       fileOverrides: [...checkedPaths.value],
       includeLineNumbers: includeLineNumbers.value,
       maxSignatureLen: maxSignatureLen.value,
+      budgetTokens: budgetTokens.value,
+      stripComments: stripComments.value,
+      maxLineLen: maxLineLen.value,
+      smartFullTokens: smartFullTokens.value,
     };
   }
 
@@ -76,5 +85,10 @@ export const useExportStore = defineStore('export', () => {
     return api.previewExport(cfg, buildOptions());
   }
 
-  return { files, checkedPaths, mode, redact, splitTokens, compress, includeLineNumbers, maxSignatureLen, result, scan, run, preview };
+  return {
+    files, checkedPaths, mode, redact, splitTokens, compress,
+    includeLineNumbers, maxSignatureLen,
+    budgetTokens, stripComments, maxLineLen, smartFullTokens,
+    result, scan, run, preview,
+  };
 });

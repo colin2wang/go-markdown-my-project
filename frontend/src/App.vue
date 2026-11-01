@@ -33,7 +33,19 @@ onMounted(() => {
 <template>
   <div class="app-shell">
     <header class="topbar">
-      <span class="brand">{{ t('app.brand') }}</span>
+      <span class="brand">
+        <svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true">
+          <defs>
+            <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#63b3ed" />
+              <stop offset="1" stop-color="#2b6cb0" />
+            </linearGradient>
+          </defs>
+          <rect x="3.5" y="2.5" width="17" height="19" rx="3.5" fill="url(#brandGrad)" />
+          <path d="M7.5 8h9M7.5 12h9M7.5 16h6" stroke="#fff" stroke-width="1.7" stroke-linecap="round" opacity="0.92" />
+        </svg>
+        <span class="brand-text">{{ t('app.brand') }}</span>
+      </span>
       <nav>
         <router-link to="/" class="tab" exact-active-class="active">{{ t('app.projects') }}</router-link>
         <router-link
@@ -83,13 +95,20 @@ onMounted(() => {
   padding: 0 16px;
   background: #101a24; border-bottom: 1px solid #3a4a5c;
 }
-.brand { font-weight: bold; color: #eee; }
+.brand { display: flex; align-items: center; gap: 9px; font-weight: 700; color: #eee; letter-spacing: .2px; }
+.brand-logo { width: 22px; height: 22px; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
+.brand-text { font-size: 15px; }
 nav { display: flex; gap: 4px; }
 .tab {
-  color: #8fa3b8; text-decoration: none;
-  padding: 4px 12px; border-radius: 6px; font-size: 14px;
+  color: #8fa3b8; text-decoration: none; position: relative;
+  padding: 6px 12px; border-radius: 6px; font-size: 14px; transition: color .12s, background .12s;
 }
-.tab.active { color: #eee; background: #1f2d3d; }
+.tab:hover { color: #cdd9e5; }
+.tab.active { color: #fff; background: rgba(99,179,237,.14); }
+.tab.active::after {
+  content: ''; position: absolute; left: 12px; right: 12px; bottom: -10px; height: 2px;
+  background: var(--accent-2, #63b3ed); border-radius: 2px;
+}
 .tab.disabled { opacity: .45; cursor: not-allowed; }
 .spacer { flex: 1; }
 .lang { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #8fa3b8; }

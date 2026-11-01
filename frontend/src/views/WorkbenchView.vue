@@ -23,6 +23,7 @@ const exporting = ref(false);
 
 const MODES = computed(() => [
   { value: 'full', icon: '📄', label: t('wb.modes.full.label'), desc: t('wb.modes.full.desc') },
+  { value: 'smart', icon: '🧠', label: t('wb.modes.smart.label'), desc: t('wb.modes.smart.desc') },
   { value: 'files', icon: '🗂', label: t('wb.modes.files.label'), desc: t('wb.modes.files.desc') },
   { value: 'symbols', icon: '🔎', label: t('wb.modes.symbols.label'), desc: t('wb.modes.symbols.desc') },
   { value: 'signatures', icon: '✍️', label: t('wb.modes.signatures.label'), desc: t('wb.modes.signatures.desc') },
@@ -111,6 +112,11 @@ const splitTokens = ref(100000);
 const estParts = computed(() =>
   splitEnabled.value && splitTokens.value > 0 ? Math.max(1, Math.ceil(estTokens.value / splitTokens.value)) : 1
 );
+
+// 按当前勾选的估算填入预算：取 80%（留给文件树与清单等脚手架文本），对齐到千位
+function fillBudget() {
+  exp.budgetTokens = Math.max(1000, Math.round((estTokens.value * 0.8) / 1000) * 1000);
+}
 
 // —— 导出前未扫描确认 ——
 const showUnscannedConfirm = ref(false);
@@ -269,6 +275,23 @@ async function copyResult() {
           </div>
         </template>
 
+        <h3>{{ t('wb.tokenSaving') }}</h3>
+        <label class="inline">
+          <input v-model="exp.stripComments" type="checkbox" />
+          {{ t('wb.stripComments') }}
+        </label>
+        <label class="inline wrap">
+          {{ t('wb.budgetTokens') }}
+          <input v-model.number="exp.budgetTokens" type="number" class="num" min="0" step="1000" />
+          <button class="mini" :title="t('wb.budgetHint')" @click="fillBudget">{{ t('wb.fillBudget') }}</button>
+        </label>
+        <label class="inline wrap">
+          {{ t('wb.maxLineLen') }}
+          <input v-model.number="exp.maxLineLen" type="number" class="num" min="0" step="40" />
+          <span class="muted">{{ t('wb.maxLineHint') }}</span>
+        </label>
+        <p v-if="exp.budgetTokens > 0" class="muted">{{ t('wb.budgetHint') }}</p>
+
         <h3>{{ t('wb.sizeControl') }}</h3>
         <label class="inline">
           <input v-model="splitEnabled" type="checkbox" />
@@ -317,6 +340,7 @@ async function copyResult() {
 
     <!-- 底部状态条 -->
     <footer v-if="projects.current" class="statusbar">
+      <div v-if="exporting || previewing || scanning" class="bar-progress" />
       <span class="status-left">
         <template v-if="exporting">{{ t('wb.statusExporting') }}</template>
         <template v-else>{{ t('wb.statusReady') }}</template>
@@ -387,11 +411,24 @@ async function copyResult() {
 .result-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 .statusbar {
   grid-column: 1 / -1;
+  position: relative; overflow: hidden;
   height: 44px; flex: none;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 16px;
   background: #16222e; border: 1px solid #3a4a5c; border-radius: 8px;
 }
+/* 忙碌时的不确定进度条（导出/预览/扫描共用） */
+.bar-progress {
+  position: absolute; left: 0; top: 0; height: 2px; width: 35%;
+  background: linear-gradient(90deg, transparent, #63b3ed, transparent);
+  animation: bar-slide 1.1s linear infinite;
+}
+@keyframes bar-slide {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(320%); }
+}
+.inline.wrap { flex-wrap: wrap; }
+.mini { font-size: 12px; padding: 1px 8px; }
 .status-left { display: flex; gap: 12px; align-items: center; }
 .status-right { display: flex; gap: 8px; }
 .muted { color: #8fa3b8; font-size: 12px; }

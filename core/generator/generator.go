@@ -23,6 +23,7 @@ const (
 	ModeFiles      ExportMode = "files"
 	ModeSymbols    ExportMode = "symbols"
 	ModeSignatures ExportMode = "signatures"
+	ModeSmart      ExportMode = "smart"
 	ModeCustom     ExportMode = "custom"
 )
 
@@ -38,6 +39,8 @@ func localizedText(key, lang string) string {
 		"api_signatures":        "API 签名",
 		"symbols_count":         "个符号",
 		"no_symbols":            "未识别到符号",
+		"skeleton_note":         "（骨架）",
+		"omitted_files":         "已按预算省略的文件",
 	}
 	if lang == "zh_cn" {
 		if v, ok := zh[key]; ok {
@@ -63,6 +66,10 @@ func localizedText(key, lang string) string {
 			return "symbols"
 		case "no_symbols":
 			return "no symbols recognized"
+		case "skeleton_note":
+			return " (skeleton)"
+		case "omitted_files":
+			return "Omitted files (token budget)"
 		}
 	}
 	return key
@@ -112,6 +119,11 @@ type Options struct {
 	// symbols / signatures 模式子选项（对齐设计文档 §2/§9）
 	IncludeLineNumbers bool
 	MaxSignatureLen    int
+	// smart 模式子选项：超过 SmartFullTokens 的文件改为骨架输出；
+	// StripComments 剥离注释；MaxLineLen > 0 时截断超长行。
+	SmartFullTokens int
+	StripComments   bool
+	MaxLineLen      int
 }
 
 // Generate 按模式生成完整 Markdown 内容。
@@ -130,6 +142,8 @@ func Generate(results []scanner.FileResult, opts Options) (string, error) {
 		return generateSymbols(sorted, opts), nil
 	case ModeSignatures:
 		return generateSignatures(sorted, opts), nil
+	case ModeSmart:
+		return generateSmart(sorted, opts), nil
 	case ModeFull, "":
 		return generateFull(sorted, opts), nil
 	default:
@@ -143,24 +157,30 @@ type FullPart struct {
 	Content string // 完整章节（### 标题 + 代码块 + 尾空行）
 }
 
-// FullParts 拆解 full 模式输出：preamble（标题+文件树+清单标题）+ 逐文件章节。
-// preamble 与全部章节按序拼接后，与 generateFull 的输出逐字节一致。
-func FullParts(sorted []scanner.FileResult, opts Options) (string, []FullPart) {
+// writeHead 写入「项目标题 + 文件树 + 文件清单标题」前导段落。
+// full 与 smart 共用，保证两种模式的头部结构一致（逐字符不变）。
+func writeHead(b *strings.Builder, sorted []scanner.FileResult, opts Options) {
 	title := localizedText("project_documentation", opts.Lang)
-	var b strings.Builder
-	fmt.Fprintf(&b, "# %s for %s\n\n", title, opts.ProjectName)
+	fmt.Fprintf(b, "# %s for %s\n\n", title, opts.ProjectName)
 
 	treeHeading := localizedText("project_file_tree", opts.Lang)
-	fmt.Fprintf(&b, "## %s\n\n", treeHeading)
+	fmt.Fprintf(b, "## %s\n\n", treeHeading)
 	b.WriteString("```\n")
-	fmt.Fprintf(&b, "%s\n", opts.ProjectName)
+	fmt.Fprintf(b, "%s\n", opts.ProjectName)
 	b.WriteString(GenerateTree(opts.ProjectName, sorted, opts.ProjectRoot))
 	b.WriteString("```\n\n")
 
 	filesHeading := localizedText("project_files", opts.Lang)
-	fileLabel := localizedText("file_label", opts.Lang)
-	fmt.Fprintf(&b, "## %s\n\n", filesHeading)
+	fmt.Fprintf(b, "## %s\n\n", filesHeading)
+}
 
+// FullParts 拆解 full 模式输出：preamble（标题+文件树+清单标题）+ 逐文件章节。
+// preamble 与全部章节按序拼接后，与 generateFull 的输出逐字节一致。
+func FullParts(sorted []scanner.FileResult, opts Options) (string, []FullPart) {
+	var b strings.Builder
+	writeHead(&b, sorted, opts)
+
+	fileLabel := localizedText("file_label", opts.Lang)
 	parts := make([]FullPart, 0, len(sorted))
 	for _, fr := range sorted {
 		// 对齐旧版：display_path 用原生分隔符（Windows 下为 \），保证 byte-equal

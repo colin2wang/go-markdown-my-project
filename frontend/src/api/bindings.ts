@@ -55,6 +55,14 @@ export interface ExportOptions {
   fileOverrides: string[];
   includeLineNumbers?: boolean;
   maxSignatureLen?: number;
+  /** >0 时按重要性评分裁剪文件（超出预算的低价值文件移入省略清单） */
+  budgetTokens?: number;
+  /** 剥离注释（保留 TODO/FIXME 与许可证头） */
+  stripComments?: boolean;
+  /** >0 时截断超长行（按字符计） */
+  maxLineLen?: number;
+  /** smart 模式：单文件保留全文的 token 上限（≤0 → 后端默认 1200） */
+  smartFullTokens?: number;
 }
 
 export interface ExportResult {
@@ -90,8 +98,29 @@ export interface FieldError {
 export interface ScanPreview {
   fileCount: number;
   totalBytes: number;
+  /** 估算 token 数（容量规划用） */
+  estTokens?: number;
   byLang: Record<string, number>;
   warnings: string[];
+}
+
+/** 自动分析项目结构得到的推断报告 */
+export interface InferReport {
+  fileCount: number;
+  scanned: number;
+  totalBytes: number;
+  /** 主语言（按文件数） */
+  mainLang: string;
+  byLang: Record<string, number>;
+  excludeDirs: string[];
+  excludePats: string[];
+  /** 已本地化的分析说明 */
+  notes: string[];
+}
+
+export interface SuggestResult {
+  config: ProjectConfig;
+  report: InferReport;
 }
 
 /** 全局默认排除规则（config/exclude_defaults.yml），编辑器只读展示 */
@@ -164,5 +193,9 @@ export const api = {
   },
   async defaultExcludes(): Promise<ExcludeDefaults | null> {
     return (await go()?.DefaultExcludes()) ?? null;
+  },
+  /** 自动分析项目目录结构，产出推荐配置与推断报告 */
+  async suggestConfig(projectPath: string): Promise<SuggestResult> {
+    return go()?.SuggestConfig(projectPath);
   },
 };

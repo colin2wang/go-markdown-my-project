@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	goruntime "runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -19,6 +20,7 @@ import (
 	"go-markdown-my-project/core/config"
 	"go-markdown-my-project/core/generator"
 	"go-markdown-my-project/core/i18n"
+	"go-markdown-my-project/core/infer"
 	"go-markdown-my-project/core/logger"
 	"go-markdown-my-project/core/redactor"
 	"go-markdown-my-project/core/scanner"
@@ -53,6 +55,11 @@ type ExportOptions struct {
 	// symbols / signatures 模式子选项
 	IncludeLineNumbers *bool `json:"includeLineNumbers"` // nil → 默认 true
 	MaxSignatureLen    int   `json:"maxSignatureLen"`    // ≤0 → 默认 200
+	// 省 token 三件套（用更少 token 承载更多代码信息）
+	BudgetTokens    int  `json:"budgetTokens"`    // >0 时按重要性裁剪文件（超出预算的低价值文件移入省略清单）
+	StripComments   bool `json:"stripComments"`   // 剥离注释（保留 TODO/FIXME/许可证）
+	MaxLineLen      int  `json:"maxLineLen"`      // >0 时截断超长行（按 rune 计）
+	SmartFullTokens int  `json:"smartFullTokens"` // smart 模式：单文件保留全文的 token 上限（≤0 → 1200）
 }
 
 // ExportResult 导出结果。
@@ -202,6 +209,7 @@ func (a *App) ValidateConfig(cfg config.ProjectConfig) []FieldError {
 type ScanPreview struct {
 	FileCount  int            `json:"fileCount"`
 	TotalBytes int64          `json:"totalBytes"`
+	EstTokens  int            `json:"estTokens"` // 估算 token 数（容量规划用）
 	ByLang     map[string]int `json:"byLang"`
 	Warnings   []string       `json:"warnings"`
 }
@@ -283,13 +291,12 @@ func (a *App) PreviewScan(cfg config.ProjectConfig) (ScanPreview, error) {
 			noLang++
 		}
 		prev.ByLang[l]++
-		if info, err := os.Stat(r.FullPath); err == nil {
-			prev.TotalBytes += info.Size()
-		}
+		prev.TotalBytes += r.Size
+		prev.EstTokens += token.EstimateTokens(r.Content)
 	}
 	prev.FileCount = len(results)
 	if noLang > 0 {
-		prev.Warnings = append(prev.Warnings, fmt.Sprintf("%d 个文件无符号提取器（符号/签名模式将跳过）", noLang))
+		prev.Warnings = append(prev.Warnings, i18n.T("warn.noExtractor", "n", noLang))
 	}
 	return prev, nil
 }
@@ -349,7 +356,7 @@ func splitOverrides(cfg config.ProjectConfig, overrides []string) (files, dirs [
 	return files, dirs
 }
 
-// ScanProject 扫描项目，返回文件树条目（不读内容）。
+// ScanProject 扫描项目，返回文件树条目（大小与行数由扫描阶段顺带统计，不重复读盘）。
 func (a *App) ScanProject(cfg config.ProjectConfig) ([]FileInfo, error) {
 	results, err := scanner.ProcessFiles(scanOpts(cfg, cfg.Files, cfg.Directories))
 	if err != nil {
@@ -365,41 +372,70 @@ func (a *App) ScanProject(cfg config.ProjectConfig) ([]FileInfo, error) {
 		if err != nil {
 			rel = r.FullPath
 		}
-		info, err := statSize(r.FullPath)
-		if err != nil {
-			continue
-		}
 		out = append(out, FileInfo{
 			Path:      filepath.ToSlash(rel),
 			Language:  generator.LanguageFor(langs, r.FullPath),
-			SizeBytes: info,
+			SizeBytes: r.Size,
+			Lines:     r.Lines,
 		})
 	}
 	return out, nil
 }
 
-// prepareExport 导出前公共准备：解析勾选覆盖、扫描、语言映射、模式判定与压缩预处理。
-func prepareExport(cfg config.ProjectConfig, opt ExportOptions) ([]scanner.FileResult, map[string]string, generator.ExportMode, int, error) {
-	// GUI 勾选覆盖配置
-	files, dirs := cfg.Files, cfg.Directories
-	if len(opt.FileOverrides) > 0 {
-		files, dirs = nil, nil
-		// 简化：把勾选的相对路径分为文件与目录（无子路径标记的作为文件）
-		for _, rel := range opt.FileOverrides {
-			full := filepath.Join(cfg.ProjectPath, filepath.FromSlash(rel))
-			if info, serr := statIsDir(full); serr == nil && info {
-				dirs = append(dirs, rel)
-			} else {
-				files = append(files, rel)
-			}
-		}
+// SuggestResult 配置推断结果（绑定层用具名结构体，避免多返回值歧义）。
+type SuggestResult struct {
+	Config config.ProjectConfig `json:"config"`
+	Report infer.Report         `json:"report"`
+}
+
+// SuggestConfig 自动分析项目目录结构，产出推荐配置与推断报告（「生成配置文件」）。
+// 仅依据目录与文件名做启发式推断，不修改任何文件；失败时返回错误由前端提示。
+func (a *App) SuggestConfig(projectPath string) (SuggestResult, error) {
+	logger.Info(i18n.T("log.suggest"), "path", projectPath)
+	langs, err := generator.LoadLanguages(languagesPath())
+	if err != nil {
+		langs = map[string]string{}
 	}
+	res, err := infer.Infer(projectPath, infer.Options{
+		Languages: langs,
+		Markdown:  markdownLangFromLocale(),
+	})
+	if err != nil {
+		logger.Warn(i18n.T("log.suggestFail"), "path", projectPath, "err", err.Error())
+		return SuggestResult{}, err
+	}
+	logger.Info(i18n.T("log.suggest"), "path", projectPath, "files", len(res.Config.Files), "dirs", len(res.Config.Directories))
+	return SuggestResult{Config: res.Config, Report: res.Report}, nil
+}
+
+// markdownLangFromLocale 由后端当前界面语言推导文档语言（zh_cn | en_us）。
+func markdownLangFromLocale() string {
+	if i18n.Current() == i18n.ZhCN {
+		return "zh_cn"
+	}
+	return "en_us"
+}
+
+// exportPlan 导出前的公共准备结果（扫描结果 + 裁剪 + 语言映射 + 模式）。
+type exportPlan struct {
+	Results   []scanner.FileResult
+	Dropped   []scanner.FileResult // 按预算裁剪掉的文件（生成省略清单用）
+	Langs     map[string]string
+	Mode      generator.ExportMode
+	FileCount int
+}
+
+// prepareExport 导出前公共准备：解析勾选覆盖、扫描、敏感替换、语言映射、
+// 模式判定、预算裁剪与压缩预处理（各导出入口共用，避免字段透传遗漏）。
+func prepareExport(cfg config.ProjectConfig, opt ExportOptions) (exportPlan, error) {
+	// GUI 勾选覆盖配置（与 splitOverrides 同逻辑：目录归入 directories，其余作 files）
+	files, dirs := splitOverrides(cfg, opt.FileOverrides)
 	logger.Info(i18n.T("log.exportStart"), "project", cfg.ProjectName, "mode", opt.Mode, "files", len(files), "dirs", len(dirs))
 
 	results, err := scanner.ProcessFiles(scanOpts(cfg, files, dirs))
 	if err != nil {
 		logger.Error(i18n.T("log.exportFail"), "err", err.Error())
-		return nil, nil, "", 0, err
+		return exportPlan{}, err
 	}
 	scanner.SortByRelPath(results)
 
@@ -425,7 +461,7 @@ func prepareExport(cfg config.ProjectConfig, opt ExportOptions) ([]scanner.FileR
 	langs, err := generator.LoadLanguages(languagesPath())
 	if err != nil {
 		logger.Error(i18n.T("log.exportFail"), "err", err.Error())
-		return nil, nil, "", 0, fmt.Errorf("加载语言映射失败: %w", err)
+		return exportPlan{}, fmt.Errorf("加载语言映射失败: %w", err)
 	}
 
 	mode := generator.ExportMode(opt.Mode)
@@ -437,18 +473,37 @@ func prepareExport(cfg config.ProjectConfig, opt ExportOptions) ([]scanner.FileR
 		}
 	}
 
+	// 预算裁剪：按重要性评分挑文件（用更少 token 覆盖更多有效信息）。
+	// 在压缩之前按原始内容估算，保证预算口径与用户勾选时的估算一致。
+	var dropped []scanner.FileResult
+	if opt.BudgetTokens > 0 {
+		sel := generator.SelectWithinBudget(results, cfg.ProjectPath, opt.BudgetTokens)
+		if len(sel.Dropped) > 0 {
+			logger.Info(i18n.T("log.budgetApplied"), "kept", len(sel.Kept), "dropped", len(sel.Dropped), "budget", opt.BudgetTokens)
+		}
+		results, dropped = sel.Kept, sel.Dropped
+	}
+
+	// 逐文件精简：分片路径按文件单元装箱，逐文件处理保证每片同样精简。
 	// 压缩输出 T2：大括号类语言（缩进不承载语法）剥除行首缩进，
 	// 仅作用于源码文件内容；Markdown 结构（列表/引用缩进）不受影响。
-	// T1 逐文件精简：分片路径按文件单元装箱，逐文件处理保证每片同样精简
-	if opt.Compress {
+	if opt.Compress || opt.StripComments || opt.MaxLineLen > 0 {
 		for i := range results {
-			if compress.IsBraceLanguage(generator.LanguageFor(langs, results[i].FullPath)) {
-				results[i].Content = compress.StripIndent(results[i].Content)
+			lang := generator.LanguageFor(langs, results[i].FullPath)
+			c := results[i].Content
+			if opt.Compress && compress.IsBraceLanguage(lang) {
+				c = compress.StripIndent(c)
 			}
-			results[i].Content = compress.Minify(results[i].Content)
+			if opt.StripComments {
+				c = compress.StripComments(lang, c)
+			}
+			if opt.Compress || opt.MaxLineLen > 0 {
+				c = compress.MinifyWith(c, opt.MaxLineLen)
+			}
+			results[i].Content = c
 		}
 	}
-	return results, langs, mode, len(results), nil
+	return exportPlan{Results: results, Dropped: dropped, Langs: langs, Mode: mode, FileCount: len(results)}, nil
 }
 
 // maxSignatureLen 导出签名长度上限（≤0 → 默认 200）。
@@ -484,61 +539,70 @@ func redactorConfig(rc config.RedactionConfig) redactor.Config {
 	return cfg
 }
 
-// buildExport 扫描并生成完整导出内容（PreviewExport 使用；分片见 RunExport）。
-func buildExport(cfg config.ProjectConfig, opt ExportOptions) (string, generator.ExportMode, int, error) {
-	results, langs, mode, fileCount, err := prepareExport(cfg, opt)
-	if err != nil {
-		return "", "", 0, err
-	}
-	content, err := generator.Generate(results, generator.Options{
+// genOptions 由导出选项构造生成参数（各导出入口共用，避免字段透传遗漏）。
+func genOptions(cfg config.ProjectConfig, opt ExportOptions, plan exportPlan) generator.Options {
+	return generator.Options{
 		ProjectName:        cfg.ProjectName,
 		ProjectRoot:        cfg.ProjectPath,
 		Lang:               cfg.MarkdownLang,
-		Mode:               mode,
-		Languages:          langs,
+		Mode:               plan.Mode,
+		Languages:          plan.Langs,
 		IncludeLineNumbers: opt.IncludeLineNumbers == nil || *opt.IncludeLineNumbers,
 		MaxSignatureLen:    maxSignatureLen(opt),
-	})
+		SmartFullTokens:    opt.SmartFullTokens,
+		StripComments:      opt.StripComments,
+		MaxLineLen:         opt.MaxLineLen,
+	}
+}
+
+// droppedManifest 生成被预算裁剪文件的清单（保留路径与规模，信息不丢）。
+func droppedManifest(plan exportPlan, cfg config.ProjectConfig) string {
+	return generator.DroppedManifest(plan.Dropped, cfg.ProjectPath, cfg.MarkdownLang)
+}
+
+// buildExport 扫描并生成完整导出内容（PreviewExport 使用；分片见 RunExport）。
+func buildExport(cfg config.ProjectConfig, opt ExportOptions) (string, generator.ExportMode, int, error) {
+	plan, err := prepareExport(cfg, opt)
 	if err != nil {
 		return "", "", 0, err
 	}
+	content, err := generator.Generate(plan.Results, genOptions(cfg, opt, plan))
+	if err != nil {
+		return "", "", 0, err
+	}
+	content += droppedManifest(plan, cfg)
 	// 压缩输出：整篇空白精简（与逐文件精简叠加，覆盖脚手架文本）
 	if opt.Compress {
-		content = compress.Minify(content)
+		content = compress.MinifyWith(content, opt.MaxLineLen)
 	}
-	return content, mode, fileCount, nil
+	return content, plan.Mode, plan.FileCount, nil
 }
 
 // RunExport 执行导出（GUI 主流程）。结果与进度经事件推送，此处同步返回结果。
 func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResult, error) {
 	start := time.Now()
 
-	results, langs, mode, fileCount, err := prepareExport(cfg, opt)
+	plan, err := prepareExport(cfg, opt)
 	if err != nil {
 		return ExportResult{}, err
 	}
+	mode := plan.Mode
+	fileCount := plan.FileCount
 	logExportFail := func(err error) {
 		logger.Error(i18n.T("log.exportFail"), "err", err.Error())
 	}
-	genOpts := generator.Options{
-		ProjectName:        cfg.ProjectName,
-		ProjectRoot:        cfg.ProjectPath,
-		Lang:               cfg.MarkdownLang,
-		Mode:               mode,
-		Languages:          langs,
-		IncludeLineNumbers: opt.IncludeLineNumbers == nil || *opt.IncludeLineNumbers,
-		MaxSignatureLen:    maxSignatureLen(opt),
-	}
+	genOpts := genOptions(cfg, opt, plan)
+	manifest := droppedManifest(plan, cfg)
 
 	var outPaths []string
 	var content string
 
-	if mode == generator.ModeFull && opt.SplitTokens > 0 {
+	if (mode == generator.ModeFull || mode == generator.ModeSmart) && opt.SplitTokens > 0 {
 		// Token 限制分片（§7.5）：以文件为最小单位贪心装箱，产出 xxx.partN.md；
 		// 单文件超过上限时独占一片，内容不截断
-		preamble, parts := generator.FullParts(results, genOpts)
+		preamble, parts := generator.FileParts(plan.Results, genOpts)
 		if opt.Compress {
-			preamble = compress.Minify(preamble)
+			preamble = compress.MinifyWith(preamble, opt.MaxLineLen)
 		}
 		units := make([]token.FileUnit, len(parts))
 		for i, p := range parts {
@@ -547,25 +611,31 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 		chunks := token.Split(units, opt.SplitTokens, preamble)
 		ext := filepath.Ext(cfg.OutputFile)
 		base := strings.TrimSuffix(cfg.OutputFile, ext)
-		for _, c := range chunks {
+		for i, c := range chunks {
+			body := c.Content
+			// 省略清单附在最后一片，保证分片合并后信息完整
+			if i == len(chunks)-1 {
+				body += manifest
+			}
 			name := fmt.Sprintf("%s.part%d%s", base, c.Index, ext)
-			p, werr := generator.WriteOutput("output", name, c.Content)
+			p, werr := generator.WriteOutput("output", name, body)
 			if werr != nil {
 				logExportFail(werr)
 				return ExportResult{}, werr
 			}
 			outPaths = append(outPaths, p)
-			content += c.Content
+			content += body
 		}
 		logger.Info(i18n.T("log.exportSplit"), "parts", len(chunks), "limit", opt.SplitTokens)
 	} else {
-		content, err = generator.Generate(results, genOpts)
+		content, err = generator.Generate(plan.Results, genOpts)
 		if err != nil {
 			logExportFail(err)
 			return ExportResult{}, err
 		}
+		content += manifest
 		if opt.Compress {
-			content = compress.Minify(content)
+			content = compress.MinifyWith(content, opt.MaxLineLen)
 		}
 		outPath, werr := generator.WriteOutput("output", cfg.OutputFile, content)
 		if werr != nil {
@@ -614,15 +684,6 @@ func (a *App) PreviewExport(cfg config.ProjectConfig, opt ExportOptions) (Previe
 // removeFile 删除文件（独立小函数便于测试）。
 func removeFile(path string) error {
 	return os.Remove(path)
-}
-
-// statSize 返回文件大小；失败返回错误。
-func statSize(path string) (int64, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return 0, err
-	}
-	return info.Size(), nil
 }
 
 // statIsDir 判断路径是否为目录。
@@ -709,7 +770,8 @@ func (a *App) ListSubdirs(path string) []string {
 	return out
 }
 
-// OpenPath 用系统默认程序打开文件所在目录（select 不选中文件）或目录本身。
+// OpenPath 用系统文件管理器打开文件所在目录（文件则打开其父目录）或目录本身。
+// 按 GOOS 分派：Windows=explorer、macOS=open、其他=xdg-open。
 func (a *App) OpenPath(path string) error {
 	abs, err := filepath.Abs(path)
 	if err != nil {
@@ -718,5 +780,12 @@ func (a *App) OpenPath(path string) error {
 	if info, err := os.Stat(abs); err == nil && !info.IsDir() {
 		abs = filepath.Dir(abs)
 	}
-	return exec.Command("explorer", abs).Start()
+	switch goruntime.GOOS {
+	case "windows":
+		return exec.Command("explorer", abs).Start()
+	case "darwin":
+		return exec.Command("open", abs).Start()
+	default:
+		return exec.Command("xdg-open", abs).Start()
+	}
 }

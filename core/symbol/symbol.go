@@ -28,6 +28,7 @@ type Symbol struct {
 	Parent    string `json:"parent,omitempty"`    // 所属 class/struct/impl 名；顶级符号为 ""
 	Signature string `json:"signature,omitempty"` // 规范化单行签名（signatures 模式用；symbols 模式留空）
 	Line      int    `json:"line"`                // 1-based 声明行
+	EndLine   int    `json:"endLine"`             // 1-based 声明体结束行（骨架化用；无法确定时等于 Line）
 }
 
 // Extractor 按语言提取符号。
@@ -110,6 +111,21 @@ func (e *lineExtractor) scanBrace(lines []string) []Symbol {
 	depth := 0
 	var stack []stackEntry
 
+	// pendingSym 已产出但尚未确定结束行的符号（骨架化需要 body 范围）。
+	type pendingSym struct {
+		idx   int
+		depth int // 声明所在行的花括号深度
+	}
+	var open []pendingSym
+	// emit 记录符号并登记待闭合；EndLine 先取声明行，闭合时更新为 body 末行。
+	emit := func(s Symbol) {
+		if s.EndLine == 0 {
+			s.EndLine = s.Line
+		}
+		out = append(out, s)
+		open = append(open, pendingSym{idx: len(out) - 1, depth: depth})
+	}
+
 	for i, raw := range lines {
 		line := strings.TrimRight(raw, "\r")
 		trimmed := strings.TrimSpace(line)
@@ -149,7 +165,7 @@ func (e *lineExtractor) scanBrace(lines []string) []Symbol {
 				continue
 			}
 			if r.emit {
-				out = append(out, Symbol{Kind: r.kind, Name: name, Line: i + 1, Signature: e.normalizeSignature(lines, i)})
+				emit(Symbol{Kind: r.kind, Name: name, Line: i + 1, Signature: e.normalizeSignature(lines, i)})
 			}
 			stack = append(stack, stackEntry{name: name, depth: depth})
 			typeMatched = true
@@ -186,7 +202,7 @@ func (e *lineExtractor) scanBrace(lines []string) []Symbol {
 				if parent != "" && kind == KindFunc {
 					kind = KindMethod // 处于类型作用域内 → 视为方法
 				}
-				out = append(out, Symbol{
+				emit(Symbol{
 					Kind:      kind,
 					Name:      name,
 					Parent:    parent,
@@ -202,6 +218,11 @@ func (e *lineExtractor) scanBrace(lines []string) []Symbol {
 		for len(stack) > 0 && stack[len(stack)-1].depth >= depth {
 			stack = stack[:len(stack)-1]
 		}
+		// 深度回落到声明层 → 该层的符号体到此结束
+		for len(open) > 0 && open[len(open)-1].depth >= depth {
+			out[open[len(open)-1].idx].EndLine = i + 1
+			open = open[:len(open)-1]
+		}
 	}
 	return out
 }
@@ -215,6 +236,20 @@ func (e *lineExtractor) scanIndent(lines []string) []Symbol {
 	}
 	var stack []entry
 
+	// pendingSym 待闭合的符号（缩进回退即 body 结束）。
+	type pendingSym struct {
+		idx    int
+		indent int
+	}
+	var open []pendingSym
+	emit := func(s Symbol, indent int) {
+		if s.EndLine == 0 {
+			s.EndLine = s.Line
+		}
+		out = append(out, s)
+		open = append(open, pendingSym{idx: len(out) - 1, indent: indent})
+	}
+
 	for i, raw := range lines {
 		line := strings.TrimRight(raw, "\r")
 		trimmed := strings.TrimSpace(line)
@@ -227,6 +262,16 @@ func (e *lineExtractor) scanIndent(lines []string) []Symbol {
 		for len(stack) > 0 && stack[len(stack)-1].indent >= indent {
 			stack = stack[:len(stack)-1]
 		}
+		// 缩进回退：符号体结束于上一行（i 为当前行下标，1-based 上行为 i）
+		for len(open) > 0 && open[len(open)-1].indent >= indent {
+			p := open[len(open)-1]
+			end := i
+			if end < out[p.idx].Line {
+				end = out[p.idx].Line
+			}
+			out[p.idx].EndLine = end
+			open = open[:len(open)-1]
+		}
 
 		typeMatched := false
 		for _, r := range e.typeOpeners {
@@ -238,7 +283,7 @@ func (e *lineExtractor) scanIndent(lines []string) []Symbol {
 			if name == "" {
 				continue
 			}
-			out = append(out, Symbol{Kind: r.kind, Name: name, Line: i + 1, Signature: e.normalizeSignature(lines, i)})
+			emit(Symbol{Kind: r.kind, Name: name, Line: i + 1, Signature: e.normalizeSignature(lines, i)}, indent)
 			stack = append(stack, entry{indent: indent, name: name})
 			typeMatched = true
 			break
@@ -261,13 +306,13 @@ func (e *lineExtractor) scanIndent(lines []string) []Symbol {
 				if parent != "" && kind == KindFunc {
 					kind = KindMethod
 				}
-				out = append(out, Symbol{
+				emit(Symbol{
 					Kind:      kind,
 					Name:      name,
 					Parent:    parent,
 					Line:      i + 1,
 					Signature: e.normalizeSignature(lines, i),
-				})
+				}, indent)
 				break
 			}
 		}

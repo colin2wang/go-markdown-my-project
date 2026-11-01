@@ -37,4 +37,6 @@ export function SerializeYAML(arg1:config.ProjectConfig):Promise<string>;
 
 export function SetLocale(arg1:string):Promise<void>;
 
+export function SuggestConfig(arg1:string):Promise<app.SuggestResult>;
+
 export function ValidateConfig(arg1:config.ProjectConfig):Promise<Array<app.FieldError>>;

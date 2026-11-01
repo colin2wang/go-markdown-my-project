@@ -179,6 +179,66 @@ var dicts = map[string]map[Locale]string{
 		EnUS: "Invalid regex: {err}",
 		JaJP: "正規表現が無効: {err}",
 	},
+	"log.suggest": {
+		ZhCN: "自动分析项目结构",
+		EnUS: "Analyzing project structure",
+		JaJP: "プロジェクト構造を分析中",
+	},
+	"log.suggestFail": {
+		ZhCN: "自动分析失败",
+		EnUS: "Project analysis failed",
+		JaJP: "プロジェクト分析に失敗しました",
+	},
+	"log.budgetApplied": {
+		ZhCN: "按 token 预算裁剪文件",
+		EnUS: "Files trimmed by token budget",
+		JaJP: "トークン予算によりファイルを選別しました",
+	},
+	"infer.pathNotFound": {
+		ZhCN: "路径不存在: {path}",
+		EnUS: "Path does not exist: {path}",
+		JaJP: "パスが存在しません: {path}",
+	},
+	"infer.pathNotDir": {
+		ZhCN: "不是目录: {path}",
+		EnUS: "Not a directory: {path}",
+		JaJP: "ディレクトリではありません: {path}",
+	},
+	"infer.noteMainLang": {
+		ZhCN: "主语言：{lang}",
+		EnUS: "Primary language: {lang}",
+		JaJP: "主要言語：{lang}",
+	},
+	"infer.noteScope": {
+		ZhCN: "推荐范围：{files} 个根级文件 + {dirs} 个目录",
+		EnUS: "Suggested scope: {files} root files + {dirs} directories",
+		JaJP: "推奨範囲：ルートファイル {files} 件 + ディレクトリ {dirs} 件",
+	},
+	"infer.noteExcludeDirs": {
+		ZhCN: "已识别 {n} 类产物/依赖目录，自动排除",
+		EnUS: "{n} build/dependency directories detected and excluded",
+		JaJP: "ビルド/依存ディレクトリ {n} 種類を検出し除外しました",
+	},
+	"infer.noteExcludePats": {
+		ZhCN: "已建议 {n} 条排除模式（锁文件/生成代码/资源）",
+		EnUS: "{n} exclude patterns suggested (lockfiles/generated/assets)",
+		JaJP: "除外パターン {n} 件を提案（ロックファイル/生成コード/アセット）",
+	},
+	"infer.noteMaxSize": {
+		ZhCN: "检测到 {n} 个超过 128KB 的文件，已建议 256KB 大小上限",
+		EnUS: "{n} files larger than 128KB detected; 256KB size cap suggested",
+		JaJP: "128KB 超のファイルが {n} 件あり、256KB のサイズ上限を提案",
+	},
+	"warn.noExtractor": {
+		ZhCN: "{n} 个文件无符号提取器（符号/签名模式将跳过）",
+		EnUS: "{n} files have no symbol extractor (skipped in symbols/signatures modes)",
+		JaJP: "{n} 件のファイルにシンボル抽出器がありません（symbols/signatures ではスキップ）",
+	},
+	"infer.noteMode": {
+		ZhCN: "估算 ≈{tokens} tokens，推荐 {mode} 模式",
+		EnUS: "Estimated ≈{tokens} tokens; mode {mode} recommended",
+		JaJP: "推定 ≈{tokens} トークン、{mode} モードを推奨",
+	},
 }
 
 // SetLocale 设置当前语言；无法识别的代码回退简体中文。

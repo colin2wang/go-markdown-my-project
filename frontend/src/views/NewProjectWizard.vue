@@ -70,6 +70,46 @@ const step1Valid = computed(() =>
   pathChecked.value?.exists === true && pathChecked.value.isDir
 );
 
+// —— 自动分析：由项目结构推断推荐配置 ——
+const analyzing = ref(false);
+const autoNotes = ref<string[]>([]);
+
+async function autoAnalyze() {
+  const p = form.value.project_path.trim();
+  if (!p) return;
+  analyzing.value = true;
+  error.value = '';
+  try {
+    const r = await api.suggestConfig(p);
+    const c = r.config;
+    // 项目路径与已填名称以用户输入为准，其余采用推荐值
+    form.value = {
+      ...form.value,
+      project_name: form.value.project_name || c.project_name,
+      project_path: p,
+      output_file: c.output_file || form.value.output_file,
+      markdown_lang: c.markdown_lang || form.value.markdown_lang,
+      files: c.files ?? [],
+      directories: c.directories ?? [],
+      exclude_directories: c.exclude_directories ?? [],
+      exclude_patterns: c.exclude_patterns ?? [],
+      max_file_size: c.max_file_size ?? 0,
+      export_mode: c.export_mode || 'full',
+      split_tokens: c.split_tokens ?? 0,
+      skip_binary_files: c.skip_binary_files,
+      redaction: c.redaction,
+    };
+    autoNotes.value = r.report?.notes ?? [];
+    await checkPath();
+    step.value = 2;
+    runScan();
+  } catch (e) {
+    error.value = t('wizard.autoFailed', { err: String(e) });
+  } finally {
+    analyzing.value = false;
+  }
+}
+
 // —— Step 2：扫描并勾选范围 ——
 const scanFiles = ref<FileInfo[]>([]);
 const langFilter = ref('');
@@ -199,6 +239,14 @@ async function save() {
           <div class="row">
             <input v-model="form.project_path" placeholder="C:/Workspaces/my-project" @blur="checkPath" />
             <button @click="browseDir">{{ t('common.browse') }}</button>
+            <button
+              class="accent"
+              :disabled="analyzing || !form.project_path.trim()"
+              :title="t('wizard.autoAnalyze')"
+              @click="autoAnalyze"
+            >
+              {{ analyzing ? t('wizard.analyzing') : t('wizard.autoAnalyze') }}
+            </button>
           </div>
         </label>
         <p v-if="pathChecked && !pathChecked.exists" class="field-error">{{ t('wizard.pathMissing') }}</p>
@@ -216,6 +264,10 @@ async function save() {
 
       <!-- Step 2 -->
       <section v-else-if="step === 2">
+        <div v-if="autoNotes.length" class="notes">
+          <div class="notes-title">{{ t('wizard.autoNotes') }}</div>
+          <div v-for="n in autoNotes" :key="n" class="note-line">· {{ n }}</div>
+        </div>
         <div class="row toolbar2">
           <label class="inline">{{ t('wizard.langFilter') }}
             <select v-model="langFilter">
@@ -278,6 +330,13 @@ label.inline { display: inline-flex; align-items: center; gap: 4px; margin: 0; }
 .row { display: flex; gap: 6px; }
 .row input { flex: 1; }
 .toolbar2 { align-items: center; margin-bottom: 6px; }
+.notes {
+  border: 1px solid #2f4a63; border-radius: 6px; padding: 8px 10px; margin: 8px 0;
+  background: rgba(43, 108, 176, .08);
+}
+.notes-title { font-size: 12px; color: #63b3ed; margin-bottom: 4px; }
+.note-line { font-size: 12px; color: #a9bacb; line-height: 1.7; }
+button.accent { background: #2b6cb0; border-color: #2b6cb0; white-space: nowrap; }
 .filelist { max-height: 300px; overflow: auto; border: 1px solid #3a4a5c; border-radius: 6px; padding: 8px; margin: 8px 0; }
 .fileitem { display: block; font-size: 13px; margin: 2px 0; }
 .summary { width: 100%; border-collapse: collapse; font-size: 13px; }

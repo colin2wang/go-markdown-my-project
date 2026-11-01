@@ -17,9 +17,24 @@ import (
 )
 
 // FileResult 对应旧版 Vec<(PathBuf, String)>：文件绝对路径 + 内容。
+// Size/Lines 在读取时顺带统计，避免调用方（扫描列表、预算裁剪）重复 Stat/读盘。
 type FileResult struct {
 	FullPath string
 	Content  string
+	Size     int64 // 文件字节数（= len(Content)）
+	Lines    int   // 行数（末行无换行也计入）
+}
+
+// countLines 统计行数：末行无尾换行时补计。
+func countLines(s string) int {
+	if s == "" {
+		return 0
+	}
+	n := strings.Count(s, "\n")
+	if !strings.HasSuffix(s, "\n") {
+		n++
+	}
+	return n
 }
 
 // ReadFileContent 读取文件内容，对齐 read_file_content。
@@ -70,7 +85,7 @@ func ProcessFiles(opts Options) ([]FileResult, error) {
 					logger.Debug(i18n.T("log.skipBinary"), "path", fullPath)
 					continue
 				}
-				results = append(results, FileResult{FullPath: fullPath, Content: content})
+				results = append(results, FileResult{FullPath: fullPath, Content: content, Size: int64(len(content)), Lines: countLines(content)})
 			}
 		}
 	}
@@ -164,7 +179,10 @@ func parallelProcessDirectory(dir string, results *[]FileResult, opts Options) {
 	close(out)
 
 	for it := range out {
-		*results = append(*results, FileResult{FullPath: it.path, Content: it.content})
+		*results = append(*results, FileResult{
+			FullPath: it.path, Content: it.content,
+			Size: int64(len(it.content)), Lines: countLines(it.content),
+		})
 	}
 }
 

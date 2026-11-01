@@ -12,11 +12,13 @@ go test ./core/...         # 全部单测（generator/symbol/redactor/token）
 go test ./core/generator/ -update   # 重新生成黄金快照（仅在有意变更输出格式时）
 wails dev                  # GUI 热重载开发
 cd frontend && pnpm dev    # 纯前端开发
+.\generate-icon.ps1       # 由 frontend/public/icon.svg 生成应用图标（build/appicon.png + build/windows/icon.ico）
 ```
 
 ## 架构边界（必须遵守）
 
 - `core/` 各包是纯 Go，**禁止 import Wails**；进度/事件抽象在 `app/` 绑定层适配。新逻辑放 `core/`，`app/app.go` 只做薄转发。
+- 新增的 `core/infer`（按项目结构推断推荐配置）、`core/pick`（文件重要性评分/预算裁剪）、`core/compress`（注释剥离 `StripComments` / 骨架化 `Skeleton` / 长行截断 `MinifyWith`）均为纯 Go，不依赖 Wails，可被复用与单测。
 - 绑定层方法必须可导出（`Startup` 而非 `startup`），否则 Wails 不生成前端绑定。
 - 前端通过 `frontend/src/api/bindings.ts` 手写封装访问 `window.go.app.App`（App 结构体在 `app` 包下），新增后端方法需同步在此补类型。
 

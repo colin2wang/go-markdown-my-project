@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProjectsStore } from '../stores';
 import { api } from '../api/bindings';
@@ -21,6 +21,19 @@ const deleteConfirm = ref<string | null>(null);
 
 // 本会话内的最近导出时间（configPath -> 时间），用于卡片展示
 const lastExport = ref<Map<string, string>>(new Map());
+
+// 卡片搜索：按名称 / 路径 / 输出文件模糊匹配
+const keyword = ref('');
+const filtered = computed(() => {
+  const q = keyword.value.trim().toLowerCase();
+  if (!q) return projects.list;
+  return projects.list.filter(
+    (p) =>
+      p.name.toLowerCase().includes(q) ||
+      p.path.toLowerCase().includes(q) ||
+      p.outputFile.toLowerCase().includes(q)
+  );
+});
 
 onMounted(async () => {
   projects.projectsDir = await api.defaultProjectsDir();
@@ -86,12 +99,15 @@ async function confirmDelete() {
       <button @click="refreshProjects">🔄 {{ t('projects.refresh') }}</button>
       <button @click="openConfigDir">{{ t('projects.open') }}</button>
       <span class="spacer" />
+      <input v-model="keyword" class="search" :placeholder="t('projects.search')" />
       <button class="primary" @click="openCreate">{{ t('projects.create') }}</button>
     </div>
+    <p v-if="projects.list.length > 0" class="muted count">{{ t('projects.countSuffix', { n: filtered.length }) }}</p>
     <p v-if="projects.error" class="error">{{ projects.error }}</p>
     <p v-else-if="projects.list.length === 0" class="muted">{{ t('projects.empty') }}</p>
+    <p v-else-if="projects.list.length > 0 && filtered.length === 0" class="muted">{{ t('tree.matched', { n: 0 }) }}</p>
     <div class="cards">
-      <div v-for="p in projects.list" :key="p.configPath" class="card">
+      <div v-for="p in filtered" :key="p.configPath" class="card">
         <h3>📦 {{ p.name }}</h3>
         <p class="muted path">{{ p.path }}</p>
         <p class="muted">{{ t('projects.output', { file: p.outputFile }) }}</p>
@@ -129,8 +145,10 @@ async function confirmDelete() {
 
 <style scoped>
 .projects-view { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px; color: #eee; }
-.toolbar { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; }
-.toolbar input { width: 360px; }
+.toolbar { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+.toolbar > label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.toolbar > label input { width: 260px; }
+.toolbar .search { flex: 1 1 180px; width: auto; min-width: 150px; max-width: 360px; }
 .spacer { flex: 1; }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; max-width: 1200px; }
 .card { border: 1px solid #3a4a5c; border-radius: 8px; padding: 14px; background: #16222e; display: flex; flex-direction: column; }
