@@ -184,6 +184,10 @@ export const api = {
   async openPath(path: string): Promise<void> {
     return go()?.OpenPath(path);
   },
+  // 构建版本戳（build.ps1 编译期注入，dev 下为 "dev"），标题栏展示
+  async getVersion(): Promise<string> {
+    return (await go()?.GetVersion()) ?? 'dev';
+  },
   // 同步界面语言到后端（后端日志/校验文案随之切换）
   async setLocale(locale: string): Promise<void> {
     return go()?.SetLocale(locale);

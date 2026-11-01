@@ -92,9 +92,9 @@ async function browse() {
 
 <template>
   <div class="taglist" :class="{ disabled }">
-    <div class="tags">
+    <div class="tags" :class="{ invalid: !!error }">
       <span v-for="(t, i) in modelValue" :key="t" class="tag">
-        {{ t }}
+        <span class="chip-text">{{ t }}</span>
         <button type="button" class="x" :disabled="disabled" @click="remove(i)">×</button>
       </span>
       <input
@@ -117,12 +117,27 @@ async function browse() {
 </template>
 
 <style scoped>
-.tags { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; background: #0f1720; border: 1px solid #3a4a5c; border-radius: 4px; padding: 4px 6px; }
-.tag { display: inline-flex; align-items: center; gap: 2px; background: #1f2d3d; border: 1px solid #3a4a5c; border-radius: 4px; padding: 1px 4px 1px 8px; font-size: 12px; color: #eee; }
-.tag .x { background: none; border: none; color: #8fa3b8; cursor: pointer; padding: 0 3px; font-size: 13px; }
-.tag .x:hover { color: #ff8383; }
-.tags input { flex: 1; min-width: 90px; background: none; border: none; color: #eee; outline: none; font-size: 12px; padding: 2px; }
-.tags input.invalid { border: 1px solid #c53030; border-radius: 3px; }
+.tags { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; background: #0f1720; border: 1px solid #3a4a5c; border-radius: 6px; padding: 5px 8px; min-height: 34px; box-sizing: border-box; cursor: text; transition: border-color .12s; }
+.tags:focus-within { border-color: #63b3ed; }
+.tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  max-width: 220px;
+  background: #1f2d3d; border: 1px solid #3a4a5c; border-radius: 5px;
+  padding: 2px 4px 2px 8px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px; color: #cdd9e5;
+}
+.tag .chip-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag .x {
+  flex: none; width: 15px; height: 15px;
+  display: grid; place-items: center;
+  background: none; border: none; border-radius: 3px;
+  color: #6b7c8f; font-size: 11px; line-height: 1; cursor: pointer; padding: 0;
+}
+.tag .x:hover { color: #ff8383; background: rgba(255, 131, 131, .12); }
+/* 校验失败时整组 tag 容器红框 */
+.tags.invalid { border-color: #c53030; }
+.tags input { flex: 1; min-width: 120px; background: none; border: none; color: #eee; outline: none; font-size: 12.5px; padding: 2px; }
 .browse { margin-top: 4px; background: #1f2d3d; color: #eee; border: 1px solid #3a4a5c; border-radius: 4px; padding: 3px 8px; font-size: 12px; cursor: pointer; }
 .browse:disabled { opacity: .4; cursor: not-allowed; }
 .browse-row { display: flex; align-items: center; gap: 10px; }

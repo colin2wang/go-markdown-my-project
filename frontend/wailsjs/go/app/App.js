@@ -18,6 +18,10 @@ export function GetGlobalSettings() {
   return window['go']['app']['App']['GetGlobalSettings']();
 }
 
+export function GetVersion() {
+  return window['go']['app']['App']['GetVersion']();
+}
+
 export function ListProjects(arg1) {
   return window['go']['app']['App']['ListProjects'](arg1);
 }

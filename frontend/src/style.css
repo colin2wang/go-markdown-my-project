@@ -82,10 +82,17 @@ input::placeholder, textarea::placeholder { color: #5e7286; }
 a { color: var(--accent-2); text-decoration: none; }
 
 /* 滚动条（深色主题） */
+* { scrollbar-width: thin; scrollbar-color: #2f3e4e transparent; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #2f3e4e; border-radius: 6px; border: 2px solid var(--bg); }
-::-webkit-scrollbar-thumb:hover { background: #3f5061; }
+::-webkit-scrollbar-thumb {
+  background: #2f3e4e;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #3f5061; background-clip: content-box; }
+::-webkit-scrollbar-corner { background: transparent; }
 
 .muted { color: var(--muted); }
 .error { color: var(--danger); }

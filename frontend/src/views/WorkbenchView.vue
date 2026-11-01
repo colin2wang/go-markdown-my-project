@@ -231,8 +231,9 @@ async function copyResult() {
           class="mode-card" :class="{ active: exp.mode === m.value }"
           @click="exp.mode = m.value"
         >
-          <div class="mode-line"><span class="radio" :class="{ on: exp.mode === m.value }" /> {{ m.icon }} {{ m.label }}</div>
+          <div class="mode-line">{{ m.icon }} {{ m.label }}</div>
           <div class="mode-desc">{{ m.desc }}</div>
+          <span class="mode-check" aria-hidden="true">✓</span>
         </div>
 
         <!-- 符号类模式子选项（设计文档 §8） -->
@@ -329,6 +330,13 @@ async function copyResult() {
           <p class="muted">{{ t('wb.previewStats', { chars: fmtNum(previewData.totalChars), tokens: fmtNum(previewData.tokenCount) }) }}<template v-if="previewData.truncated"> · {{ t('wb.previewTruncated') }}</template></p>
           <pre class="outline preview-content">{{ previewData.content }}</pre>
         </template>
+        <template v-else-if="checkedFiles.length === 0">
+          <div class="result-empty">
+            <div class="empty-icon">📄</div>
+            <p class="empty-title">{{ t('wb.emptyTitle') }}</p>
+            <p class="empty-hint">{{ t('wb.emptyHint') }}</p>
+          </div>
+        </template>
         <template v-else>
           <h3>{{ t('wb.previewTitle') }}</h3>
           <pre class="outline"><template v-for="l in outline" :key="l">{{ l }}
@@ -376,9 +384,13 @@ async function copyResult() {
 .workbench {
   flex: 1; min-height: 0;
   display: grid;
-  grid-template-columns: 320px 300px 1fr;
+  grid-template-columns: 320px 300px minmax(0, 1fr);
   gap: 12px; padding: 12px;
   color: #eee;
+}
+@media (max-width: 1100px) {
+  .workbench { grid-template-columns: 1fr 1fr; }
+  .pane-result { grid-column: 1 / -1; }
 }
 .pane { overflow-y: auto; background: #16222e; border: 1px solid #3a4a5c; border-radius: 8px; padding: 12px; }
 .pane-tree { display: flex; flex-direction: column; min-height: 0; }
@@ -387,12 +399,19 @@ async function copyResult() {
 .path { word-break: break-all; }
 .pane-options h3, .pane-result h3 { font-size: 13px; color: #8fa3b8; margin: 14px 0 8px; text-transform: none; }
 .pane-options h3:first-child { margin-top: 0; }
-.mode-card { border: 1px solid #3a4a5c; border-radius: 8px; padding: 10px; margin-bottom: 8px; cursor: pointer; }
-.mode-card.active { border-color: #2b6cb0; background: rgba(43, 108, 176, .15); }
-.mode-line { font-size: 14px; }
-.mode-desc { font-size: 12px; color: #8fa3b8; margin-top: 4px; padding-left: 20px; }
-.radio { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #8fa3b8; margin-right: 4px; vertical-align: -1px; }
-.radio.on { border-color: #2b6cb0; background: #2b6cb0; box-shadow: inset 0 0 0 2px #16222e; }
+.mode-card { position: relative; border: 1px solid #3a4a5c; border-radius: 8px; padding: 10px; margin-bottom: 8px; cursor: pointer; transition: border-color .12s, background .12s; }
+.mode-card:hover { border-color: #4a5d70; }
+.mode-card.active { border-color: #63b3ed; background: rgba(99, 179, 237, .08); }
+.mode-card.active .mode-line { color: #63b3ed; }
+.mode-line { font-size: 14px; padding-right: 18px; }
+.mode-desc { font-size: 12px; color: #8fa3b8; margin-top: 4px; }
+.mode-check {
+  position: absolute; top: 8px; right: 10px;
+  color: #63b3ed; font-size: 12px;
+  opacity: 0; transform: scale(.6);
+  transition: opacity .12s, transform .12s;
+}
+.mode-card.active .mode-check { opacity: 1; transform: scale(1); }
 .inline { display: flex; align-items: center; gap: 6px; margin: 6px 0; }
 .block { display: block; margin: 6px 0; }
 .num { width: 100px; }
@@ -401,6 +420,15 @@ async function copyResult() {
 .chip.hit { background: #3a2a1a; color: #f6ad55; }
 .chip.unscanned { background: #1f2d3d; color: #8fa3b8; }
 .outline { background: #0f1720; padding: 10px; border-radius: 6px; font-size: 12px; line-height: 1.7; overflow-x: auto; }
+.result-empty {
+  height: 100%; min-height: 260px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 6px; color: #6b7c8f; text-align: center;
+}
+.empty-icon { font-size: 36px; opacity: .5; }
+.empty-title { margin: 0; font-size: 14px; color: #8fa3b8; }
+.empty-hint { margin: 0; font-size: 12px; }
 .outline.preview-content { white-space: pre-wrap; word-break: break-word; }
 .result-card { border-radius: 8px; padding: 14px; }
 .result-card.ok { border: 1px solid #2f855a; background: rgba(47, 133, 90, .1); }

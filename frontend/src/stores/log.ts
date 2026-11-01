@@ -50,5 +50,15 @@ export const useLogStore = defineStore('log', () => {
     listening = true;
   }
 
-  return { entries, clear, listen, push, info, warn, error };
+  // —— 全局 toast（保存成功等短提示，自动消失）——
+  const toast = ref<{ msg: string; kind: 'success' | 'warn'; seq: number } | null>(null);
+  let toastTimer: ReturnType<typeof setTimeout> | undefined;
+  function showToast(msg: string, kind: 'success' | 'warn' = 'success') {
+    // seq 递增保证连续触发时过渡动画能重放
+    toast.value = { msg, kind, seq: Date.now() };
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.value = null; }, 2600);
+  }
+
+  return { entries, clear, listen, push, info, warn, error, toast, showToast };
 });

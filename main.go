@@ -21,8 +21,12 @@ func main() {
 	logger.Info(i18n.T("log.starting"))
 
 	appObj := app.NewApp()
+	title := "Project Docs GUI"
+	if app.BuildVersion != "dev" { // 编译期注入的版本戳（build-YYYYMMDD），dev 下不加后缀
+		title += " " + app.BuildVersion
+	}
 	err := wails.Run(&options.App{
-		Title:  "Project Docs GUI",
+		Title:  title,
 		Width:  1200,
 		Height: 800,
 		AssetServer: &assetserver.Options{

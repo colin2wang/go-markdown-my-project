@@ -5,10 +5,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
-	goruntime "runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -809,7 +807,7 @@ func (a *App) ListSubdirs(path string) []string {
 }
 
 // OpenPath 用系统文件管理器打开文件所在目录（文件则打开其父目录）或目录本身。
-// 按 GOOS 分派：Windows=explorer、macOS=open、其他=xdg-open。
+// Windows 上优先复用已显示该目录的资源管理器窗口（见 openpath_windows.go）。
 func (a *App) OpenPath(path string) error {
 	abs, err := filepath.Abs(path)
 	if err != nil {
@@ -818,12 +816,5 @@ func (a *App) OpenPath(path string) error {
 	if info, err := os.Stat(abs); err == nil && !info.IsDir() {
 		abs = filepath.Dir(abs)
 	}
-	switch goruntime.GOOS {
-	case "windows":
-		return exec.Command("explorer", abs).Start()
-	case "darwin":
-		return exec.Command("open", abs).Start()
-	default:
-		return exec.Command("xdg-open", abs).Start()
-	}
+	return openInFileManager(abs)
 }

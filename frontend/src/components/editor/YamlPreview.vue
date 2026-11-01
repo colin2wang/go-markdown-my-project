@@ -17,6 +17,24 @@ const wrap = ref(false);
 
 const lines = computed(() => props.yaml.split('\n'));
 
+// 最简 YAML 语法高亮：注释灰、键蓝、引号字符串橙、其余值青绿
+// 不引 CodeMirror，够用即可；特殊行（多行块、列表项内的复杂结构）按普通文本渲染
+interface Seg { cls: string; text: string }
+function highlight(line: string): Seg[] {
+  const trimmed = line.trimStart();
+  if (trimmed.startsWith('#')) return [{ cls: 'tok-comment', text: line }];
+  const m = line.match(/^(\s*-?\s*[^:#]+?:)(.*)$/);
+  if (m) {
+    const segs: Seg[] = [{ cls: 'tok-key', text: m[1] }];
+    const rest = m[2];
+    if (/^\s*["'].*["']\s*$/.test(rest)) segs.push({ cls: 'tok-string', text: rest });
+    else if (rest.trim()) segs.push({ cls: 'tok-value', text: rest });
+    return segs;
+  }
+  return [{ cls: '', text: line }];
+}
+const hlLines = computed(() => lines.value.map(highlight));
+
 async function copyAll() {
   try {
     await navigator.clipboard.writeText(props.yaml);
@@ -39,9 +57,9 @@ async function copyAll() {
       <label class="wrap-toggle"><input v-model="wrap" type="checkbox" /> {{ t('editor.yamlWrap') }}</label>
     </div>
     <div class="code" :class="{ wrap }">
-      <div v-for="(l, i) in lines" :key="i" class="line" :class="{ changed: changed.has(i + 1) }">
+      <div v-for="(l, i) in hlLines" :key="i" class="line" :class="{ changed: changed.has(i + 1) }">
         <span class="ln">{{ i + 1 }}</span>
-        <span class="txt">{{ l || ' ' }}</span>
+        <span class="txt"><span v-for="(s, j) in l" :key="j" :class="s.cls">{{ s.text }}</span></span>
       </div>
     </div>
   </div>
@@ -69,5 +87,9 @@ button { background: #1f2d3d; color: #eee; border: 1px solid #3a4a5c; border-rad
 .code.wrap .line { white-space: pre-wrap; word-break: break-all; }
 .ln { flex: none; width: 38px; text-align: right; padding-right: 10px; color: #4a5a6c; user-select: none; }
 .txt { color: #cdd9e5; }
+.tok-comment { color: #6b7c8f; font-style: italic; }
+.tok-key { color: #63b3ed; }
+.tok-value { color: #9ae6c4; }
+.tok-string { color: #f6c177; }
 .line.changed { background: rgba(246, 224, 110, .13); }
 </style>

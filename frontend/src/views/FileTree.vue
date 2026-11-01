@@ -45,10 +45,13 @@ function buildTree(files: FileInfo[]): TreeNode[] {
       sizeBytes: f.sizeBytes, language: f.language, children: [],
     });
   }
-  // 目录在前、文件在后，各自按名称排序
-  const sortRec = (n: TreeNode) => {
+  // 目录在前、文件在后，各自按名称排序；目录行聚合子孙文件大小
+  const sortRec = (n: TreeNode): number => {
     n.children.sort((a, b) => (a.dir === b.dir ? a.name.localeCompare(b.name) : a.dir ? -1 : 1));
-    n.children.forEach(sortRec);
+    let total = n.dir ? 0 : n.sizeBytes;
+    n.children.forEach((c) => { total += sortRec(c); });
+    if (n.dir) n.sizeBytes = total;
+    return total;
   };
   sortRec(root);
   return root.children;
@@ -243,19 +246,22 @@ const DirNode = defineComponent({
       const state = hit === 0 ? 'none' : hit === leaves.length ? 'all' : 'some';
       return h('div', {
         class: 'file-row dir-row',
-        style: { paddingLeft: p.depth * 16 + 'px' },
+        style: { paddingLeft: p.depth * 16 + 'px', '--depth': p.depth },
+        'data-depth': p.depth,
         onClick: () => emit('toggle-dir', p.node.path),
       }, [
         Indent(0),
         Chevron(!p.collapsed.has(p.node.path), () => emit('toggle-dir', p.node.path)),
         h('input', {
-          type: 'checkbox', class: state === 'some' ? 'some' : '',
+          type: 'checkbox',
+          indeterminate: state === 'some',
           checked: state === 'all',
           onClick: (e: Event) => e.stopPropagation(),
           onChange: () => emit('toggle-node', p.node),
         }),
         h('span', { class: 'icon' }, '📁'),
         h('span', { class: 'name' }, p.node.name),
+        h('span', { class: 'size' }, fmtSize(p.node.sizeBytes)),
       ]);
     };
   },
@@ -272,7 +278,8 @@ const FileRow = defineComponent({
   setup(p, { emit }) {
     return () => h('div', {
       class: 'file-row',
-      style: { paddingLeft: p.depth * 16 + 'px' },
+      style: { paddingLeft: p.depth * 16 + 'px', '--depth': p.depth },
+      'data-depth': p.depth,
       onClick: () => emit('toggle-file', p.node.path),
     }, [
       h('input', {
@@ -354,17 +361,22 @@ export default defineComponent({ name: 'FileTreeRoot' });
   cursor: pointer; border-radius: 4px;
   font-size: 13px; color: #eee;
   text-align: left;
+  position: relative;
 }
 .file-row:hover { background: #1f2d3d; }
+/* 缩进参考线：depth > 0 时在行首画竖线 */
+.file-row::before {
+  content: '';
+  position: absolute;
+  left: calc((var(--depth, 0) - 1) * 16px + 11px);
+  top: 0; bottom: 0;
+  width: 1px;
+  background: rgba(58, 74, 92, .5);
+}
+.file-row[data-depth='0']::before { display: none; }
 .file-row .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.file-row .size { color: #8fa3b8; font-size: 12px; }
+.file-row .size { color: #8fa3b8; font-size: 12px; font-variant-numeric: tabular-nums; }
 .file-row .chevron { width: 14px; color: #8fa3b8; flex: none; }
 .file-row .icon { flex: none; font-size: 12px; }
 .file-row input[type='checkbox'] { flex: none; margin: 0; accent-color: #2b6cb0; }
-.file-row input[type='checkbox'].some { opacity: .6; }
-/* 半选态：用样式近似横线 */
-input[type='checkbox'].some:not(:checked) {
-  background: #2b6cb0; border-color: #2b6cb0;
-  background-image: linear-gradient(transparent 45%, #eee 45%, #eee 55%, transparent 55%);
-}
 </style>

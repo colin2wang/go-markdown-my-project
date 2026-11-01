@@ -15,6 +15,8 @@ cd frontend && pnpm dev    # 纯前端开发
 .\generate-icon.ps1       # 由 frontend/public/icon.svg 生成应用图标（build/appicon.png + build/windows/icon.ico）
 ```
 
+**构建版本戳**：build.ps1 按构建日期生成 `build-YYYYMMDD`，经 `-ldflags -X` 注入 `app.BuildVersion`（`app/version.go`），前端标题栏经 `GetVersion` 绑定展示；本地 `go build` / `wails dev` 下为 `dev`。
+
 ## 架构边界（必须遵守）
 
 - `core/` 各包是纯 Go，**禁止 import Wails**；进度/事件抽象在 `app/` 绑定层适配。新逻辑放 `core/`，`app/app.go` 只做薄转发。

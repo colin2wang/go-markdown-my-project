@@ -104,7 +104,10 @@ try {
     # `wails build` regenerates the Go<->frontend bindings, then builds the frontend,
     # so the embedded dist reflects the latest backend methods.
     # -SkipFrontend reuses an already-built dist (skips the internal frontend build).
-    $buildArgs = @('build', '-ldflags', '-s -w')
+    # Build stamp: build-YYYYMMDD by build date, injected into app.BuildVersion (title bar)
+    $buildStamp = '(build-' + (Get-Date -Format 'yyyyMMdd') + ')'
+    Write-Ok "Build version: $buildStamp"
+    $buildArgs = @('build', '-ldflags', "-s -w -X go-markdown-my-project/app.BuildVersion=$buildStamp")
     if ($SkipFrontend) { $buildArgs += '-s' }
     if ($Package) {
         if (Get-Command makensis -ErrorAction SilentlyContinue) {
@@ -124,8 +127,9 @@ try {
         Write-Fail "wails build output not found: build\bin\$exeName"
         exit 1
     }
-    # Copy-Item -Recurse 的坑：目标已存在时会把源目录整个拷进目标内部（config/config），
-    # 因此先删旧目录再整目录拷贝，保证结构始终是 build/bin/config/*
+    # Copy-Item -Recurse pitfall: if the destination dir already exists, the whole source
+    # dir gets nested inside it (config/config). Delete the old dir first so the layout
+    # is always build/bin/config/*
     $configDest = Join-Path $root 'build\bin\config'
     if (Test-Path $configDest) { Remove-Item $configDest -Recurse -Force }
     Copy-Item (Join-Path $root 'config') $configDest -Recurse -Force

@@ -14,6 +14,12 @@ const { t, locale, setLocale, locales } = useI18n();
 // 全局设置对话框
 const settingsOpen = ref(false);
 
+// 构建版本戳（build.ps1 编译期注入 build-YYYYMMDD，dev 下为 dev）
+const buildVersion = ref('');
+onMounted(async () => {
+  try { buildVersion.value = await api.getVersion(); } catch { buildVersion.value = ''; }
+});
+
 // 帮助菜单：null = 关闭；'config' = 配置文件说明；'configSample' = 项目配置文件说明；'about' = 程序说明
 const helpOpen = ref(false);
 const helpPage = ref<'config' | 'configSample' | 'about' | null>(null);
@@ -49,6 +55,7 @@ onMounted(() => {
           <path d="M7.5 8h9M7.5 12h9M7.5 16h6" stroke="#fff" stroke-width="1.7" stroke-linecap="round" opacity="0.92" />
         </svg>
         <span class="brand-text">{{ t('app.brand') }}</span>
+        <span v-if="buildVersion" class="build-version">{{ buildVersion }}</span>
       </span>
       <nav>
         <router-link to="/" class="tab" exact-active-class="active">{{ t('app.projects') }}</router-link>
@@ -78,6 +85,13 @@ onMounted(() => {
       </div>
     </header>
     <router-view />
+
+    <!-- 全局 toast：保存成功等短提示（避开底部日志面板，居中偏上） -->
+    <Transition name="toast">
+      <div v-if="log.toast" :key="log.toast.seq" class="toast" :class="log.toast.kind" role="status">
+        {{ log.toast.msg }}
+      </div>
+    </Transition>
     <LogPanel />
     <GlobalSettingsDialog :open="settingsOpen" @close="settingsOpen = false" />
 
@@ -104,6 +118,16 @@ onMounted(() => {
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; color: #eee; letter-spacing: .2px; }
 .brand-logo { width: 22px; height: 22px; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
 .brand-text { font-size: 15px; }
+.build-version {
+  font-size: 11px;
+  color: #8fa3b8;
+  background: rgba(99, 179, 237, .08);
+  border: 1px solid #2f3e4e;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-variant-numeric: tabular-nums;
+  user-select: text;
+}
 nav { display: flex; gap: 4px; }
 .tab {
   color: #8fa3b8; text-decoration: none; position: relative;
@@ -149,4 +173,28 @@ nav { display: flex; gap: 4px; }
   cursor: pointer; border: 1px solid #3a4a5c; background: #1f2d3d;
   color: #eee; border-radius: 6px; padding: 4px 14px;
 }
+</style>
+
+<style>
+/* 全局 toast（log store 驱动，App 层渲染） */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2d3d;
+  border: 1px solid #3a4a5c;
+  border-left: 3px solid #68d391;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  color: #eee;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .4);
+  z-index: 60;
+  max-width: 70vw;
+  word-break: break-all;
+}
+.toast.warn { border-left-color: #f6ad55; }
+.toast-enter-active, .toast-leave-active { transition: opacity .2s, transform .2s; }
+.toast-enter-from, .toast-leave-to { opacity: 0; transform: translate(-50%, 8px); }
 </style>

@@ -43,11 +43,40 @@ onMounted(() => {
   log.info(ed.isNew ? t('editor.logOpenCreate') : t('editor.logOpenEdit', { path: props.configPath }));
 });
 
-// 锚点导航：点击滚动到左栏对应分区
+// 锚点导航：点击滚动到左栏对应分区；滚动时高亮当前所在分区（scroll-spy）
 const leftPane = ref<HTMLElement | null>(null);
+const activeSec = ref('sec-basic');
+const SECTIONS = [
+  { id: 'sec-basic', key: 'editor.anchorBasic' },
+  { id: 'sec-scope', key: 'editor.anchorScope' },
+  { id: 'sec-exclude', key: 'editor.anchorExclude' },
+  { id: 'sec-include', key: 'editor.anchorInclude' },
+  { id: 'sec-export', key: 'editor.anchorExport' },
+  { id: 'sec-redaction', key: 'editor.anchorRedaction' },
+  { id: 'sec-preview', key: 'editor.anchorPreview' },
+] as const;
 function scrollTo(id: string) {
+  activeSec.value = id;
   leftPane.value?.querySelector(`#${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+function onLeftScroll() {
+  const pane = leftPane.value;
+  if (!pane) return;
+  const top = pane.scrollTop;
+  let cur: string = SECTIONS[0].id;
+  for (const s of SECTIONS) {
+    const sec = pane.querySelector(`#${s.id}`) as HTMLElement | null;
+    if (sec && sec.offsetTop - pane.offsetTop - 40 <= top) cur = s.id;
+  }
+  activeSec.value = cur;
+}
+// 分区是否有校验错误（锚点上显示红点）
+const secErrors = computed<Record<string, number>>(() => ({
+  'sec-basic': ['project_name', 'project_path', 'output_file'].filter((f) => ed.errors[f]).length,
+  'sec-exclude': ed.errors.exclude_patterns ? 1 : 0,
+  'sec-include': ed.errors.include_patterns ? 1 : 0,
+  'sec-redaction': ed.errors.custom_patterns ? 1 : 0,
+}));
 
 // 项目路径校验通过后，名称为空则自动填入路径最后的文件夹名（新建时顺带联动输出文件）
 function onPathValidated(r: { exists: boolean; isDir: boolean }) {
@@ -68,6 +97,7 @@ async function onSave() {
     ed.updateConfigPath(savePath.value);
     await ed.save();
     log.info(t('editor.logSaved', { path: savePath.value }));
+    log.showToast(t('editor.toastSaved', { name: ed.draft?.project_name ?? '' }));
     emit('saved', savePath.value);
   } catch (e) {
     saveError.value = String(e instanceof Error ? e.message : e);
@@ -101,16 +131,14 @@ function onCancel() {
       <!-- 双栏 -->
       <div class="body">
         <!-- 左栏：可视化编辑 -->
-        <div ref="leftPane" class="left">
+        <div ref="leftPane" class="left" @scroll="onLeftScroll">
           <!-- 锚点 -->
           <nav class="anchors">
-            <a @click="scrollTo('sec-basic')">{{ t('editor.anchorBasic') }}</a>
-            <a @click="scrollTo('sec-scope')">{{ t('editor.anchorScope') }}</a>
-            <a @click="scrollTo('sec-exclude')">{{ t('editor.anchorExclude') }}</a>
-            <a @click="scrollTo('sec-include')">{{ t('editor.anchorInclude') }}</a>
-            <a @click="scrollTo('sec-export')">{{ t('editor.anchorExport') }}</a>
-            <a @click="scrollTo('sec-redaction')">{{ t('editor.anchorRedaction') }}</a>
-            <a @click="scrollTo('sec-preview')">{{ t('editor.anchorPreview') }}</a>
+            <a
+              v-for="s in SECTIONS" :key="s.id"
+              :class="{ active: activeSec === s.id, 'has-error': (secErrors[s.id] ?? 0) > 0 }"
+              @click="scrollTo(s.id)"
+            >{{ t(s.key) }}</a>
           </nav>
 
           <template v-if="ed.draft">
@@ -266,13 +294,33 @@ button.danger { background: #742a2a; }
 .right { flex: 1; min-width: 0; }
 .anchors {
   position: sticky; top: 0; z-index: 2;
-  display: flex; gap: 4px; margin-bottom: 10px; padding: 4px 0;
+  display: flex; gap: 4px; margin-bottom: 10px; padding: 6px 0;
   background: #16222e;
+  border-bottom: 1px solid #2a3848;
 }
-.anchors a { color: #63b3ed; font-size: 12px; cursor: pointer; padding: 2px 8px; border-radius: 4px; }
-.anchors a:hover { background: #1f2d3d; }
+.anchors a { position: relative; color: #8fa3b8; font-size: 12px; cursor: pointer; padding: 3px 9px; border-radius: 4px; }
+.anchors a:hover { color: #eee; background: #1f2d3d; }
+.anchors a.active { color: #63b3ed; background: rgba(99, 179, 237, .1); }
+.anchors a.has-error::after {
+  content: '';
+  position: absolute; top: 3px; right: 2px;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #ff8383;
+}
 input.invalid { border-color: #c53030 !important; }
 .field-error { color: #ff8383; font-size: 11px; margin: 2px 0 6px 2px; }
+/* 表单栅格：块级 label 的标签列定宽右对齐，输入框起点对齐 */
+.left label {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 6px 12px;
+  align-items: center;
+  font-size: 12.5px;
+  color: #8fa3b8;
+  text-align: right;
+  margin: 6px 0;
+}
+.left label.inline { display: flex; text-align: left; }
 .num { width: 110px; }
 .default-excludes { display: flex; flex-wrap: wrap; gap: 4px; }
 .default-tag {
