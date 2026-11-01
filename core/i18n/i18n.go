@@ -39,6 +39,11 @@ var dicts = map[string]map[Locale]string{
 		EnUS: "UI language switched",
 		JaJP: "表示言語を切り替えました",
 	},
+	"log.globalSettingsSaved": {
+		ZhCN: "全局设置已保存",
+		EnUS: "Global settings saved",
+		JaJP: "グローバル設定を保存しました",
+	},
 	"log.listProjectsDirNotFound": {
 		ZhCN: "项目列表：projects 目录不存在",
 		EnUS: "Project list: projects directory not found",

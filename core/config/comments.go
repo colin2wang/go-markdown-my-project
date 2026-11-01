@@ -99,6 +99,10 @@ func SerializeWithComments(c *ProjectConfig) (string, error) {
 		// 默认 true（省略即生效）；仅显式关闭时输出
 		pair("Set to false to include binary files (detected by content: NUL byte in the first 8KB)", "skip_binary_files", boolNode(false))
 	}
+	if c.WriteBOM != nil && !*c.WriteBOM {
+		// 默认 true（省略即生效）；仅显式关闭时输出
+		pair("Set to false to write output without a UTF-8 BOM", "write_bom", boolNode(false))
+	}
 	if c.SplitTokens > 0 {
 		pair("Split output into parts of at most this many tokens (0 = no split)", "split_tokens", intNode(int64(c.SplitTokens)))
 	}

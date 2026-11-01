@@ -28,6 +28,15 @@ export interface ProjectConfig {
   use_default_excludes?: boolean;
   /** 按内容跳过二进制文件（前 8KB 含 NUL）；省略 = true */
   skip_binary_files?: boolean;
+  /** 输出文件写入 UTF-8 BOM（避免 Windows 查看器误判编码）；省略 = true */
+  write_bom?: boolean;
+}
+
+export interface GlobalSettings {
+  /** 导出文件编码：utf8_bom | utf8 | gb18030 */
+  outputEncoding: string;
+  /** 界面语言：auto | zh_cn | en_us | ja_jp */
+  interfaceLanguage: string;
 }
 
 export interface FileInfo {
@@ -178,6 +187,13 @@ export const api = {
   // 同步界面语言到后端（后端日志/校验文案随之切换）
   async setLocale(locale: string): Promise<void> {
     return go()?.SetLocale(locale);
+  },
+  // 全局设置（config/global_settings.yml）
+  async getGlobalSettings(): Promise<GlobalSettings | null> {
+    return (await go()?.GetGlobalSettings()) ?? null;
+  },
+  async saveGlobalSettings(s: GlobalSettings): Promise<void> {
+    return go()?.SaveGlobalSettings(s);
   },
   async scanSensitive(cfg: ProjectConfig, fileOverrides: string[]): Promise<SensitiveHit[]> {
     return (await go()?.ScanSensitive(cfg, fileOverrides)) ?? [];

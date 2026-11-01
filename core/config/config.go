@@ -48,11 +48,18 @@ type ProjectConfig struct {
 	UseDefaultExcludes *bool `yaml:"use_default_excludes,omitempty" json:"use_default_excludes,omitempty"`
 	// SkipBinaryFiles 按内容跳过二进制文件（前 8KB 含 NUL）；nil = true
 	SkipBinaryFiles *bool `yaml:"skip_binary_files,omitempty" json:"skip_binary_files,omitempty"`
+	// WriteBOM 输出文件写入 UTF-8 BOM（避免 Windows 查看器误判编码）；nil = true
+	WriteBOM *bool `yaml:"write_bom,omitempty" json:"write_bom,omitempty"`
 }
 
 // UseDefaultsEnabled 判断是否合并全局默认排除（nil 视为 true）。
 func (c *ProjectConfig) UseDefaultsEnabled() bool {
 	return c.UseDefaultExcludes == nil || *c.UseDefaultExcludes
+}
+
+// WriteBOMEnabled 判断输出是否写 UTF-8 BOM（nil 视为 true）。
+func (c *ProjectConfig) WriteBOMEnabled() bool {
+	return c.WriteBOM == nil || *c.WriteBOM
 }
 
 // supportedOutputExts 对齐 config.rs 的输出扩展名警告列表。

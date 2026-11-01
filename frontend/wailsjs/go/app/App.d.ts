@@ -9,6 +9,8 @@ export function DefaultProjectsDir():Promise<string>;
 
 export function DeleteProject(arg1:string):Promise<void>;
 
+export function GetGlobalSettings():Promise<config.GlobalSettings>;
+
 export function ListProjects(arg1:string):Promise<Array<app.ProjectSummary>>;
 
 export function ListSubdirs(arg1:string):Promise<Array<string>>;
@@ -24,6 +26,8 @@ export function PreviewExport(arg1:config.ProjectConfig,arg2:app.ExportOptions):
 export function PreviewScan(arg1:config.ProjectConfig):Promise<app.ScanPreview>;
 
 export function RunExport(arg1:config.ProjectConfig,arg2:app.ExportOptions):Promise<app.ExportResult>;
+
+export function SaveGlobalSettings(arg1:config.GlobalSettings):Promise<void>;
 
 export function SaveProject(arg1:string,arg2:config.ProjectConfig):Promise<void>;
 

@@ -5,10 +5,14 @@ import { useLogStore } from './stores/log';
 import LogPanel from './components/LogPanel.vue';
 import { useI18n, type LocaleCode } from './i18n';
 import { api } from './api/bindings';
+import GlobalSettingsDialog from './components/settings/GlobalSettingsDialog.vue';
 
 const route = useRoute();
 const log = useLogStore();
 const { t, locale, setLocale, locales } = useI18n();
+
+// 全局设置对话框
+const settingsOpen = ref(false);
 
 // 帮助菜单：null = 关闭；'config' = 配置文件说明；'configSample' = 项目配置文件说明；'about' = 程序说明
 const helpOpen = ref(false);
@@ -63,6 +67,7 @@ onMounted(() => {
           <option v-for="l in locales" :key="l.code" :value="l.code">{{ l.label }}</option>
         </select>
       </label>
+      <button class="help-btn" @click="settingsOpen = true">⚙ {{ t('app.settings') }}</button>
       <div class="help-menu">
         <button class="help-btn" @click="helpOpen = !helpOpen">{{ t('app.help') }} ▾</button>
         <div v-if="helpOpen" class="help-dropdown">
@@ -74,6 +79,7 @@ onMounted(() => {
     </header>
     <router-view />
     <LogPanel />
+    <GlobalSettingsDialog :open="settingsOpen" @close="settingsOpen = false" />
 
     <div v-if="helpPage" class="modal" @click.self="helpPage = null">
       <div class="modal-body">

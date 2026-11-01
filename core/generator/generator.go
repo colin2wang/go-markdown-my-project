@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"golang.org/x/text/encoding/simplifiedchinese"
 	"gopkg.in/yaml.v3"
 
 	"go-markdown-my-project/core/scanner"
@@ -367,13 +368,46 @@ func relPathNative(fullPath, projectRoot string) string {
 	return rel
 }
 
+// utf8BOM UTF-8 BOM（无 BOM 的 UTF-8 易被 Windows 查看器误判为 GB18030）。
+var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
+
+// 输出编码取值（与 config 包的全局设置对齐，generator 自持常量保持解耦）。
+const (
+	EncUTF8BOM = "utf8_bom" // UTF-8 带 BOM（默认）
+	EncUTF8    = "utf8"     // UTF-8 无 BOM
+	EncGB18030 = "gb18030"  // 简体中文 Windows 常见编码
+)
+
+// EncodeOutput 按 encoding 把 UTF-8 文本转为落盘字节；未知取值回退 utf8_bom。
+func EncodeOutput(content, encoding string) ([]byte, error) {
+	switch encoding {
+	case EncUTF8:
+		return []byte(content), nil
+	case EncGB18030:
+		enc := simplifiedchinese.GB18030
+		out, err := enc.NewEncoder().Bytes([]byte(content))
+		if err != nil {
+			// 个别字符无法映射（生僻符号等）：回退 UTF-8+BOM，不阻断导出、不丢内容
+			return append(append([]byte{}, utf8BOM...), content...), nil
+		}
+		return out, nil
+	default: // EncUTF8BOM 及未知取值
+		return append(append([]byte{}, utf8BOM...), content...), nil
+	}
+}
+
 // WriteOutput 将内容写入 outputDir/outputFile（对齐 main.rs：output_dir.join(config.output_file)）。
-func WriteOutput(outputDir, outputFile, content string) (string, error) {
+// encoding 见 EncodeOutput；Generate 的内存输出不受影响，full 模式黄金快照保持逐字节一致。
+func WriteOutput(outputDir, outputFile, content, encoding string) (string, error) {
 	out := filepath.Join(outputDir, filepath.FromSlash(outputFile))
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(out, []byte(content), 0o644); err != nil {
+	body, err := EncodeOutput(content, encoding)
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(out, body, 0o644); err != nil {
 		return "", err
 	}
 	return out, nil

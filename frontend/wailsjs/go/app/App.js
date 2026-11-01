@@ -14,6 +14,10 @@ export function DeleteProject(arg1) {
   return window['go']['app']['App']['DeleteProject'](arg1);
 }
 
+export function GetGlobalSettings() {
+  return window['go']['app']['App']['GetGlobalSettings']();
+}
+
 export function ListProjects(arg1) {
   return window['go']['app']['App']['ListProjects'](arg1);
 }
@@ -44,6 +48,10 @@ export function PreviewScan(arg1) {
 
 export function RunExport(arg1, arg2) {
   return window['go']['app']['App']['RunExport'](arg1, arg2);
+}
+
+export function SaveGlobalSettings(arg1) {
+  return window['go']['app']['App']['SaveGlobalSettings'](arg1);
 }
 
 export function SaveProject(arg1, arg2) {

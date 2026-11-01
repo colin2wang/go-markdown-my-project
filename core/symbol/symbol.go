@@ -376,7 +376,12 @@ func ExtractConfig(language, content string, cfg Config) []Symbol {
 	}
 	for i := range syms {
 		if cfg.MaxSignatureLen > 0 && len(syms[i].Signature) > cfg.MaxSignatureLen {
-			syms[i].Signature = syms[i].Signature[:cfg.MaxSignatureLen] + " …"
+			// 按 rune 截断：按字节切会把 UTF-8 多字节字符（签名行内中文等）拦腰截断，
+			// 产出非法 UTF-8，Markdown 查看器渲染为乱码
+			runes := []rune(syms[i].Signature)
+			if len(runes) > cfg.MaxSignatureLen {
+				syms[i].Signature = string(runes[:cfg.MaxSignatureLen]) + " …"
+			}
 		}
 		if !cfg.ComputeSignatures {
 			syms[i].Signature = "" // symbols 模式：省去签名计算

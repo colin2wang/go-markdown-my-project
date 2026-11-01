@@ -618,7 +618,7 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 				body += manifest
 			}
 			name := fmt.Sprintf("%s.part%d%s", base, c.Index, ext)
-			p, werr := generator.WriteOutput("output", name, body)
+			p, werr := generator.WriteOutput("output", name, body, a.exportEncoding(cfg))
 			if werr != nil {
 				logExportFail(werr)
 				return ExportResult{}, werr
@@ -637,7 +637,7 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 		if opt.Compress {
 			content = compress.MinifyWith(content, opt.MaxLineLen)
 		}
-		outPath, werr := generator.WriteOutput("output", cfg.OutputFile, content)
+		outPath, werr := generator.WriteOutput("output", cfg.OutputFile, content, a.exportEncoding(cfg))
 		if werr != nil {
 			logExportFail(werr)
 			return ExportResult{}, werr
@@ -735,6 +735,44 @@ func (a *App) DefaultExcludes() ExcludeDefaultsResult {
 // DefaultProjectsDir 返回 exe 工作目录下的默认 projects 目录（绝对路径）。
 func (a *App) DefaultProjectsDir() string {
 	return filepath.Join(wd(), "config", "projects")
+}
+
+// GetGlobalSettings 读取全局设置（config/global_settings.yml）；不存在返回默认值。
+func (a *App) GetGlobalSettings() (config.GlobalSettings, error) {
+	g, err := config.LoadGlobalSettings(filepath.Join(wd(), "config"))
+	if err != nil {
+		return config.GlobalSettings{}, err
+	}
+	return *g, nil
+}
+
+// SaveGlobalSettings 保存全局设置。
+func (a *App) SaveGlobalSettings(g config.GlobalSettings) error {
+	if err := config.SaveGlobalSettings(filepath.Join(wd(), "config"), &g); err != nil {
+		return err
+	}
+	logger.Info(i18n.T("log.globalSettingsSaved"), "encoding", g.OutputEncoding, "lang", g.InterfaceLanguage)
+	return nil
+}
+
+// exportEncoding 解析导出编码：项目配置显式设置 > 全局设置 > 默认 utf8_bom。
+// 项目级 write_bom 兼容：显式 false 时映射为 utf8（无 BOM），显式 true 时保持全局/默认。
+func (a *App) exportEncoding(cfg config.ProjectConfig) string {
+	g, err := config.LoadGlobalSettings(filepath.Join(wd(), "config"))
+	if err != nil {
+		logger.Warn("failed to load global settings, using default encoding", "err", err)
+		return generator.EncUTF8BOM
+	}
+	enc := g.OutputEncoding
+	if cfg.WriteBOM != nil {
+		if !*cfg.WriteBOM {
+			enc = generator.EncUTF8
+		} else if enc == generator.EncUTF8 {
+			// 项目显式要求 BOM，覆盖全局的 utf8 无 BOM
+			enc = generator.EncUTF8BOM
+		}
+	}
+	return enc
 }
 
 // PathCheck 路径存在性校验结果。

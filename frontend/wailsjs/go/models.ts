@@ -227,6 +227,20 @@ export namespace app {
 
 export namespace config {
 	
+	export class GlobalSettings {
+	    outputEncoding: string;
+	    interfaceLanguage: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GlobalSettings(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.outputEncoding = source["outputEncoding"];
+	        this.interfaceLanguage = source["interfaceLanguage"];
+	    }
+	}
 	export class RedactionConfig {
 	    enabled: boolean;
 	    placeholder?: string;
@@ -265,6 +279,7 @@ export namespace config {
 	    template?: string;
 	    use_default_excludes?: boolean;
 	    skip_binary_files?: boolean;
+	    write_bom?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ProjectConfig(source);
@@ -289,6 +304,7 @@ export namespace config {
 	        this.template = source["template"];
 	        this.use_default_excludes = source["use_default_excludes"];
 	        this.skip_binary_files = source["skip_binary_files"];
+	        this.write_bom = source["write_bom"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
