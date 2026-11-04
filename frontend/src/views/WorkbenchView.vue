@@ -9,6 +9,8 @@ import SensitiveDrawer from './SensitiveDrawer.vue';
 import { estimateTokensFromSize, fmtNum } from '../estimate';
 import { useLogStore } from '../stores/log';
 import { useI18n } from '../i18n';
+import Icon from '../components/ui/Icon.vue';
+import type { IconName } from '../components/ui/Icon.vue';
 
 const props = defineProps<{ configPath: string }>();
 const router = useRouter();
@@ -22,11 +24,11 @@ const scanning = ref(false);
 const exporting = ref(false);
 
 const MODES = computed(() => [
-  { value: 'full', icon: '📄', label: t('wb.modes.full.label'), desc: t('wb.modes.full.desc') },
-  { value: 'smart', icon: '🧠', label: t('wb.modes.smart.label'), desc: t('wb.modes.smart.desc') },
-  { value: 'files', icon: '🗂', label: t('wb.modes.files.label'), desc: t('wb.modes.files.desc') },
-  { value: 'symbols', icon: '🔎', label: t('wb.modes.symbols.label'), desc: t('wb.modes.symbols.desc') },
-  { value: 'signatures', icon: '✍️', label: t('wb.modes.signatures.label'), desc: t('wb.modes.signatures.desc') },
+  { value: 'full', icon: 'doc', label: t('wb.modes.full.label'), desc: t('wb.modes.full.desc') },
+  { value: 'smart', icon: 'gear', label: t('wb.modes.smart.label'), desc: t('wb.modes.smart.desc') },
+  { value: 'files', icon: 'folder', label: t('wb.modes.files.label'), desc: t('wb.modes.files.desc') },
+  { value: 'symbols', icon: 'search', label: t('wb.modes.symbols.label'), desc: t('wb.modes.symbols.desc') },
+  { value: 'signatures', icon: 'open', label: t('wb.modes.signatures.label'), desc: t('wb.modes.signatures.desc') },
 ]);
 
 onMounted(async () => {
@@ -216,9 +218,8 @@ async function copyResult() {
       <!-- 左栏：项目信息 + 文件树 -->
       <aside class="pane pane-tree">
         <div class="proj-head">
-          <button class="link" @click="router.push('/')">{{ t('wb.back') }}</button>
-          <div class="proj-name">{{ projects.current.project_name }}</div>
-          <div class="muted path">{{ projects.current.project_path }}</div>
+          <span class="proj-name" :title="projects.current.project_name">{{ projects.current.project_name }}</span>
+          <span class="muted path" :title="projects.current.project_path">{{ projects.current.project_path }}</span>
         </div>
         <FileTree :files="exp.files" :checked="exp.checkedPaths" @update:checked="(v) => (exp.checkedPaths = v)" />
       </aside>
@@ -231,9 +232,9 @@ async function copyResult() {
           class="mode-card" :class="{ active: exp.mode === m.value }"
           @click="exp.mode = m.value"
         >
-          <div class="mode-line">{{ m.icon }} {{ m.label }}</div>
+          <div class="mode-line"><Icon :name="m.icon as IconName" /> {{ m.label }}</div>
           <div class="mode-desc">{{ m.desc }}</div>
-          <span class="mode-check" aria-hidden="true">✓</span>
+          <Icon name="check" :size="12" class="mode-check" />
         </div>
 
         <!-- 符号类模式子选项（设计文档 §8） -->
@@ -332,7 +333,7 @@ async function copyResult() {
         </template>
         <template v-else-if="checkedFiles.length === 0">
           <div class="result-empty">
-            <div class="empty-icon">📄</div>
+            <Icon name="doc" :size="28" class="empty-icon" />
             <p class="empty-title">{{ t('wb.emptyTitle') }}</p>
             <p class="empty-hint">{{ t('wb.emptyHint') }}</p>
           </div>
@@ -384,30 +385,31 @@ async function copyResult() {
 .workbench {
   flex: 1; min-height: 0;
   display: grid;
-  grid-template-columns: 320px 300px minmax(0, 1fr);
+  grid-template-columns: minmax(360px, 27%) minmax(290px, 21%) minmax(0, 1fr);
   gap: 12px; padding: 12px;
-  color: #eee;
+  color: var(--fg-1);
 }
-@media (max-width: 1100px) {
-  .workbench { grid-template-columns: 1fr 1fr; }
+@media (max-width: 1280px) {
+  .workbench { grid-template-columns: minmax(320px, 1fr) minmax(280px, 1fr); }
   .pane-result { grid-column: 1 / -1; }
 }
-.pane { overflow-y: auto; background: #16222e; border: 1px solid #3a4a5c; border-radius: 8px; padding: 12px; }
+.pane { overflow-y: auto; background: var(--bg-2); border: 1px solid var(--line-2); border-radius: var(--r-md); padding: 12px; }
 .pane-tree { display: flex; flex-direction: column; min-height: 0; }
-.proj-head { flex: none; margin-bottom: 8px; }
-.proj-name { font-weight: bold; margin-top: 4px; }
-.path { word-break: break-all; }
-.pane-options h3, .pane-result h3 { font-size: 13px; color: #8fa3b8; margin: 14px 0 8px; text-transform: none; }
+/* 项目名 + 路径压到一行，给深层级文件树腾出空间 */
+.proj-head { flex: none; display: flex; align-items: baseline; gap: 8px; min-width: 0; margin-bottom: 8px; }
+.proj-name { flex: none; max-width: 45%; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pane-options h3, .pane-result h3 { font-size: 13px; color: var(--fg-2); margin: 14px 0 8px; text-transform: none; }
 .pane-options h3:first-child { margin-top: 0; }
-.mode-card { position: relative; border: 1px solid #3a4a5c; border-radius: 8px; padding: 10px; margin-bottom: 8px; cursor: pointer; transition: border-color .12s, background .12s; }
-.mode-card:hover { border-color: #4a5d70; }
-.mode-card.active { border-color: #63b3ed; background: rgba(99, 179, 237, .08); }
-.mode-card.active .mode-line { color: #63b3ed; }
+.mode-card { position: relative; border: 1px solid var(--line-2); border-radius: var(--r-md); padding: 10px; margin-bottom: 8px; cursor: pointer; transition: border-color .12s, background .12s; }
+.mode-card:hover { border-color: var(--line-2); background: var(--bg-3); }
+.mode-card.active { border-color: var(--accent); background: var(--accent-dim); }
+.mode-card.active .mode-line { color: var(--accent); }
 .mode-line { font-size: 14px; padding-right: 18px; }
-.mode-desc { font-size: 12px; color: #8fa3b8; margin-top: 4px; }
+.mode-desc { font-size: 12px; color: var(--fg-2); margin-top: 4px; }
 .mode-check {
   position: absolute; top: 8px; right: 10px;
-  color: #63b3ed; font-size: 12px;
+  color: var(--accent);
   opacity: 0; transform: scale(.6);
   transition: opacity .12s, transform .12s;
 }
@@ -415,26 +417,26 @@ async function copyResult() {
 .inline { display: flex; align-items: center; gap: 6px; margin: 6px 0; }
 .block { display: block; margin: 6px 0; }
 .num { width: 100px; }
-.chip { display: inline-block; border-radius: 12px; padding: 3px 10px; font-size: 12px; margin-top: 6px; }
-.chip.none { background: #1a3a2a; color: #68d391; }
-.chip.hit { background: #3a2a1a; color: #f6ad55; }
-.chip.unscanned { background: #1f2d3d; color: #8fa3b8; }
-.outline { background: #0f1720; padding: 10px; border-radius: 6px; font-size: 12px; line-height: 1.7; overflow-x: auto; }
+.chip { display: inline-block; border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 3px 10px; font-size: 12px; margin-top: 6px; }
+.chip.none { color: var(--ok); }
+.chip.hit { color: var(--warn); }
+.chip.unscanned { color: var(--fg-3); }
+.outline { background: var(--bg-3); padding: 10px; border-radius: var(--r-md); font-size: 12px; line-height: 1.7; overflow-x: auto; }
 .result-empty {
   height: 100%; min-height: 260px;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 6px; color: #6b7c8f; text-align: center;
+  gap: 6px; color: var(--fg-3); text-align: center;
 }
-.empty-icon { font-size: 36px; opacity: .5; }
-.empty-title { margin: 0; font-size: 14px; color: #8fa3b8; }
+.empty-icon { color: var(--fg-3); opacity: .5; }
+.empty-title { margin: 0; font-size: 14px; color: var(--fg-2); }
 .empty-hint { margin: 0; font-size: 12px; }
 .outline.preview-content { white-space: pre-wrap; word-break: break-word; }
-.result-card { border-radius: 8px; padding: 14px; }
-.result-card.ok { border: 1px solid #2f855a; background: rgba(47, 133, 90, .1); }
-.result-card h3 { margin: 0 0 10px; color: #68d391; }
+.result-card { border-radius: var(--r-md); padding: 14px; }
+.result-card.ok { border: 1px solid var(--ok); background: transparent; }
+.result-card h3 { margin: 0 0 10px; color: var(--ok); }
 .result-card table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.result-card th { text-align: left; color: #8fa3b8; padding: 4px 8px 4px 0; white-space: nowrap; }
+.result-card th { text-align: left; color: var(--fg-2); padding: 4px 8px 4px 0; white-space: nowrap; }
 .result-card td { word-break: break-all; }
 .result-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 .statusbar {
@@ -443,12 +445,12 @@ async function copyResult() {
   height: 44px; flex: none;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 16px;
-  background: #16222e; border: 1px solid #3a4a5c; border-radius: 8px;
+  background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--r-md);
 }
 /* 忙碌时的不确定进度条（导出/预览/扫描共用） */
 .bar-progress {
   position: absolute; left: 0; top: 0; height: 2px; width: 35%;
-  background: linear-gradient(90deg, transparent, #63b3ed, transparent);
+  background: var(--accent);
   animation: bar-slide 1.1s linear infinite;
 }
 @keyframes bar-slide {
@@ -459,14 +461,15 @@ async function copyResult() {
 .mini { font-size: 12px; padding: 1px 8px; }
 .status-left { display: flex; gap: 12px; align-items: center; }
 .status-right { display: flex; gap: 8px; }
-.muted { color: #8fa3b8; font-size: 12px; }
-.error { grid-column: 1 / -1; color: #ff8383; background: #3a1a1a; border: 1px solid #742a2a; border-radius: 6px; padding: 8px 12px; }
-button { cursor: pointer; border: 1px solid #3a4a5c; background: #1f2d3d; color: #eee; border-radius: 6px; padding: 4px 10px; }
-button.primary { background: #2b6cb0; }
+.muted { color: var(--fg-3); font-size: 12px; }
+.error { grid-column: 1 / -1; color: var(--err); background: transparent; border: 1px solid var(--err); border-radius: var(--r-md); padding: 8px 12px; }
+button { cursor: pointer; border: 1px solid var(--line-2); background: var(--bg-3); color: var(--fg-1); border-radius: var(--r-sm); padding: 4px 10px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--fg-on-accent); font-weight: 600; }
 button:disabled { opacity: .5; cursor: not-allowed; }
-.link { border: none; background: none; color: #63b3ed; padding: 2px 4px; }
-input, select { background: #0f1720; color: #eee; border: 1px solid #3a4a5c; border-radius: 4px; padding: 4px 8px; }
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 30; }
-.modal-body { background: #16222e; border: 1px solid #3a4a5c; border-radius: 10px; padding: 20px; width: 420px; }
+.link { border: none; background: none; color: var(--fg-2); padding: 2px 4px; }
+.link:hover { color: var(--fg-1); }
+input, select { background: var(--bg-3); color: var(--fg-1); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 4px 8px; }
+.modal { position: fixed; inset: 0; background: var(--mask); display: flex; align-items: center; justify-content: center; z-index: 30; }
+.modal-body { background: var(--bg-2); border: 1px solid var(--line-2); border-radius: var(--r-lg); padding: 20px; width: 420px; }
 .actions { display: flex; gap: 8px; margin-top: 12px; }
 </style>

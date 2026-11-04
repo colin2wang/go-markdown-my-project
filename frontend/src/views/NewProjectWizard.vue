@@ -318,12 +318,17 @@ async function save() {
 </template>
 
 <style scoped>
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 10; }
-.wizard { background: #16222e; border: 1px solid #3a4a5c; border-radius: 10px; padding: 20px; width: 560px; max-height: 86vh; display: flex; flex-direction: column; }
+.modal { position: fixed; inset: 0; background: var(--mask); display: flex; align-items: center; justify-content: center; z-index: 10; }
+.wizard {
+  background: var(--bg-2); border: 1px solid var(--line-2);
+  border-radius: var(--r-lg); padding: 20px; width: 560px; max-height: 86vh;
+  display: flex; flex-direction: column;
+  box-shadow: var(--shadow-modal); /* modal 可保留一个功能性阴影 */
+}
 header h2 { margin: 0 0 8px; }
-.steps { display: flex; gap: 8px; list-style: none; padding: 0; margin: 0 0 12px; font-size: 12px; color: #8fa3b8; }
-.steps li.active { color: #63b3ed; font-weight: bold; }
-.steps li.done { color: #68d391; }
+.steps { display: flex; gap: 8px; list-style: none; padding: 0; margin: 0 0 12px; font-size: 12px; color: var(--fg-2); }
+.steps li.active { color: var(--accent); font-weight: bold; }
+.steps li.done { color: var(--ok); }
 section { overflow-y: auto; }
 label { display: block; margin: 8px 0; }
 label.inline { display: inline-flex; align-items: center; gap: 4px; margin: 0; }
@@ -331,24 +336,23 @@ label.inline { display: inline-flex; align-items: center; gap: 4px; margin: 0; }
 .row input { flex: 1; }
 .toolbar2 { align-items: center; margin-bottom: 6px; }
 .notes {
-  border: 1px solid #2f4a63; border-radius: 6px; padding: 8px 10px; margin: 8px 0;
-  background: rgba(43, 108, 176, .08);
+  border: 1px solid var(--line-2); border-radius: var(--r-md); padding: 8px 10px; margin: 8px 0;
+  background: var(--bg-3);
 }
-.notes-title { font-size: 12px; color: #63b3ed; margin-bottom: 4px; }
-.note-line { font-size: 12px; color: #a9bacb; line-height: 1.7; }
-button.accent { background: #2b6cb0; border-color: #2b6cb0; white-space: nowrap; }
-.filelist { max-height: 300px; overflow: auto; border: 1px solid #3a4a5c; border-radius: 6px; padding: 8px; margin: 8px 0; }
+.notes-title { font-size: 12px; color: var(--fg-2); margin-bottom: 4px; }
+.note-line { font-size: 12px; color: var(--fg-2); line-height: 1.7; }
+button.accent { background: var(--accent); border-color: var(--accent); color: var(--fg-on-accent); font-weight: 600; white-space: nowrap; }
+.filelist { max-height: 300px; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-md); padding: 8px; margin: 8px 0; }
 .fileitem { display: block; font-size: 13px; margin: 2px 0; }
-.summary { width: 100%; border-collapse: collapse; font-size: 13px; }
-.summary th { text-align: left; color: #8fa3b8; padding: 4px 8px 4px 0; white-space: nowrap; vertical-align: top; }
+.summary th { text-align: left; color: var(--fg-2); padding: 4px 8px 4px 0; white-space: nowrap; vertical-align: top; }
 .summary td { word-break: break-all; }
 footer { display: flex; gap: 8px; margin-top: 12px; }
 .spacer { flex: 1; }
-.error { color: #ff8383; background: #3a1a1a; border: 1px solid #742a2a; border-radius: 6px; padding: 8px 12px; font-size: 13px; }
-.field-error { color: #ff8383; font-size: 12px; margin: 2px 0 6px 2px; }
-.muted { color: #8fa3b8; font-size: 12px; }
-button { cursor: pointer; border: 1px solid #3a4a5c; background: #1f2d3d; color: #eee; border-radius: 6px; padding: 4px 10px; }
-button.primary { background: #2b6cb0; }
+.error { color: var(--err); background: transparent; border: 1px solid var(--err); border-radius: var(--r-md); padding: 8px 12px; font-size: 13px; }
+.field-error { color: var(--err); font-size: 12px; margin: 2px 0 6px 2px; }
+.muted { color: var(--fg-3); font-size: 12px; }
+button { cursor: pointer; border: 1px solid var(--line-2); background: transparent; color: var(--fg-1); border-radius: var(--r-sm); padding: 4px 10px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--fg-on-accent); font-weight: 600; }
 button:disabled { opacity: .5; cursor: not-allowed; }
-input, select { background: #0f1720; color: #eee; border: 1px solid #3a4a5c; border-radius: 4px; padding: 4px 8px; }
+input, select { background: var(--bg-3); color: var(--fg-1); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 4px 8px; }
 </style>

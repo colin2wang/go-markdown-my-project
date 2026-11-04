@@ -86,14 +86,43 @@ type App struct {
 // NewApp 创建 App。
 func NewApp() *App { return &App{} }
 
+// 初始窗口占主屏逻辑分辨率的比例（Screen.Size 与 Wails 窗口尺寸单位一致）。
+const windowScreenRatio = 0.75
+
 // Startup 由 Wails 注入上下文。
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
+	// main.go 以 StartHidden 启动：无论尺寸计算是否成功，退出前都要显示窗口
+	defer runtime.WindowShow(ctx)
+	a.applyInitialWindowSize(ctx)
 	// 把全局日志转发为前端可监听的事件（core 保持无 Wails 依赖）。
 	logger.SetSink(func(e logger.Entry) {
 		runtime.EventsEmit(a.ctx, "app:log", e)
 	})
 	logger.Info(i18n.T("log.started"))
+}
+
+// applyInitialWindowSize 按主屏逻辑分辨率的 75% 设置窗口尺寸并居中。
+// 取不到屏幕信息或尺寸异常时保留 main.go 中的回退尺寸，窗口仍可正常显示。
+func (a *App) applyInitialWindowSize(ctx context.Context) {
+	screens, err := runtime.ScreenGetAll(ctx)
+	if err != nil || len(screens) == 0 {
+		return
+	}
+	screen := screens[0]
+	for _, s := range screens {
+		if s.IsPrimary {
+			screen = s
+			break
+		}
+	}
+	width := int(float64(screen.Size.Width) * windowScreenRatio)
+	height := int(float64(screen.Size.Height) * windowScreenRatio)
+	if width <= 0 || height <= 0 {
+		return
+	}
+	runtime.WindowSetSize(ctx, width, height)
+	runtime.WindowCenter(ctx)
 }
 
 // SetLocale 由前端在切换界面语言时调用，同步后端日志/校验文案语言。

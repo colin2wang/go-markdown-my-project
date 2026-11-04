@@ -104,9 +104,15 @@ try {
     # `wails build` regenerates the Go<->frontend bindings, then builds the frontend,
     # so the embedded dist reflects the latest backend methods.
     # -SkipFrontend reuses an already-built dist (skips the internal frontend build).
-    # Build stamp: build-YYYYMMDD by build date, injected into app.BuildVersion (title bar)
-    $buildStamp = '(build-' + (Get-Date -Format 'yyyyMMdd') + ')'
+    # Build stamp: local wall-clock time, never UTC. [DateTime]::Now uses the
+    # machine's local time zone; the stamp stays space-free because it is passed
+    # through -ldflags -X to the Go linker and shown in the title bar.
+    $buildTime = [DateTime]::Now
+    $invariant = [System.Globalization.CultureInfo]::InvariantCulture
+    $buildStamp = '(build-' + $buildTime.ToString('yyyyMMdd-HHmm', $invariant) + ')'
+    $buildLocal = $buildTime.ToString('yyyy-MM-dd HH:mm:ss', $invariant) + ' ' + $buildTime.ToString('zzz', $invariant) + ' (local)'
     Write-Ok "Build version: $buildStamp"
+    Write-Ok "Build time   : $buildLocal"
     $buildArgs = @('build', '-ldflags', "-s -w -X go-markdown-my-project/app.BuildVersion=$buildStamp")
     if ($SkipFrontend) { $buildArgs += '-s' }
     if ($Package) {

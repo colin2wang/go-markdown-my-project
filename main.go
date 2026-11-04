@@ -22,17 +22,22 @@ func main() {
 
 	appObj := app.NewApp()
 	title := "Project Docs GUI"
-	if app.BuildVersion != "dev" { // 编译期注入的版本戳（build-YYYYMMDD），dev 下不加后缀
+	if app.BuildVersion != "dev" { // 编译期注入的版本戳（本地时区 build-YYYYMMDD-HHmm），dev 下不加后缀
 		title += " " + app.BuildVersion
 	}
 	err := wails.Run(&options.App{
-		Title:  title,
-		Width:  1200,
-		Height: 800,
+		// 回退尺寸：取不到屏幕信息时使用；StartHidden 下由 app.App.Startup 按主屏 75% 设定并显示
+		Title:       title,
+		Width:       1200,
+		Height:      800,
+		MinWidth:    640,  // 下限放宽，避免小屏上把 75% 的窗口顶大
+		MinHeight:   400,
+		StartHidden: true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
+		// 与 --bg-0 (#14161a) 对齐，避免启动瞬间闪出偏蓝底色
+		BackgroundColour: &options.RGBA{R: 20, G: 22, B: 26, A: 1},
 		OnStartup:        appObj.Startup,
 		Bind: []interface{}{
 			appObj,

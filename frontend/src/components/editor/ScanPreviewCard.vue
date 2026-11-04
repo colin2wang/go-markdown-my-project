@@ -3,6 +3,7 @@
 import type { ScanPreview } from '../../api/bindings';
 import { fmtNum } from '../../estimate';
 import { useI18n } from '../../i18n';
+import Icon from '../ui/Icon.vue';
 
 const { t } = useI18n();
 defineProps<{ preview: ScanPreview }>();
@@ -20,13 +21,18 @@ function fmtSize(n: number): string {
     <p class="langs">
       {{ Object.entries(preview.byLang).map(([l, n]) => `${l} ×${n}`).join(' · ') }}
     </p>
-    <p v-for="(w, i) in preview.warnings" :key="i" class="warn">⚠ {{ w }}</p>
+    <p v-for="(w, i) in preview.warnings" :key="i" class="warn"><Icon name="warn" :size="12" /> {{ w }}</p>
   </div>
 </template>
 
 <style scoped>
-.scanpreview { background: #0f1720; border: 1px solid #2a3848; border-radius: 6px; padding: 8px 10px; margin-top: 6px; font-size: 12px; }
-.ok { color: #68d391; margin: 0 0 4px; }
-.langs { color: #8fa3b8; margin: 0; }
-.warn { color: #f6ad55; margin: 4px 0 0; }
+.scanpreview {
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 8px 10px; margin-top: 6px; font-size: 12px;
+}
+.ok { color: var(--ok); margin: 0 0 4px; }
+.langs { color: var(--fg-2); margin: 0; }
+.warn { color: var(--warn); margin: 4px 0 0; display: flex; align-items: center; gap: 5px; }
 </style>

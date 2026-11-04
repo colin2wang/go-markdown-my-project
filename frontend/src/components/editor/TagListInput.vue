@@ -4,6 +4,7 @@ import { ref } from 'vue';
 import { api } from '../../api/bindings';
 import { useLogStore } from '../../stores/log';
 import { useI18n } from '../../i18n';
+import Icon from '../ui/Icon.vue';
 
 const { t } = useI18n();
 const props = defineProps<{
@@ -95,7 +96,7 @@ async function browse() {
     <div class="tags" :class="{ invalid: !!error }">
       <span v-for="(t, i) in modelValue" :key="t" class="tag">
         <span class="chip-text">{{ t }}</span>
-        <button type="button" class="x" :disabled="disabled" @click="remove(i)">×</button>
+        <button type="button" class="x" :disabled="disabled" @click="remove(i)"><Icon name="close" :size="10" /></button>
       </span>
       <input
         v-model="input"
@@ -108,7 +109,7 @@ async function browse() {
       />
     </div>
     <div v-if="dirSelect" class="browse-row">
-      <button type="button" class="browse" :disabled="disabled" @click="browse">📂 {{ t('editor.browseDisk') }}</button>
+      <button type="button" class="browse" :disabled="disabled" @click="browse"><Icon name="folder" /> {{ t('editor.browseDisk') }}</button>
       <label class="multi"><input v-model="multi" type="checkbox" :disabled="disabled" />{{ t('editor.multiPick') }}</label>
       <label class="multi"><input v-model="allSubdirs" type="checkbox" :disabled="disabled" />{{ t('editor.allSubdirs') }}</label>
     </div>
@@ -117,33 +118,33 @@ async function browse() {
 </template>
 
 <style scoped>
-.tags { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; background: #0f1720; border: 1px solid #3a4a5c; border-radius: 6px; padding: 5px 8px; min-height: 34px; box-sizing: border-box; cursor: text; transition: border-color .12s; }
-.tags:focus-within { border-color: #63b3ed; }
+.tags { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: var(--r-md); padding: 5px 8px; min-height: 34px; box-sizing: border-box; cursor: text; transition: border-color .12s; }
+.tags:focus-within { border-color: var(--accent-strong); }
 .tag {
   display: inline-flex; align-items: center; gap: 5px;
   max-width: 220px;
-  background: #1f2d3d; border: 1px solid #3a4a5c; border-radius: 5px;
+  background: var(--bg-2); border: 1px solid var(--line-2); border-radius: var(--r-sm);
   padding: 2px 4px 2px 8px;
   font-family: ui-monospace, Consolas, monospace;
-  font-size: 12px; color: #cdd9e5;
+  font-size: 12px; color: var(--fg-1);
 }
 .tag .chip-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tag .x {
   flex: none; width: 15px; height: 15px;
   display: grid; place-items: center;
-  background: none; border: none; border-radius: 3px;
-  color: #6b7c8f; font-size: 11px; line-height: 1; cursor: pointer; padding: 0;
+  background: none; border: none; border-radius: var(--r-sm);
+  color: var(--fg-3); font-size: 11px; line-height: 1; cursor: pointer; padding: 0;
 }
-.tag .x:hover { color: #ff8383; background: rgba(255, 131, 131, .12); }
+.tag .x:hover { color: var(--err); background: var(--bg-2); }
 /* 校验失败时整组 tag 容器红框 */
-.tags.invalid { border-color: #c53030; }
-.tags input { flex: 1; min-width: 120px; background: none; border: none; color: #eee; outline: none; font-size: 12.5px; padding: 2px; }
-.browse { margin-top: 4px; background: #1f2d3d; color: #eee; border: 1px solid #3a4a5c; border-radius: 4px; padding: 3px 8px; font-size: 12px; cursor: pointer; }
+.tags.invalid { border-color: var(--err); }
+.tags input { flex: 1; min-width: 120px; background: none; border: none; color: var(--fg-1); outline: none; font-size: 12.5px; padding: 2px; }
+.browse { margin-top: 4px; background: transparent; color: var(--fg-1); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 3px 8px; font-size: 12px; cursor: pointer; }
 .browse:disabled { opacity: .4; cursor: not-allowed; }
 .browse-row { display: flex; align-items: center; gap: 10px; }
-.multi { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #8fa3b8; cursor: pointer; user-select: none; }
+.multi { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--fg-2); cursor: pointer; user-select: none; }
 .multi input { cursor: pointer; }
 .disabled { opacity: .5; }
-input.invalid { border-color: #c53030; }
-.field-error { color: #ff8383; font-size: 11px; margin: 3px 0 0 2px; }
+input.invalid { border-color: var(--err); }
+.field-error { color: var(--err); font-size: 11px; margin: 3px 0 0 2px; }
 </style>

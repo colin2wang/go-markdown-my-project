@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import type { FileInfo } from '../api/bindings';
 import { useLogStore } from '../stores/log';
 import { useI18n } from '../i18n';
+import Icon from '../components/ui/Icon.vue';
 
 const { t } = useI18n();
 const props = defineProps<{
@@ -127,6 +128,26 @@ const visibleTree = computed<TreeNode[]>(() => {
 
 watch(search, () => { collapsed.value = new Set(); }); // 搜索时全部展开
 
+// —— 折叠全部 / 展开全部：深目录先收起再逐级展开 ——
+const dirPaths = computed(() => {
+  const out: string[] = [];
+  const walk = (nodes: TreeNode[]) => {
+    for (const n of nodes) {
+      if (!n.dir) continue;
+      out.push(n.path);
+      walk(n.children);
+    }
+  };
+  walk(tree.value);
+  return out;
+});
+const allCollapsed = computed(() =>
+  dirPaths.value.length > 0 && dirPaths.value.every((p) => collapsed.value.has(p))
+);
+function toggleCollapseAll() {
+  collapsed.value = allCollapsed.value ? new Set() : new Set(dirPaths.value);
+}
+
 // —— 快捷操作 ——
 const log = useLogStore();
 
@@ -174,6 +195,7 @@ function formatSize(n: number): string {
         <button @click="selectInvert">{{ t('tree.selectInvert') }}</button>
         <button @click="selectCodeOnly">{{ t('tree.codeOnly') }}</button>
         <button @click="selectNone">{{ t('tree.selectNone') }}</button>
+        <button @click="toggleCollapseAll">{{ allCollapsed ? t('tree.expandAll') : t('tree.collapseAll') }}</button>
       </div>
     </div>
 
@@ -209,14 +231,24 @@ import { defineComponent, h, type PropType } from 'vue';
 import type { TreeNode } from './filetree-types';
 import { t } from '../i18n';
 
-const Indent = (depth: number) => h('span', { class: 'indent', style: { width: depth * 16 + 'px' } });
+// 前 4 层每层 12px，之后每层 6px：深层目录不再把名称挤出可视区
+const TREE_STEP = 12;
+const DEEP_STEP = 6;
+const DEEP_AFTER = 4;
+const indentPx = (depth: number) =>
+  depth <= DEEP_AFTER
+    ? depth * TREE_STEP
+    : DEEP_AFTER * TREE_STEP + (depth - DEEP_AFTER) * DEEP_STEP;
 
 const Chevron = (open: boolean, onToggle: () => void) =>
-  h('span', {
+  h(Icon, {
+    name: 'chevron' as const,
+    size: 14,
     class: 'chevron',
     title: open ? t('tree.collapse') : t('tree.expand'),
+    style: { transform: open ? '' : 'rotate(-90deg)' },
     onClick: (e: Event) => { e.stopPropagation(); onToggle(); },
-  }, open ? '▾' : '▸');
+  });
 
 function fmtSize(n: number): string {
   if (n < 1024) return n + ' B';
@@ -244,13 +276,13 @@ const DirNode = defineComponent({
       })(p.node);
       const hit = leaves.filter((x) => p.checked.has(x)).length;
       const state = hit === 0 ? 'none' : hit === leaves.length ? 'all' : 'some';
+      const indent = indentPx(p.depth);
       return h('div', {
-        class: 'file-row dir-row',
-        style: { paddingLeft: p.depth * 16 + 'px', '--depth': p.depth },
+        class: ['file-row', 'dir-row', { deep: p.depth >= DEEP_AFTER }],
+        style: { paddingLeft: indent + 'px', '--indent': indent + 'px' },
         'data-depth': p.depth,
         onClick: () => emit('toggle-dir', p.node.path),
       }, [
-        Indent(0),
         Chevron(!p.collapsed.has(p.node.path), () => emit('toggle-dir', p.node.path)),
         h('input', {
           type: 'checkbox',
@@ -259,8 +291,13 @@ const DirNode = defineComponent({
           onClick: (e: Event) => e.stopPropagation(),
           onChange: () => emit('toggle-node', p.node),
         }),
-        h('span', { class: 'icon' }, '📁'),
-        h('span', { class: 'name' }, p.node.name),
+        h(Icon, { name: 'folder', size: 13 }),
+        h('span', {
+          class: 'name',
+          title: p.depth >= DEEP_AFTER
+            ? p.node.path + ' · ' + fmtSize(p.node.sizeBytes)
+            : p.node.path,
+        }, p.node.name),
         h('span', { class: 'size' }, fmtSize(p.node.sizeBytes)),
       ]);
     };
@@ -276,22 +313,31 @@ const FileRow = defineComponent({
   },
   emits: ['toggle-file'],
   setup(p, { emit }) {
-    return () => h('div', {
-      class: 'file-row',
-      style: { paddingLeft: p.depth * 16 + 'px', '--depth': p.depth },
-      'data-depth': p.depth,
-      onClick: () => emit('toggle-file', p.node.path),
-    }, [
-      h('input', {
-        type: 'checkbox',
-        checked: p.checked.has(p.node.path),
-        onClick: (e: Event) => e.stopPropagation(),
-        onChange: () => emit('toggle-file', p.node.path),
-      }),
-      h('span', { class: 'icon' }, '📄'),
-      h('span', { class: 'name', title: p.node.path }, p.node.name),
-      h('span', { class: 'size' }, fmtSize(p.node.sizeBytes)),
-    ]);
+    return () => {
+      const indent = indentPx(p.depth);
+      return h('div', {
+        class: ['file-row', { deep: p.depth >= DEEP_AFTER }],
+        style: { paddingLeft: indent + 'px', '--indent': indent + 'px' },
+        'data-depth': p.depth,
+        onClick: () => emit('toggle-file', p.node.path),
+      }, [
+        h('span', { class: 'chevron', style: { visibility: 'hidden' } }), // 与目录行箭头占位对齐
+        h('input', {
+          type: 'checkbox',
+          checked: p.checked.has(p.node.path),
+          onClick: (e: Event) => e.stopPropagation(),
+          onChange: () => emit('toggle-file', p.node.path),
+        }),
+        h(Icon, { name: 'doc', size: 13 }),
+        h('span', {
+          class: 'name',
+          title: p.depth >= DEEP_AFTER
+            ? p.node.path + ' · ' + fmtSize(p.node.sizeBytes)
+            : p.node.path,
+        }, p.node.name),
+        h('span', { class: 'size' }, fmtSize(p.node.sizeBytes)),
+      ]);
+    };
   },
 });
 
@@ -347,36 +393,41 @@ export default defineComponent({ name: 'FileTreeRoot' });
 .search { width: 100%; box-sizing: border-box; margin-bottom: 6px; }
 .quick { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
 .quick button { font-size: 12px; padding: 2px 8px; }
-.treewrap { flex: 1; min-height: 0; overflow-y: auto; border: 1px solid #3a4a5c; border-radius: 6px; padding: 4px; }
+.treewrap { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-md); padding: 4px; }
 .hint { padding: 6px 8px; }
 .foot { flex: none; padding: 8px 2px 0; }
-.muted { color: #8fa3b8; font-size: 12px; }
+.muted { color: var(--fg-3); font-size: 12px; }
 </style>
 
 <style>
 /* 文件行全局样式（递归子组件在 scoped 外） */
 .file-row {
-  display: flex; align-items: center; gap: 8px;
+  --indent: 0px;
+  display: flex; align-items: center; gap: 6px;
+  width: max-content; min-width: 100%;
   height: 28px; padding-right: 8px;
-  cursor: pointer; border-radius: 4px;
-  font-size: 13px; color: #eee;
+  cursor: pointer; border-radius: var(--r-sm);
+  font-size: 13px; color: var(--fg-1);
   text-align: left;
   position: relative;
 }
-.file-row:hover { background: #1f2d3d; }
-/* 缩进参考线：depth > 0 时在行首画竖线 */
+.file-row:hover { background: var(--bg-3); }
+/* 缩进参考线跟随 JS 计算的 --indent，深层级不再线性外扩 */
 .file-row::before {
   content: '';
   position: absolute;
-  left: calc((var(--depth, 0) - 1) * 16px + 11px);
+  left: calc(var(--indent) - 6px);
   top: 0; bottom: 0;
   width: 1px;
-  background: rgba(58, 74, 92, .5);
+  background: var(--line);
 }
 .file-row[data-depth='0']::before { display: none; }
-.file-row .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.file-row .size { color: #8fa3b8; font-size: 12px; font-variant-numeric: tabular-nums; }
-.file-row .chevron { width: 14px; color: #8fa3b8; flex: none; }
+/* 名称不再被省略号截断；行宽不足时整棵树横向滚动 */
+.file-row .name { flex: 1 1 auto; min-width: 10ch; white-space: nowrap; }
+.file-row .size { flex: none; color: var(--fg-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+/* 深层级让出大小列，大小改由 hover 的完整路径提示承载 */
+.file-row.deep .size { display: none; }
+.file-row .chevron { width: 14px; height: 14px; color: var(--fg-2); flex: none; }
 .file-row .icon { flex: none; font-size: 12px; }
-.file-row input[type='checkbox'] { flex: none; margin: 0; accent-color: #2b6cb0; }
+.file-row input[type='checkbox'] { flex: none; margin: 0; accent-color: var(--accent); }
 </style>

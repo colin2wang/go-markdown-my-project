@@ -15,7 +15,7 @@ cd frontend && pnpm dev    # 纯前端开发
 .\generate-icon.ps1       # 由 frontend/public/icon.svg 生成应用图标（build/appicon.png + build/windows/icon.ico）
 ```
 
-**构建版本戳**：build.ps1 按构建日期生成 `build-YYYYMMDD`，经 `-ldflags -X` 注入 `app.BuildVersion`（`app/version.go`），前端标题栏经 `GetVersion` 绑定展示；本地 `go build` / `wails dev` 下为 `dev`。
+**构建版本戳**：build.ps1 按**本地时区**的构建时间生成 `build-YYYYMMDD-HHmm`（`[DateTime]::Now`，勿用 UTC；构建日志另打印完整本地时间与 UTC 偏移），经 `-ldflags -X` 注入 `app.BuildVersion`（`app/version.go`），前端标题栏经 `GetVersion` 绑定展示；本地 `go build` / `wails dev` 下为 `dev`。
 
 ## 架构边界（必须遵守）
 
@@ -23,6 +23,7 @@ cd frontend && pnpm dev    # 纯前端开发
 - 新增的 `core/infer`（按项目结构推断推荐配置）、`core/pick`（文件重要性评分/预算裁剪）、`core/compress`（注释剥离 `StripComments` / 骨架化 `Skeleton` / 长行截断 `MinifyWith`）均为纯 Go，不依赖 Wails，可被复用与单测。
 - 绑定层方法必须可导出（`Startup` 而非 `startup`），否则 Wails 不生成前端绑定。
 - 前端通过 `frontend/src/api/bindings.ts` 手写封装访问 `window.go.app.App`（App 结构体在 `app` 包下），新增后端方法需同步在此补类型。
+- **窗口初始化**：`main.go` 以 `StartHidden: true` 启动，`app.App.Startup` 用 `runtime.ScreenGetAll` 取主屏**逻辑**分辨率（`Screen.Size`）的 75% 设尺寸并居中，且必须 `defer runtime.WindowShow(ctx)` 才显示窗口；取不到屏幕信息时回退 `main.go` 的固定尺寸，勿删 `WindowShow`。
 
 ## 协作约定
 

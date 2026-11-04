@@ -111,15 +111,25 @@ watch(
 </template>
 
 <style scoped>
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 40; }
-.modal-body { background: #16222e; border: 1px solid #3a4a5c; border-radius: 10px; padding: 20px; width: 460px; max-width: 90vw; }
-.modal-body h3 { margin: 0 0 14px; color: #eee; }
-.field { display: block; margin-bottom: 14px; font-size: 13px; color: #c6d2de; }
-.field select { display: block; margin-top: 4px; width: 100%; background: #0f1720; color: #eee; border: 1px solid #3a4a5c; border-radius: 4px; padding: 5px 8px; font-size: 13px; }
-.hint { margin: 4px 0 0; font-size: 11px; color: #6d8296; }
-.error { color: #f56565; font-size: 12px; }
+.modal { position: fixed; inset: 0; background: var(--mask); display: flex; align-items: center; justify-content: center; z-index: 40; }
+.modal-body {
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg); padding: 20px; width: 460px; max-width: 90vw;
+  box-shadow: var(--shadow-modal); /* modal 可保留一个功能性阴影 */
+}
+.modal-body h3 { margin: 0 0 14px; color: var(--fg-1); }
+.field { display: block; margin-bottom: 14px; font-size: 13px; color: var(--fg-1); }
+.field select {
+  display: block; margin-top: 4px; width: 100%;
+  background: var(--bg-3); color: var(--fg-1);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm); padding: 5px 8px; font-size: 13px;
+}
+.hint { margin: 4px 0 0; font-size: 11px; color: var(--fg-3); }
+.error { color: var(--err); font-size: 12px; }
 .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
-.actions button { cursor: pointer; border: 1px solid #3a4a5c; background: #1f2d3d; color: #eee; border-radius: 6px; padding: 4px 14px; }
-.actions button.primary { background: #2b6cb0; border-color: #2b6cb0; }
+.actions button { cursor: pointer; border: 1px solid var(--line-2); background: transparent; color: var(--fg-1); border-radius: var(--r-sm); padding: 4px 14px; }
+.actions button.primary { background: var(--accent); border-color: var(--accent); color: var(--fg-on-accent); font-weight: 600; }
 .actions button:disabled { opacity: .5; cursor: default; }
 </style>

@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import { useLogStore } from '../stores/log';
 import { useI18n } from '../i18n';
+import Icon from './ui/Icon.vue';
 
 const { t } = useI18n();
 const log = useLogStore();
@@ -41,7 +42,7 @@ function levelClass(level: string) {
 <template>
   <section class="logpanel" :class="{ collapsed }">
     <header class="log-head">
-      <button class="toggle" @click="collapsed = !collapsed">{{ collapsed ? '▸' : '▾' }} {{ t('log.title') }}</button>
+      <button class="toggle" @click="collapsed = !collapsed"><Icon name="chevron" :size="12" :class="{ 'is-collapsed': collapsed }" /> {{ t('log.title') }}</button>
       <span class="counts">
         <span class="lvl-debug">D {{ counts.DEBUG }}</span>
         <span class="lvl-info">I {{ counts.INFO }}</span>
@@ -70,9 +71,9 @@ function levelClass(level: string) {
   height: 170px;
   display: flex;
   flex-direction: column;
-  background: #0c141c;
-  border-top: 1px solid #3a4a5c;
-  color: #cdd9e5;
+  background: var(--bg-0);
+  border-top: 1px solid var(--line);
+  color: var(--fg-1);
 }
 .logpanel.collapsed { height: 32px; }
 .log-head {
@@ -82,15 +83,17 @@ function levelClass(level: string) {
   align-items: center;
   gap: 12px;
   padding: 0 10px;
-  background: #16222e;
-  border-bottom: 1px solid #2a3848;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--line);
   font-size: 12px;
 }
-.toggle { background: none; border: none; color: #8fa3b8; cursor: pointer; padding: 0 4px; font-size: 12px; }
-.counts { display: flex; gap: 8px; font-variant-numeric: tabular-nums; }
+.toggle { background: none; border: none; color: var(--fg-2); cursor: pointer; padding: 0 4px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+.toggle .is-collapsed { transform: rotate(-90deg); }
+/* 计数徽标去掉彩色：只有数字本身在出错时才着色 */
+.counts { display: flex; gap: 8px; font-variant-numeric: tabular-nums; color: var(--fg-3); }
 .spacer { flex: 1; }
-.auto { display: flex; align-items: center; gap: 4px; color: #8fa3b8; }
-.clear { border: 1px solid #3a4a5c; background: #1f2d3d; color: #eee; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+.auto { display: flex; align-items: center; gap: 4px; color: var(--fg-2); }
+.clear { border: 1px solid var(--line-2); background: transparent; color: var(--fg-2); border-radius: var(--r-sm); padding: 2px 8px; cursor: pointer; }
 .log-body {
   flex: 1;
   overflow-y: auto;
@@ -101,17 +104,17 @@ function levelClass(level: string) {
   text-align: left; /* 日志始终左对齐 */
 }
 .log-line { white-space: pre-wrap; word-break: break-all; }
-.log-line .t { color: #6b7c8f; margin-right: 8px; }
+.log-line .t { color: var(--fg-3); margin-right: 8px; }
 .log-line .lv { display: inline-block; width: 52px; margin-right: 8px; font-weight: bold; }
-.log-line .src { color: #6b7c8f; margin-left: 8px; }
-.log-line .attr { color: #8fa3b8; }
-.lvl-debug .lv { color: #6b7c8f; }
-.lvl-info .lv { color: #63b3ed; }
-.lvl-warn .lv, .lvl-warn { color: #f6ad55; }
-.lvl-error .lv, .lvl-error { color: #ff8383; }
-.counts .lvl-debug { color: #6b7c8f; }
-.counts .lvl-info { color: #63b3ed; }
-.counts .lvl-warn { color: #f6ad55; }
-.counts .lvl-error { color: #ff8383; }
-.empty { color: #6b7c8f; font-style: italic; }
+.log-line .src { color: var(--fg-3); margin-left: 8px; }
+.log-line .attr { color: var(--fg-2); }
+.lvl-debug .lv { color: var(--fg-3); }
+.lvl-info .lv { color: var(--fg-2); }        /* INFO 不再抢眼 */
+.lvl-warn .lv, .lvl-warn { color: var(--warn); }
+.lvl-error .lv, .lvl-error { color: var(--err); }
+.counts .lvl-debug { color: var(--fg-3); }
+.counts .lvl-info { color: var(--fg-2); }
+.counts .lvl-warn { color: var(--warn); }
+.counts .lvl-error { color: var(--err); }
+.empty { color: var(--fg-3); font-style: italic; }
 </style>

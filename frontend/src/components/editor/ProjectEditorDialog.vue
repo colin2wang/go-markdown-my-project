@@ -142,7 +142,7 @@ function onCancel() {
           </nav>
 
           <template v-if="ed.draft">
-            <EditorSection id="sec-basic" icon="📦" :title="t('editor.sectionBasic')" :error-count="['project_name', 'project_path', 'output_file'].filter((f) => ed.errors[f]).length">
+            <EditorSection id="sec-basic" icon="box" :title="t('editor.sectionBasic')" :error-count="['project_name', 'project_path', 'output_file'].filter((f) => ed.errors[f]).length">
               <label>{{ t('editor.projectName') }}
                 <input :value="ed.draft.project_name" :class="{ invalid: !!ed.errors.project_name }" @input="ed.draft!.project_name = ($event.target as HTMLInputElement).value" />
               </label>
@@ -159,14 +159,14 @@ function onCancel() {
               </label>
             </EditorSection>
 
-            <EditorSection id="sec-scope" icon="🔍" :title="t('editor.sectionScope')" :hint="t('editor.hintScope')">
+            <EditorSection id="sec-scope" icon="search" :title="t('editor.sectionScope')" :hint="t('editor.hintScope')">
               <label>{{ t('editor.includeFiles') }}</label>
               <TagListInput v-model="ed.draft!.files!" :placeholder="t('editor.phFiles')" />
               <label>{{ t('editor.includeDirs') }}</label>
               <TagListInput v-model="ed.draft!.directories!" :placeholder="t('editor.phDirs')" dir-select :base-path="ed.draft!.project_path" />
             </EditorSection>
 
-            <EditorSection id="sec-exclude" icon="🚫" :title="t('editor.sectionExclude')" :error-count="ed.errors.exclude_patterns ? 1 : 0">
+            <EditorSection id="sec-exclude" icon="ban" :title="t('editor.sectionExclude')" :error-count="ed.errors.exclude_patterns ? 1 : 0">
               <label>{{ t('editor.excludeDirs') }}</label>
               <TagListInput v-model="ed.draft!.exclude_directories!" :placeholder="t('editor.phExcludeDirs')" />
               <label>{{ t('editor.excludePatterns') }}</label>
@@ -193,7 +193,7 @@ function onCancel() {
               </template>
             </EditorSection>
 
-            <EditorSection id="sec-include" icon="📥" :title="t('editor.sectionInclude')" :error-count="ed.errors.include_patterns ? 1 : 0">
+            <EditorSection id="sec-include" icon="inbox" :title="t('editor.sectionInclude')" :error-count="ed.errors.include_patterns ? 1 : 0">
               <label class="inline"><input v-model="ed.includeEnabled" type="checkbox" /> {{ t('editor.includeEnabled') }}</label>
               <template v-if="ed.includeEnabled">
                 <label>{{ t('editor.includePatterns') }}</label>
@@ -201,7 +201,7 @@ function onCancel() {
               </template>
             </EditorSection>
 
-            <EditorSection id="sec-export" icon="📤" :title="t('editor.sectionExport')">
+            <EditorSection id="sec-export" icon="outbox" :title="t('editor.sectionExport')">
               <label class="inline">{{ t('editor.exportMode') }}
                 <select v-model="ed.draft!.export_mode">
                   <option value="full">{{ t('wb.modes.full.label') }}</option>
@@ -218,7 +218,7 @@ function onCancel() {
             </EditorSection>
 
             <EditorSection
-              id="sec-redaction" icon="🛡" :title="t('editor.sectionRedaction')"
+              id="sec-redaction" icon="shield" :title="t('editor.sectionRedaction')"
               :muted="!ed.draft.redaction?.enabled"
               :error-count="ed.errors.custom_patterns ? 1 : 0"
             >
@@ -241,7 +241,7 @@ function onCancel() {
               </template>
             </EditorSection>
 
-            <EditorSection id="sec-preview" icon="📊" :title="t('editor.sectionPreview')">
+            <EditorSection id="sec-preview" icon="chart" :title="t('editor.sectionPreview')">
               <button type="button" class="ghost" @click="ed.runPreview(); log.info(t('editor.logPreview'))">{{ t('editor.runPreview') }}</button>
               <ScanPreviewCard v-if="ed.preview" :preview="ed.preview" />
             </EditorSection>
@@ -270,23 +270,23 @@ function onCancel() {
 </template>
 
 <style scoped>
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 40; }
+.modal { position: fixed; inset: 0; background: var(--mask); display: flex; align-items: center; justify-content: center; z-index: 40; }
 .dialog {
   width: min(1200px, 94vw); height: 82vh;
   display: flex; flex-direction: column;
-  background: #16222e; border: 1px solid #3a4a5c; border-radius: 10px;
+  background: var(--bg-2); border: 1px solid var(--line-2); border-radius: var(--r-lg);
   padding: 14px 16px;
 }
 .head { flex: none; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .head h3 { margin: 0; font-size: 15px; }
 .spacer { flex: 1; }
-button { cursor: pointer; border: 1px solid #3a4a5c; background: #1f2d3d; color: #eee; border-radius: 6px; padding: 5px 12px; font-size: 13px; }
-button.primary { background: #2b6cb0; }
+button { cursor: pointer; border: 1px solid var(--line-2); background: transparent; color: var(--fg-1); border-radius: var(--r-sm); padding: 5px 12px; font-size: 13px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--fg-on-accent); font-weight: 600; }
 button.ghost { background: none; }
 button:disabled { opacity: .5; cursor: not-allowed; }
-button.danger { background: #742a2a; }
-.banner { flex: none; margin: 0 0 8px; border-radius: 6px; padding: 6px 10px; font-size: 12px; }
-.error-banner { color: #ff8383; background: #3a1a1a; border: 1px solid #742a2a; }
+button.danger { background: transparent; border-color: var(--err); color: var(--err); }
+.banner { flex: none; margin: 0 0 8px; border-radius: var(--r-sm); padding: 6px 10px; font-size: 12px; }
+.error-banner { color: var(--err); background: transparent; border: 1px solid var(--err); }
 .body { flex: 1; min-height: 0; display: flex; gap: 12px; }
 .left {
   flex: 1.2; min-height: 0; overflow-y: auto; padding-right: 4px;
@@ -295,20 +295,20 @@ button.danger { background: #742a2a; }
 .anchors {
   position: sticky; top: 0; z-index: 2;
   display: flex; gap: 4px; margin-bottom: 10px; padding: 6px 0;
-  background: #16222e;
-  border-bottom: 1px solid #2a3848;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
 }
-.anchors a { position: relative; color: #8fa3b8; font-size: 12px; cursor: pointer; padding: 3px 9px; border-radius: 4px; }
-.anchors a:hover { color: #eee; background: #1f2d3d; }
-.anchors a.active { color: #63b3ed; background: rgba(99, 179, 237, .1); }
+.anchors a { position: relative; color: var(--fg-2); font-size: 12px; cursor: pointer; padding: 3px 9px; border-radius: var(--r-sm); }
+.anchors a:hover { color: var(--fg-1); background: var(--bg-3); }
+.anchors a.active { color: var(--accent); background: var(--accent-dim); }
 .anchors a.has-error::after {
   content: '';
   position: absolute; top: 3px; right: 2px;
   width: 5px; height: 5px; border-radius: 50%;
-  background: #ff8383;
+  background: var(--err);
 }
-input.invalid { border-color: #c53030 !important; }
-.field-error { color: #ff8383; font-size: 11px; margin: 2px 0 6px 2px; }
+input.invalid { border-color: var(--err) !important; }
+.field-error { color: var(--err); font-size: 11px; margin: 2px 0 6px 2px; }
 /* 表单栅格：块级 label 的标签列定宽右对齐，输入框起点对齐 */
 .left label {
   display: grid;
@@ -316,7 +316,7 @@ input.invalid { border-color: #c53030 !important; }
   gap: 6px 12px;
   align-items: center;
   font-size: 12.5px;
-  color: #8fa3b8;
+  color: var(--fg-2);
   text-align: right;
   margin: 6px 0;
 }
@@ -324,15 +324,15 @@ input.invalid { border-color: #c53030 !important; }
 .num { width: 110px; }
 .default-excludes { display: flex; flex-wrap: wrap; gap: 4px; }
 .default-tag {
-  font-size: 11px; padding: 2px 7px; border-radius: 10px;
-  background: #1f2d3d; border: 1px solid #3a4a5c; color: #8fa3b8;
+  font-size: 11px; padding: 2px 7px; border-radius: var(--r-sm);
+  background: transparent; border: 1px solid var(--line-2); color: var(--fg-2);
 }
 .default-tag.dir { border-style: dashed; }
-.default-hint { font-size: 11px; color: #6b7f93; margin: 4px 0 0; }
+.default-hint { font-size: 11px; color: var(--fg-3); margin: 4px 0 0; }
 .modal.sub { z-index: 50; }
-.confirm { background: #16222e; border: 1px solid #742a2a; border-radius: 10px; padding: 18px 20px; width: 360px; }
+.confirm { background: var(--bg-2); border: 1px solid var(--line-2); border-radius: var(--r-lg); padding: 18px 20px; width: 360px; }
 .confirm h4 { margin: 0 0 8px; }
-.confirm p { font-size: 12px; color: #8fa3b8; }
+.confirm p { font-size: 12px; color: var(--fg-2); }
 .actions { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
 /* 小屏退化：上下堆叠 */
 @media (max-width: 1100px) {

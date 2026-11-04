@@ -65,7 +65,7 @@ const badgeClass: Record<string, string> = {
         :class="{ invalid: !!error || checkState === 'notfound' || checkState === 'notdir' }"
         @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
       />
-      <button type="button" @click="browse">📂 {{ t('common.browse') }}</button>
+      <button type="button" @click="browse"><Icon name="folder" /> {{ t('common.browse') }}</button>
       <span v-if="checkState !== 'idle'" class="badge" :class="badgeClass[checkState]">{{ badgeText }}</span>
     </div>
     <p v-if="error" class="field-error">{{ error }}</p>
@@ -75,11 +75,11 @@ const badgeClass: Record<string, string> = {
 <style scoped>
 .row { display: flex; align-items: center; gap: 6px; }
 .row input { flex: 1; }
-button { background: #1f2d3d; color: #eee; border: 1px solid #3a4a5c; border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer; }
+button { background: transparent; color: var(--fg-1); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 4px 8px; font-size: 12px; cursor: pointer; }
 .badge { font-size: 11px; white-space: nowrap; }
-.badge.green { color: #68d391; }
-.badge.red { color: #ff8383; }
-.badge.gray { color: #8fa3b8; }
-input.invalid { border-color: #c53030 !important; }
-.field-error { color: #ff8383; font-size: 11px; margin: 2px 0 0 2px; }
+.badge.green { color: var(--ok); }
+.badge.red { color: var(--err); }
+.badge.gray { color: var(--fg-3); }
+input.invalid { border-color: var(--err) !important; }
+.field-error { color: var(--err); font-size: 11px; margin: 2px 0 0 2px; }
 </style>

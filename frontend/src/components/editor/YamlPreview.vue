@@ -17,7 +17,7 @@ const wrap = ref(false);
 
 const lines = computed(() => props.yaml.split('\n'));
 
-// 最简 YAML 语法高亮：注释灰、键蓝、引号字符串橙、其余值青绿
+// 最简 YAML 语法高亮：注释/行号弱化、键加粗、值与字符串用降饱和状态色
 // 不引 CodeMirror，够用即可；特殊行（多行块、列表项内的复杂结构）按普通文本渲染
 interface Seg { cls: string; text: string }
 function highlight(line: string): Seg[] {
@@ -68,16 +68,16 @@ async function copyAll() {
 <style scoped>
 .yamlpreview { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .toolbar { flex: none; display: flex; align-items: center; gap: 8px; padding: 0 0 8px; font-size: 12px; }
-.chip { border-radius: 10px; padding: 2px 10px; font-size: 11px; }
-.chip.green { background: #1a3a2a; color: #68d391; }
-.chip.red { background: #3a1a1a; color: #ff8383; }
-.muted { color: #6b7c8f; }
+.chip { border-radius: var(--r-sm); border: 1px solid transparent; padding: 2px 10px; font-size: 11px; }
+.chip.green { background: transparent; color: var(--ok); border-color: var(--ok); }
+.chip.red { background: transparent; color: var(--err); border-color: var(--err); }
+.muted { color: var(--fg-3); }
 .spacer { flex: 1; }
-button { background: #1f2d3d; color: #eee; border: 1px solid #3a4a5c; border-radius: 4px; padding: 2px 10px; font-size: 12px; cursor: pointer; }
-.wrap-toggle { display: flex; align-items: center; gap: 4px; color: #8fa3b8; font-size: 12px; }
+button { background: var(--bg-3); color: var(--fg-1); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 2px 10px; font-size: 12px; cursor: pointer; }
+.wrap-toggle { display: flex; align-items: center; gap: 4px; color: var(--fg-2); font-size: 12px; }
 .code {
   flex: 1; min-height: 0; overflow: auto;
-  background: #0c141c; border: 1px solid #2a3848; border-radius: 6px;
+  background: var(--bg-0); border: 1px solid var(--line); border-radius: var(--r-md);
   font-family: ui-monospace, Menlo, Consolas, monospace;
   font-size: 13px; line-height: 1.55;
   padding: 6px 0;
@@ -85,11 +85,11 @@ button { background: #1f2d3d; color: #eee; border: 1px solid #3a4a5c; border-rad
 }
 .line { display: flex; white-space: pre; }
 .code.wrap .line { white-space: pre-wrap; word-break: break-all; }
-.ln { flex: none; width: 38px; text-align: right; padding-right: 10px; color: #4a5a6c; user-select: none; }
-.txt { color: #cdd9e5; }
-.tok-comment { color: #6b7c8f; font-style: italic; }
-.tok-key { color: #63b3ed; }
-.tok-value { color: #9ae6c4; }
-.tok-string { color: #f6c177; }
-.line.changed { background: rgba(246, 224, 110, .13); }
+.ln { flex: none; width: 38px; text-align: right; padding-right: 10px; color: var(--fg-3); user-select: none; }
+.txt { color: var(--fg-1); }
+.tok-comment { color: var(--fg-3); font-style: italic; }
+.tok-key { color: var(--fg-1); font-weight: 600; }
+.tok-value { color: var(--ok); }
+.tok-string { color: var(--warn); }
+.line.changed { background: var(--accent-dim); }
 </style>

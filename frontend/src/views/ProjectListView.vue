@@ -7,6 +7,7 @@ import type { ProjectConfig } from '../api/bindings';
 import ProjectEditorDialog from '../components/editor/ProjectEditorDialog.vue';
 import { useLogStore } from '../stores/log';
 import { useI18n } from '../i18n';
+import Icon from '../components/ui/Icon.vue';
 
 const router = useRouter();
 const projects = useProjectsStore();
@@ -96,7 +97,7 @@ async function confirmDelete() {
       <label>{{ t('projects.dir') }}:
         <input v-model="projects.projectsDir" placeholder="projects" />
       </label>
-      <button @click="refreshProjects">🔄 {{ t('projects.refresh') }}</button>
+      <button @click="refreshProjects"><Icon name="refresh" /> {{ t('projects.refresh') }}</button>
       <button @click="openConfigDir">{{ t('projects.open') }}</button>
       <span class="spacer" />
       <input v-model="keyword" class="search" :placeholder="t('projects.search')" />
@@ -108,7 +109,7 @@ async function confirmDelete() {
     <p v-else-if="projects.list.length > 0 && filtered.length === 0" class="muted">{{ t('tree.matched', { n: 0 }) }}</p>
     <div class="cards">
       <div v-for="p in filtered" :key="p.configPath" class="card">
-        <h3>📦 {{ p.name }}</h3>
+        <h3><Icon name="box" /> {{ p.name }}</h3>
         <p class="muted path">{{ p.path }}</p>
         <p class="muted">{{ t('projects.output', { file: p.outputFile }) }}</p>
         <p class="muted">{{ t('projects.language', { lang: p.markdownLang }) }}</p>
@@ -144,28 +145,28 @@ async function confirmDelete() {
 </template>
 
 <style scoped>
-.projects-view { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px; color: #eee; }
+.projects-view { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px; color: var(--fg-1); }
 .toolbar { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
 .toolbar > label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .toolbar > label input { width: 260px; }
 .toolbar .search { flex: 1 1 180px; width: auto; min-width: 150px; max-width: 360px; }
 .spacer { flex: 1; }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; max-width: 1200px; }
-.card { border: 1px solid #3a4a5c; border-radius: 8px; padding: 14px; background: #16222e; display: flex; flex-direction: column; }
-.card h3 { margin: 0 0 6px; }
+.card { border: 1px solid var(--line-2); border-radius: var(--r-md); padding: 14px; background: var(--bg-2); display: flex; flex-direction: column; }
+.card h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; }
 .path { word-break: break-all; }
-.muted { color: #8fa3b8; font-size: 12px; margin: 2px 0; }
+.muted { color: var(--fg-3); font-size: 12px; margin: 2px 0; }
 .enter { margin-top: 10px; width: 100%; padding: 8px; }
 .actions { display: flex; gap: 6px; margin-top: 8px; }
-button { cursor: pointer; border: 1px solid #3a4a5c; background: #1f2d3d; color: #eee; border-radius: 6px; padding: 4px 10px; }
-button.primary { background: #2b6cb0; }
-button.danger { background: #742a2a; }
-button.link { border: none; background: none; color: #8fa3b8; padding: 2px 4px; }
-button.link:hover { color: #eee; }
-.danger-text:hover { color: #ff8383 !important; }
-.error { color: #ff8383; background: #3a1a1a; border: 1px solid #742a2a; border-radius: 6px; padding: 8px 12px; margin: 8px 0; font-size: 13px; }
-input { background: #0f1720; color: #eee; border: 1px solid #3a4a5c; border-radius: 4px; padding: 4px 8px; }
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 20; }
-.modal-body { background: #16222e; border: 1px solid #3a4a5c; border-radius: 10px; padding: 20px; width: 420px; }
+button { cursor: pointer; border: 1px solid var(--line-2); background: transparent; color: var(--fg-1); border-radius: var(--r-sm); padding: 4px 10px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--fg-on-accent); font-weight: 600; }
+button.danger { background: transparent; border-color: var(--err); color: var(--err); }
+button.link { border: none; background: none; color: var(--fg-2); padding: 2px 4px; }
+button.link:hover { color: var(--fg-1); }
+.danger-text:hover { color: var(--err) !important; }
+.error { color: var(--err); background: transparent; border: 1px solid var(--err); border-radius: var(--r-md); padding: 8px 12px; margin: 8px 0; font-size: 13px; }
+input { background: var(--bg-3); color: var(--fg-1); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 4px 8px; }
+.modal { position: fixed; inset: 0; background: var(--mask); display: flex; align-items: center; justify-content: center; z-index: 20; }
+.modal-body { background: var(--bg-2); border: 1px solid var(--line-2); border-radius: var(--r-lg); padding: 20px; width: 420px; }
 code { word-break: break-all; }
 </style>
