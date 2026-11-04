@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useLogStore } from './stores/log';
 import { useProjectsStore } from './stores';
@@ -13,6 +13,10 @@ const route = useRoute();
 const log = useLogStore();
 const projects = useProjectsStore();
 const { t, locale, setLocale, locales } = useI18n();
+// 顶栏显示当前语言的原生名称（English / 简体中文 / 日本語），不随界面语言翻译
+const currentLocaleLabel = computed(
+  () => locales.find((l) => l.code === locale.value)?.label ?? locale.value
+);
 
 // 全局设置对话框
 const settingsOpen = ref(false);
@@ -26,15 +30,18 @@ onMounted(async () => {
 // 帮助菜单：null = 关闭；'config' = 配置文件说明；'configSample' = 项目配置文件说明；'about' = 程序说明
 const helpOpen = ref(false);
 const helpPage = ref<'config' | 'configSample' | 'about' | null>(null);
+// 语言菜单：地球图标触发，与帮助菜单互斥
+const langOpen = ref(false);
 
 function showHelp(page: 'config' | 'configSample' | 'about') {
   helpOpen.value = false;
   helpPage.value = page;
 }
 
-function onChangeLocale(e: Event) {
-  setLocale((e.target as HTMLSelectElement).value as LocaleCode);
-  void api.setLocale(locale.value);
+function pickLocale(code: LocaleCode) {
+  setLocale(code);
+  langOpen.value = false;
+  void api.setLocale(code);
 }
 
 onMounted(() => {
@@ -77,15 +84,37 @@ onMounted(() => {
         </template>
       </nav>
       <span class="spacer" />
-      <label class="lang">
-        {{ t('app.language') }}
-        <select :value="locale" @change="onChangeLocale">
-          <option v-for="l in locales" :key="l.code" :value="l.code">{{ l.label }}</option>
-        </select>
-      </label>
+      <div class="lang-menu">
+        <button
+          class="help-btn lang-btn"
+          :title="t('app.switchLanguage')"
+          :aria-label="t('app.switchLanguage')"
+          :aria-expanded="langOpen"
+          aria-haspopup="menu"
+          @click="langOpen = !langOpen; helpOpen = false"
+        >
+          <Icon name="globe" :size="14" />
+          <span class="lang-current">{{ currentLocaleLabel }}</span>
+          <Icon name="chevron" :size="10" />
+        </button>
+        <div v-if="langOpen" class="help-dropdown lang-dropdown" role="menu">
+          <button
+            v-for="l in locales"
+            :key="l.code"
+            :class="{ current: locale === l.code }"
+            role="menuitemradio"
+            :aria-checked="locale === l.code"
+            @click="pickLocale(l.code)"
+          >
+            <Icon v-if="locale === l.code" name="check" :size="12" />
+            <span v-else class="lang-check-space" aria-hidden="true" />
+            {{ l.label }}
+          </button>
+        </div>
+      </div>
       <button class="help-btn" @click="settingsOpen = true"><Icon name="gear" /> {{ t('app.settings') }}</button>
       <div class="help-menu">
-        <button class="help-btn" @click="helpOpen = !helpOpen">{{ t('app.help') }} <Icon name="chevron" :size="12" /></button>
+        <button class="help-btn" @click="helpOpen = !helpOpen; langOpen = false">{{ t('app.help') }} <Icon name="chevron" :size="12" /></button>
         <div v-if="helpOpen" class="help-dropdown">
           <button @click="showHelp('config')">{{ t('app.helpConfig') }}</button>
           <button @click="showHelp('configSample')">{{ t('app.helpConfigSample') }}</button>
@@ -155,12 +184,13 @@ nav { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .crumb-name { display: inline-flex; max-width: 220px; }
 .crumb-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .spacer { flex: 1; }
-.lang { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-2); }
-.lang select {
-  background: var(--bg-3); color: var(--fg-1);
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-sm); padding: 3px 6px; font-size: 12px;
-}
+.lang-menu { position: relative; }
+.lang-btn { padding: 3px 7px; }
+.lang-current { white-space: nowrap; }
+.lang-dropdown { min-width: 150px; }
+.lang-dropdown button { display: flex; align-items: center; gap: 6px; }
+.lang-dropdown button.current { color: var(--fg-1); }
+.lang-check-space { width: 12px; flex: none; }
 .help-menu { position: relative; }
 .help-btn {
   cursor: pointer; background: none; border: 1px solid var(--line-2); color: var(--fg-2);

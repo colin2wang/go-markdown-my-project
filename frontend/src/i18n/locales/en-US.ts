@@ -5,7 +5,7 @@ const enUS: Messages = {
     brand: 'ProjectDocs',
     projects: 'Projects',
     workbench: 'Workbench',
-    language: 'Language',
+    switchLanguage: 'Switch interface language',
     help: 'Help',
     helpConfig: 'Config file guide',
     helpAbout: 'About',

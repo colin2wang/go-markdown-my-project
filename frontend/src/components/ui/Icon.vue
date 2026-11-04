@@ -1,5 +1,5 @@
 <script setup lang="ts">
-export type IconName = 'folder' | 'gear' | 'doc' | 'chevron' | 'close' | 'open' | 'search' | 'box' | 'ban' | 'inbox' | 'outbox' | 'shield' | 'chart' | 'check' | 'refresh' | 'warn';
+export type IconName = 'folder' | 'gear' | 'doc' | 'chevron' | 'close' | 'open' | 'search' | 'box' | 'ban' | 'inbox' | 'outbox' | 'shield' | 'chart' | 'check' | 'refresh' | 'warn' | 'globe';
 const props = withDefaults(defineProps<{ name: IconName; size?: number }>(), { size: 15 });
 const paths: Record<IconName, string> = {
   folder:  'M2.5 5.2c0-.9.7-1.6 1.6-1.6h2.4l1.5 1.7h3.9c.9 0 1.6.7 1.6 1.6v4.6c0 .9-.7 1.6-1.6 1.6H4.1c-.9 0-1.6-.7-1.6-1.6V5.2Z',
@@ -18,6 +18,7 @@ const paths: Record<IconName, string> = {
   check:   'M3 8.5 6.5 12 13 4.5',
   refresh: 'M12.8 6.2A5 5 0 1 0 13 9M13 3.5V6.5H10',
   warn:    'M8 2.8 14 13H2L8 2.8ZM8 6.4v3.3M8 11.5v.1',
+  globe:   'M8 1.6a6.4 6.4 0 1 0 0 12.8 6.4 6.4 0 1 0 0-12.8ZM1.6 8h12.8M8 1.6c2 1.9 3 4 3 6.4s-1 4.5-3 6.4M8 1.6C6 3.5 5 5.6 5 8s1 4.5 3 6.4',
 };
 </script>
 <template>

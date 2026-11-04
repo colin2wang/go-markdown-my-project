@@ -5,7 +5,7 @@ const jaJP: Messages = {
     brand: 'ProjectDocs',
     projects: 'プロジェクト管理',
     workbench: 'ワークベンチ',
-    language: '表示言語',
+    switchLanguage: '表示言語を切り替え',
     help: 'ヘルプ',
     helpConfig: '設定ファイルの説明',
     helpAbout: 'プログラムについて',

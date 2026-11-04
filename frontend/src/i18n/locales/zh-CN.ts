@@ -4,7 +4,7 @@ const zhCN = {
     brand: 'ProjectDocs',
     projects: '项目管理',
     workbench: '工作台',
-    language: '界面语言',
+    switchLanguage: '切换界面语言',
     help: '帮助',
     helpConfig: '配置文件说明',
     helpAbout: '程序说明',
