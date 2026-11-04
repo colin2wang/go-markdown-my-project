@@ -22,8 +22,8 @@ func main() {
 
 	appObj := app.NewApp()
 	title := "Project Docs GUI"
-	if app.BuildVersion != "dev" { // 编译期注入的版本戳（本地时区 build-YYYYMMDD-HHmm），dev 下不加后缀
-		title += " " + app.BuildVersion
+	if v := app.FormatBuildVersion(); v != "dev" { // 编译期注入的版本戳格式化为 (build YYYY-MM-DD HH:mm:ss)，dev 下不加后缀
+		title += " " + v
 	}
 	err := wails.Run(&options.App{
 		// 回退尺寸：取不到屏幕信息时使用；StartHidden 下由 app.App.Startup 按主屏 75% 设定并显示

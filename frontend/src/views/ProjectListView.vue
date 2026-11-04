@@ -109,15 +109,19 @@ async function confirmDelete() {
     <p v-else-if="projects.list.length > 0 && filtered.length === 0" class="muted">{{ t('tree.matched', { n: 0 }) }}</p>
     <div class="cards">
       <div v-for="p in filtered" :key="p.configPath" class="card">
-        <h3><Icon name="box" /> {{ p.name }}</h3>
-        <p class="muted path">{{ p.path }}</p>
-        <p class="muted">{{ t('projects.output', { file: p.outputFile }) }}</p>
-        <p class="muted">{{ t('projects.language', { lang: p.markdownLang }) }}</p>
-        <p class="muted">{{ lastExport.get(p.configPath) ? t('projects.lastExport', { time: lastExport.get(p.configPath) }) : t('projects.notExported') }}</p>
-        <button class="primary enter" @click="enterWorkbench(p.configPath)">{{ t('projects.enter') }}</button>
-        <div class="actions">
-          <button class="link" @click="openEdit(p.configPath)">{{ t('projects.edit') }}</button>
-          <button class="link danger-text" @click="askDelete(p.configPath)">{{ t('projects.delete') }}</button>
+        <div class="card-info">
+          <h3><Icon name="box" /> {{ p.name }}</h3>
+          <p class="muted path">{{ p.path }}</p>
+          <p class="muted">{{ t('projects.output', { file: p.outputFile }) }}</p>
+          <p class="muted">{{ t('projects.language', { lang: p.markdownLang }) }}</p>
+          <p class="muted">{{ lastExport.get(p.configPath) ? t('projects.lastExport', { time: lastExport.get(p.configPath) }) : t('projects.notExported') }}</p>
+        </div>
+        <div class="card-footer">
+          <button class="primary enter" @click="enterWorkbench(p.configPath)">{{ t('projects.enter') }}</button>
+          <div class="actions">
+            <button class="link" @click="openEdit(p.configPath)">{{ t('projects.edit') }}</button>
+            <button class="link danger-text" @click="askDelete(p.configPath)">{{ t('projects.delete') }}</button>
+          </div>
         </div>
       </div>
     </div>
@@ -151,12 +155,14 @@ async function confirmDelete() {
 .toolbar > label input { width: 260px; }
 .toolbar .search { flex: 1 1 180px; width: auto; min-width: 150px; max-width: 360px; }
 .spacer { flex: 1; }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; max-width: 1200px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
 .card { border: 1px solid var(--line-2); border-radius: var(--r-md); padding: 14px; background: var(--bg-2); display: flex; flex-direction: column; }
+.card-info { flex: 1 0 auto; }
+.card-footer { margin-top: auto; padding-top: 12px; }
 .card h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; }
 .path { word-break: break-all; }
 .muted { color: var(--fg-3); font-size: 12px; margin: 2px 0; }
-.enter { margin-top: 10px; width: 100%; padding: 8px; }
+.enter { width: 100%; padding: 8px; }
 .actions { display: flex; gap: 6px; margin-top: 8px; }
 button { cursor: pointer; border: 1px solid var(--line-2); background: transparent; color: var(--fg-1); border-radius: var(--r-sm); padding: 4px 10px; }
 button.primary { background: var(--accent); border-color: var(--accent); color: var(--fg-on-accent); font-weight: 600; }

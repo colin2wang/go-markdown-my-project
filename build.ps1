@@ -105,11 +105,13 @@ try {
     # so the embedded dist reflects the latest backend methods.
     # -SkipFrontend reuses an already-built dist (skips the internal frontend build).
     # Build stamp: local wall-clock time, never UTC. [DateTime]::Now uses the
-    # machine's local time zone; the stamp stays space-free because it is passed
-    # through -ldflags -X to the Go linker and shown in the title bar.
+    # machine's local time zone. The value must stay space-free: it travels
+    # through PowerShell -> wails -> go and nested quoting gets stripped, which
+    # truncates the value at the space. app.FormatBuildVersion() turns the
+    # underscore into a space for display as "(build YYYY-MM-DD HH:mm:ss)".
     $buildTime = [DateTime]::Now
     $invariant = [System.Globalization.CultureInfo]::InvariantCulture
-    $buildStamp = '(build-' + $buildTime.ToString('yyyyMMdd-HHmm', $invariant) + ')'
+    $buildStamp = $buildTime.ToString('yyyy-MM-dd_HH:mm:ss', $invariant)
     $buildLocal = $buildTime.ToString('yyyy-MM-dd HH:mm:ss', $invariant) + ' ' + $buildTime.ToString('zzz', $invariant) + ' (local)'
     Write-Ok "Build version: $buildStamp"
     Write-Ok "Build time   : $buildLocal"

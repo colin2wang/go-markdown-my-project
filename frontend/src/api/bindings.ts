@@ -35,7 +35,7 @@ export interface ProjectConfig {
 export interface GlobalSettings {
   /** 导出文件编码：utf8_bom | utf8 | gb18030 */
   outputEncoding: string;
-  /** 界面语言：auto | zh_cn | en_us | ja_jp */
+  /** 界面语言：zh_cn | en_us | ja_jp（旧配置 auto 会被前端按当前语言回显） */
   interfaceLanguage: string;
 }
 

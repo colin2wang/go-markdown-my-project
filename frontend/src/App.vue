@@ -21,7 +21,7 @@ const currentLocaleLabel = computed(
 // 全局设置对话框
 const settingsOpen = ref(false);
 
-// 构建版本戳（build.ps1 编译期注入本地时区 build-YYYYMMDD-HHmm，dev 下为 dev）
+// 构建版本戳（build.ps1 编译期注入本地时区时间戳，后端格式化为 (build YYYY-MM-DD HH:mm:ss)，dev 下为 dev）
 const buildVersion = ref('');
 onMounted(async () => {
   try { buildVersion.value = await api.getVersion(); } catch { buildVersion.value = ''; }
@@ -38,10 +38,18 @@ function showHelp(page: 'config' | 'configSample' | 'about') {
   helpPage.value = page;
 }
 
-function pickLocale(code: LocaleCode) {
+async function pickLocale(code: LocaleCode) {
   setLocale(code);
   langOpen.value = false;
   void api.setLocale(code);
+  // 显式选择的语言同步到全局设置（auto 语义被覆盖），设置对话框下次打开时一致
+  try {
+    const s = await api.getGlobalSettings();
+    await api.saveGlobalSettings({
+      outputEncoding: s?.outputEncoding ?? 'utf8_bom',
+      interfaceLanguage: code === 'zh-CN' ? 'zh_cn' : code === 'en-US' ? 'en_us' : 'ja_jp',
+    });
+  } catch { /* 全局设置写失败不影响界面语言生效 */ }
 }
 
 onMounted(() => {

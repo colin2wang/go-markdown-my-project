@@ -20,24 +20,26 @@ const encodings = computed(() => [
   { value: 'gb18030' as OutputEncoding, label: t('settings.encGb18030') },
 ]);
 const languages = computed(() => [
-  { value: 'auto', label: t('settings.langAuto') },
   { value: 'zh_cn', label: t('settings.langZh') },
   { value: 'en_us', label: t('settings.langEn') },
   { value: 'ja_jp', label: t('settings.langJa') },
 ]);
 const outputEncoding = ref<OutputEncoding>('utf8_bom');
-const interfaceLanguage = ref('auto');
+const interfaceLanguage = ref('zh_cn');
 const saving = ref(false);
 const error = ref('');
 
-const langMap: Record<string, string> = { auto: '', zh_cn: 'zh-CN', en_us: 'en-US', ja_jp: 'ja-JP' };
+const langMap: Record<string, string> = { zh_cn: 'zh-CN', en_us: 'en-US', ja_jp: 'ja-JP' };
+// 旧配置遗留的 auto / 空值按当前实际语言回显
+const localeToLang: Record<string, string> = { 'zh-CN': 'zh_cn', 'en-US': 'en_us', 'ja-JP': 'ja_jp' };
 
 async function load() {
   try {
     const s = await api.getGlobalSettings();
+    const saved = s?.interfaceLanguage || '';
+    interfaceLanguage.value = langMap[saved] ? saved : (localeToLang[locale.value] ?? 'zh_cn');
     if (s) {
       outputEncoding.value = (s.outputEncoding as OutputEncoding) || 'utf8_bom';
-      interfaceLanguage.value = s.interfaceLanguage || 'auto';
     }
   } catch (e) {
     error.value = String(e);
