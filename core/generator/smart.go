@@ -65,21 +65,26 @@ func FileParts(sorted []scanner.FileResult, opts Options) (string, []FullPart) {
 	return b.String(), parts
 }
 
-// smartContent 单文件 smart 处理：超限骨架化 →（可选）剥离注释 → 空白/长行精简。
+// smartContent 单文件 smart 处理：（可选）剥离注释 → 超限骨架化 → 空白/长行精简。
+// 剥离必须早于骨架化：token 阈值按精简后的内容估算（更多小文件可保留全文），
+// 且不会把 Skeleton 生成的「// … N lines …」折叠标记误当注释删掉。
+// 绑定层也会逐文件剥离一次，此处重复调用幂等（generator 可独立使用）。
 // 返回处理后内容与是否发生了骨架化（用于章节标题标注）。
 func smartContent(content, lang string, opts Options) (string, bool) {
 	limit := opts.SmartFullTokens
 	if limit <= 0 {
 		limit = defaultSmartFullTokens
 	}
+	if opts.StripComments {
+		content = compress.StripCommentsWithOptions(lang, content, compress.CommentOptions{
+			KeepMarkers: !opts.DropMarkedComments,
+		})
+	}
 	skeleton := false
 	if token.EstimateTokens(content) > limit {
 		if sk := compress.Skeleton(lang, content, compress.DefaultSkeletonOptions()); sk != content {
 			content, skeleton = sk, true
 		}
-	}
-	if opts.StripComments {
-		content = compress.StripComments(lang, content)
 	}
 	content = compress.MinifyWith(content, opts.MaxLineLen)
 	if !strings.HasSuffix(content, "\n") {

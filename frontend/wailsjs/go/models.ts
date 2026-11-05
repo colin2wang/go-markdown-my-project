@@ -24,6 +24,7 @@ export namespace app {
 	    maxSignatureLen: number;
 	    budgetTokens: number;
 	    stripComments: boolean;
+	    dropMarkedComments: boolean;
 	    maxLineLen: number;
 	    smartFullTokens: number;
 	
@@ -42,6 +43,7 @@ export namespace app {
 	        this.maxSignatureLen = source["maxSignatureLen"];
 	        this.budgetTokens = source["budgetTokens"];
 	        this.stripComments = source["stripComments"];
+	        this.dropMarkedComments = source["dropMarkedComments"];
 	        this.maxLineLen = source["maxLineLen"];
 	        this.smartFullTokens = source["smartFullTokens"];
 	    }

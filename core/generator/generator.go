@@ -121,10 +121,12 @@ type Options struct {
 	IncludeLineNumbers bool
 	MaxSignatureLen    int
 	// smart 模式子选项：超过 SmartFullTokens 的文件改为骨架输出；
-	// StripComments 剥离注释；MaxLineLen > 0 时截断超长行。
-	SmartFullTokens int
-	StripComments   bool
-	MaxLineLen      int
+	// StripComments 剥离注释；DropMarkedComments 连 TODO/许可证等标记注释一起删除；
+	// MaxLineLen > 0 时截断超长行。
+	SmartFullTokens    int
+	StripComments      bool
+	DropMarkedComments bool
+	MaxLineLen         int
 }
 
 // Generate 按模式生成完整 Markdown 内容。

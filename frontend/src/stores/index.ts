@@ -50,6 +50,7 @@ export const useExportStore = defineStore('export', () => {
   // 省 token 策略（用更少 token 承载更多有效信息）
   const budgetTokens = ref(0); // 0 = 不裁剪
   const stripComments = ref(false);
+  const keepMarkedComments = ref(true); // 剥离注释时保留 TODO/许可证等标记
   const maxLineLen = ref(0); // 0 = 不截断
   const smartFullTokens = ref(0); // 0 = 后端默认
   const result = ref<ExportResult | null>(null);
@@ -70,6 +71,7 @@ export const useExportStore = defineStore('export', () => {
       maxSignatureLen: maxSignatureLen.value,
       budgetTokens: budgetTokens.value,
       stripComments: stripComments.value,
+      dropMarkedComments: !keepMarkedComments.value,
       maxLineLen: maxLineLen.value,
       smartFullTokens: smartFullTokens.value,
     };
@@ -88,7 +90,7 @@ export const useExportStore = defineStore('export', () => {
   return {
     files, checkedPaths, mode, redact, splitTokens, compress,
     includeLineNumbers, maxSignatureLen,
-    budgetTokens, stripComments, maxLineLen, smartFullTokens,
+    budgetTokens, stripComments, keepMarkedComments, maxLineLen, smartFullTokens,
     result, scan, run, preview,
   };
 });

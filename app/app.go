@@ -54,10 +54,14 @@ type ExportOptions struct {
 	IncludeLineNumbers *bool `json:"includeLineNumbers"` // nil → 默认 true
 	MaxSignatureLen    int   `json:"maxSignatureLen"`    // ≤0 → 默认 200
 	// 省 token 三件套（用更少 token 承载更多代码信息）
-	BudgetTokens    int  `json:"budgetTokens"`    // >0 时按重要性裁剪文件（超出预算的低价值文件移入省略清单）
-	StripComments   bool `json:"stripComments"`   // 剥离注释（保留 TODO/FIXME/许可证）
-	MaxLineLen      int  `json:"maxLineLen"`      // >0 时截断超长行（按 rune 计）
-	SmartFullTokens int  `json:"smartFullTokens"` // smart 模式：单文件保留全文的 token 上限（≤0 → 1200）
+	// BudgetTokens >0 时按重要性裁剪文件（低价值文件移入省略清单）；
+	// DropMarkedComments=true 时连 TODO/许可证等标记注释一起删除（默认保留）；
+	// MaxLineLen >0 时截断超长行；SmartFullTokens ≤0 时用默认 1200。
+	BudgetTokens       int  `json:"budgetTokens"`
+	StripComments      bool `json:"stripComments"`
+	DropMarkedComments bool `json:"dropMarkedComments"`
+	MaxLineLen         int  `json:"maxLineLen"`
+	SmartFullTokens    int  `json:"smartFullTokens"`
 }
 
 // ExportResult 导出结果。
@@ -522,7 +526,9 @@ func prepareExport(cfg config.ProjectConfig, opt ExportOptions) (exportPlan, err
 				c = compress.StripIndent(c)
 			}
 			if opt.StripComments {
-				c = compress.StripComments(lang, c)
+				c = compress.StripCommentsWithOptions(lang, c, compress.CommentOptions{
+					KeepMarkers: !opt.DropMarkedComments,
+				})
 			}
 			if opt.Compress || opt.MaxLineLen > 0 {
 				c = compress.MinifyWith(c, opt.MaxLineLen)
@@ -578,6 +584,7 @@ func genOptions(cfg config.ProjectConfig, opt ExportOptions, plan exportPlan) ge
 		MaxSignatureLen:    maxSignatureLen(opt),
 		SmartFullTokens:    opt.SmartFullTokens,
 		StripComments:      opt.StripComments,
+		DropMarkedComments: opt.DropMarkedComments,
 		MaxLineLen:         opt.MaxLineLen,
 	}
 }

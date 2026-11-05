@@ -66,8 +66,10 @@ export interface ExportOptions {
   maxSignatureLen?: number;
   /** >0 时按重要性评分裁剪文件（超出预算的低价值文件移入省略清单） */
   budgetTokens?: number;
-  /** 剥离注释（保留 TODO/FIXME 与许可证头） */
+  /** 剥离注释（smart 模式默认开启） */
   stripComments?: boolean;
+  /** true = 连 TODO/FIXME、许可证等标记注释一起删除；false/缺省 = 保留标记注释 */
+  dropMarkedComments?: boolean;
   /** >0 时截断超长行（按字符计） */
   maxLineLen?: number;
   /** smart 模式：单文件保留全文的 token 上限（≤0 → 后端默认 1200） */

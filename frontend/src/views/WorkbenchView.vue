@@ -53,9 +53,10 @@ async function rescan() {
   }
 }
 
-// 导出模式切换
+// 导出模式切换（智能省流默认包含注释剥离，其余模式默认保留注释；用户仍可手动调整）
 watch(() => exp.mode, (m, old) => {
   previewData.value = null; // 选项变化后旧预览失效
+  exp.stripComments = m === 'smart';
   if (old) log.info(t('wb.logModeSwitch', { from: old, to: m }));
 });
 
@@ -281,6 +282,11 @@ async function copyResult() {
         <label class="inline">
           <input v-model="exp.stripComments" type="checkbox" />
           {{ t('wb.stripComments') }}
+        </label>
+        <label class="inline wrap">
+          <input v-model="exp.keepMarkedComments" type="checkbox" :disabled="!exp.stripComments" />
+          {{ t('wb.keepMarkedComments') }}
+          <span class="muted">{{ t('wb.keepMarkedHint') }}</span>
         </label>
         <label class="inline wrap">
           {{ t('wb.budgetTokens') }}
