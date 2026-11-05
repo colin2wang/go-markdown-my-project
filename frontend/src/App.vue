@@ -21,11 +21,7 @@ const currentLocaleLabel = computed(
 // 全局设置对话框
 const settingsOpen = ref(false);
 
-// 构建版本戳（build.ps1 编译期注入本地时区时间戳，后端格式化为 (build YYYY-MM-DD HH:mm:ss)，dev 下为 dev）
-const buildVersion = ref('');
-onMounted(async () => {
-  try { buildVersion.value = await api.getVersion(); } catch { buildVersion.value = ''; }
-});
+// 构建版本戳仅展示在窗口标题栏（后端 app.FormatBuildVersion），顶栏不再重复显示
 
 // 帮助菜单：null = 关闭；'config' = 配置文件说明；'configSample' = 项目配置文件说明；'about' = 程序说明
 const helpOpen = ref(false);
@@ -71,7 +67,6 @@ onMounted(() => {
                 stroke="var(--accent-strong)" stroke-width="1.5" stroke-linecap="round" />
         </svg>
         <span class="brand-text">{{ t('app.brand') }}</span>
-        <span v-if="buildVersion" class="build-version">{{ buildVersion }}</span>
       </span>
       <!-- 返回入口放在全局导航层：工作台时以面包屑形式显示，点击即回项目列表 -->
       <nav class="crumbs">
@@ -164,15 +159,6 @@ onMounted(() => {
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; color: var(--fg-1); letter-spacing: .1px; }
 .brand-logo { width: 20px; height: 20px; display: block; }
 .brand-text { font-size: 14px; font-weight: 600; }
-.build-version {
-  font-size: 11px;
-  color: var(--fg-3);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  padding: 1px 7px;
-  font-variant-numeric: tabular-nums;
-  user-select: text;
-}
 nav { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .tab {
   color: var(--fg-2); text-decoration: none; position: relative;
