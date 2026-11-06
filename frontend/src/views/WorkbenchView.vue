@@ -33,6 +33,8 @@ const MODES = computed(() => [
 
 onMounted(async () => {
   loadError.value = '';
+  exp.result = null; // 上一轮的导出结果卡片不跨进入保留
+  previewData.value = null;
   try {
     await projects.open(props.configPath);
     await rescan();

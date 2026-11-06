@@ -842,15 +842,15 @@ func (a *App) ListSubdirs(path string) []string {
 	return out
 }
 
-// OpenPath 用系统文件管理器打开文件所在目录（文件则打开其父目录）或目录本身。
-// Windows 上优先复用已显示该目录的资源管理器窗口（见 openpath_windows.go）。
+// OpenPath 用系统文件管理器打开文件所在目录并选中该文件，或打开目录本身。
+// Windows 上打开目录时优先复用已显示该目录的资源管理器窗口（见 openpath_windows.go）。
 func (a *App) OpenPath(path string) error {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return err
 	}
 	if info, err := os.Stat(abs); err == nil && !info.IsDir() {
-		abs = filepath.Dir(abs)
+		return openFileInFileManager(abs)
 	}
 	return openInFileManager(abs)
 }

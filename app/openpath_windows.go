@@ -32,6 +32,12 @@ var (
 	procShowWindow          = user32.NewProc("ShowWindow")
 )
 
+// openFileInFileManager 在文件管理器中打开文件所在目录并选中该文件
+// （explorer /select）。此方式总是新开窗口，不走复用逻辑。
+func openFileInFileManager(path string) error {
+	return exec.Command("explorer", "/select,", path).Start()
+}
+
 // openInFileManager 打开目录：优先复用已显示该目录的资源管理器窗口。
 // 入参应为已 Abs 归一的目录路径（OpenPath 负责文件→父目录转换）。
 func openInFileManager(dir string) error {
