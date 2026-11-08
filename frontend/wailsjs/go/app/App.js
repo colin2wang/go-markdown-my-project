@@ -22,6 +22,10 @@ export function GetVersion() {
   return window['go']['app']['App']['GetVersion']();
 }
 
+export function ListFileExtensions(arg1, arg2) {
+  return window['go']['app']['App']['ListFileExtensions'](arg1, arg2);
+}
+
 export function ListProjects(arg1) {
   return window['go']['app']['App']['ListProjects'](arg1);
 }

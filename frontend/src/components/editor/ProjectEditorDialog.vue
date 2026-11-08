@@ -36,6 +36,26 @@ const savePath = computed(() => {
   return `${dir}/${name}.yml`;
 });
 
+// 输出文件拆分：输入框只负责文件名，扩展名走下拉选择（默认 .md）
+const outName = computed(() => {
+  const v = ed.draft?.output_file ?? '';
+  const i = v.lastIndexOf('.');
+  return i > 0 ? v.slice(0, i) : v;
+});
+const outExt = computed(() => {
+  const v = ed.draft?.output_file ?? '';
+  const i = v.lastIndexOf('.');
+  return i > 0 && i < v.length - 1 ? v.slice(i) : '.md';
+});
+function setOutName(name: string) {
+  if (!ed.draft) return;
+  ed.draft.output_file = name.trim() ? name + outExt.value : '';
+}
+function setOutExt(ext: string) {
+  if (!ed.draft) return;
+  if (outName.value.trim()) ed.draft.output_file = outName.value + ext;
+}
+
 onMounted(() => {
   if (props.configPath && props.initial) ed.openForEdit(props.configPath, props.initial);
   else ed.openForCreate(savePath.value);
@@ -143,14 +163,21 @@ function onCancel() {
 
           <template v-if="ed.draft">
             <EditorSection id="sec-basic" icon="box" :title="t('editor.sectionBasic')" :error-count="['project_name', 'project_path', 'output_file'].filter((f) => ed.errors[f]).length">
-              <label>{{ t('editor.projectName') }}
+              <label class="plain">{{ t('editor.projectName') }}
                 <input :value="ed.draft.project_name" :class="{ invalid: !!ed.errors.project_name }" @input="ed.draft!.project_name = ($event.target as HTMLInputElement).value" />
               </label>
               <p v-if="ed.errors.project_name" class="field-error">{{ ed.errors.project_name }}</p>
-              <label>{{ t('editor.projectPath') }}</label>
+              <label class="plain">{{ t('editor.projectPath') }}</label>
               <PathInput v-model="ed.draft!.project_path" placeholder="F:/path/to/project" :error="ed.errors.project_path" :validated="onPathValidated" />
-              <label>{{ t('editor.outputFile') }}
-                <input :value="ed.draft.output_file" :class="{ invalid: !!ed.errors.output_file }" @input="ed.draft!.output_file = ($event.target as HTMLInputElement).value" />
+              <label class="plain">{{ t('editor.outputFile') }}
+                <div class="outrow">
+                  <input :value="outName" @input="setOutName(($event.target as HTMLInputElement).value)" />
+                  <select :value="outExt" @change="setOutExt(($event.target as HTMLSelectElement).value)">
+                    <option value=".md">.md</option>
+                    <option value=".markdown">.markdown</option>
+                    <option value=".txt">.txt</option>
+                  </select>
+                </div>
               </label>
               <p v-if="ed.errors.output_file" class="field-error">{{ ed.errors.output_file }}</p>
               <label class="inline">{{ t('editor.docLang') }}
@@ -160,16 +187,16 @@ function onCancel() {
             </EditorSection>
 
             <EditorSection id="sec-scope" icon="search" :title="t('editor.sectionScope')" :hint="t('editor.hintScope')">
-              <label>{{ t('editor.includeFiles') }}</label>
-              <TagListInput v-model="ed.draft!.files!" :placeholder="t('editor.phFiles')" />
-              <label>{{ t('editor.includeDirs') }}</label>
+              <label class="plain">{{ t('editor.includeFiles') }}</label>
+              <TagListInput v-model="ed.draft!.files!" :placeholder="t('editor.phFiles')" ext-scan :base-path="ed.draft!.project_path" :scan-dirs="ed.draft!.directories" />
+              <label class="plain">{{ t('editor.includeDirs') }}</label>
               <TagListInput v-model="ed.draft!.directories!" :placeholder="t('editor.phDirs')" dir-select :base-path="ed.draft!.project_path" />
             </EditorSection>
 
             <EditorSection id="sec-exclude" icon="ban" :title="t('editor.sectionExclude')" :error-count="ed.errors.exclude_patterns ? 1 : 0">
-              <label>{{ t('editor.excludeDirs') }}</label>
+              <label class="plain">{{ t('editor.excludeDirs') }}</label>
               <TagListInput v-model="ed.draft!.exclude_directories!" :placeholder="t('editor.phExcludeDirs')" />
-              <label>{{ t('editor.excludePatterns') }}</label>
+              <label class="plain">{{ t('editor.excludePatterns') }}</label>
               <TagListInput v-model="ed.draft!.exclude_patterns!" :placeholder="t('editor.phExcludePatterns')" :error="ed.errors.exclude_patterns" />
               <label class="inline">{{ t('editor.maxSize') }}
                 <input :value="ed.draft.max_file_size ?? 0" type="number" class="num" :class="{ invalid: !!ed.errors.max_file_size }" @input="ed.draft!.max_file_size = Number(($event.target as HTMLInputElement).value)" />
@@ -196,7 +223,7 @@ function onCancel() {
             <EditorSection id="sec-include" icon="inbox" :title="t('editor.sectionInclude')" :error-count="ed.errors.include_patterns ? 1 : 0">
               <label class="inline"><input v-model="ed.includeEnabled" type="checkbox" /> {{ t('editor.includeEnabled') }}</label>
               <template v-if="ed.includeEnabled">
-                <label>{{ t('editor.includePatterns') }}</label>
+                <label class="plain">{{ t('editor.includePatterns') }}</label>
                 <TagListInput v-model="ed.draft!.include_patterns!" :placeholder="t('editor.phIncludePatterns')" :error="ed.errors.include_patterns" />
               </template>
             </EditorSection>
@@ -236,7 +263,7 @@ function onCancel() {
                 <label v-if="ed.draft.redaction.strategy === 'placeholder'">{{ t('editor.replaceWith') }}
                   <input :value="ed.draft.redaction.placeholder" @input="ed.draft!.redaction!.placeholder = ($event.target as HTMLInputElement).value" />
                 </label>
-                <label>{{ t('editor.customPatterns') }}</label>
+                <label class="plain">{{ t('editor.customPatterns') }}</label>
                 <TagListInput v-model="ed.draft!.redaction!.custom_patterns!" :placeholder="t('editor.phPatterns')" :error="ed.errors.custom_patterns" />
               </template>
             </EditorSection>
@@ -321,6 +348,13 @@ input.invalid { border-color: var(--err) !important; }
   margin: 6px 0;
 }
 .left label.inline { display: flex; text-align: left; }
+/* 独立标签（不含输入控件）顶格左对齐，不进 96px 标签列栅格 */
+.left label.plain { display: block; text-align: left; }
+.left label.plain > input { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; }
+/* 输出文件：文件名 + 扩展名下拉 */
+.outrow { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.outrow input { flex: 1; min-width: 0; }
+.outrow select { flex: none; width: 110px; }
 .num { width: 110px; }
 .default-excludes { display: flex; flex-wrap: wrap; gap: 4px; }
 .default-tag {

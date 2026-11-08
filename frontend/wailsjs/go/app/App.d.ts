@@ -13,6 +13,8 @@ export function GetGlobalSettings():Promise<config.GlobalSettings>;
 
 export function GetVersion():Promise<string>;
 
+export function ListFileExtensions(arg1:string,arg2:Array<string>):Promise<Array<string>>;
+
 export function ListProjects(arg1:string):Promise<Array<app.ProjectSummary>>;
 
 export function ListSubdirs(arg1:string):Promise<Array<string>>;

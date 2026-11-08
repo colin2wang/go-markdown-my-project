@@ -752,6 +752,27 @@ func (a *App) SelectDirectory(startDir string) (string, error) {
 	return runtime.OpenDirectoryDialog(a.ctx, opts)
 }
 
+// ListFileExtensions 扫描项目下所有文件的扩展名（含点前缀，小写，去重排序）。
+// dirs 为包含目录列表（相对 projectPath，/ 分隔）；为空时扫描整个项目目录。
+func (a *App) ListFileExtensions(projectPath string, dirs []string) ([]string, error) {
+	if info, err := os.Stat(projectPath); err != nil || !info.IsDir() {
+		return nil, fmt.Errorf("project path not found: %s", projectPath)
+	}
+	roots := make([]string, 0, len(dirs))
+	for _, d := range dirs {
+		nd := strings.ReplaceAll(d, "\\", "/")
+		if nd == "." || nd == "" {
+			roots = append(roots, projectPath)
+			continue
+		}
+		roots = append(roots, filepath.Join(projectPath, filepath.FromSlash(nd)))
+	}
+	if len(roots) == 0 {
+		roots = append(roots, projectPath)
+	}
+	return infer.CollectExtensions(roots...), nil
+}
+
 // ExcludeDefaultsResult DefaultExcludes 的返回（Wails 绑定使用具名结构体避免多返回值歧义）。
 type ExcludeDefaultsResult struct {
 	Directories []string `json:"directories"`

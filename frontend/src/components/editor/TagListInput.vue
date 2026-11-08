@@ -11,16 +11,16 @@ const props = defineProps<{
   modelValue: string[];
   placeholder?: string;
   error?: string;
-  dirSelect?: boolean; // 显示「从磁盘选…」按钮（目录）
-  basePath?: string;   // 项目根目录：作为选择框起始目录，并把结果转为相对路径
+  dirSelect?: boolean;   // 显示「从磁盘选…」「添加所有子文件夹」按钮（目录）
+  extScan?: boolean;     // 显示「添加所有扩展名」按钮（包含文件）
+  basePath?: string;     // 项目根目录：对话框起始目录、扩展名扫描根、结果转相对路径
+  scanDirs?: string[];   // 扩展名扫描的包含目录（相对 basePath）
   disabled?: boolean;
 }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: string[]): void }>();
 
 const log = useLogStore();
 const input = ref('');
-const multi = ref(false); // 勾选后「从磁盘选…」进入连续添加模式
-const allSubdirs = ref(false); // 勾选后「从磁盘选…」一次性加入所选目录的全部直接子目录
 
 function add(raw: string) {
   const items = raw.split(/[,\n]/).map((s) => s.trim().replace(/\\/g, '/')).filter(Boolean);
@@ -67,27 +67,34 @@ function toRelative(dir: string): string {
   return dir;
 }
 
-// 多选框勾选时进入连续选择模式：每选中一个目录立即加入列表并继续弹窗，
-// 取消（返回空）时结束；未勾选则单选一次。
-// 「添加所有子文件夹」勾选时，选中目录后改为一次性加入其全部直接子目录。
+// 系统目录选择对话框：每次选一个目录，转相对路径后去重加入；
+// 取消时不动。需要多个目录可重复点击或用「添加所有子文件夹」。
 async function browse() {
-  let start = props.basePath ?? '';
-  let count = 0;
-  do {
-    const dir = await api.selectDirectory(start);
-    if (!dir) break;
-    if (allSubdirs.value) {
-      const subs = await api.listSubdirs(dir);
-      if (subs.length) add(subs.map((s) => toRelative(s)).join('\n'));
-      else log.warn(t('editor.noSubdirs', { dir }));
-      count += subs.length;
-    } else {
-      add(toRelative(dir));
-      count++;
-    }
-    start = dir; // 下一次从刚选的目录打开，便于选同级/子目录
-  } while (multi.value);
-  if (count > 1) log.info(t('editor.dirsPicked', { n: count }));
+  const dir = await api.selectDirectory(props.basePath ?? '');
+  if (!dir) return;
+  add(toRelative(dir.replace(/\\/g, '/')));
+}
+
+// 一键加入项目根目录下全部直接子目录
+async function addAllSubdirs() {
+  if (!props.basePath) return;
+  const subs = await api.listSubdirs(props.basePath);
+  if (!subs.length) {
+    log.warn(t('editor.noSubdirs', { dir: props.basePath }));
+    return;
+  }
+  add(subs.map((s) => toRelative(s)).join('\n'));
+}
+
+// 扫描项目（或包含目录）下所有文件扩展名，以 *.ext 形式加入包含文件列表
+async function addAllExtensions() {
+  if (!props.basePath) return;
+  const exts = await api.listFileExtensions(props.basePath, props.scanDirs ?? []);
+  if (!exts.length) {
+    log.warn(t('editor.noExtensions'));
+    return;
+  }
+  add(exts.map((e) => '*' + e).join('\n'));
 }
 </script>
 
@@ -108,10 +115,12 @@ async function browse() {
         @blur="input.trim() && add(input)"
       />
     </div>
+    <div v-if="extScan" class="browse-row">
+      <button type="button" class="browse" :disabled="disabled || !basePath" @click="addAllExtensions"><Icon name="doc" /> {{ t('editor.addAllExts') }}</button>
+    </div>
     <div v-if="dirSelect" class="browse-row">
       <button type="button" class="browse" :disabled="disabled" @click="browse"><Icon name="folder" /> {{ t('editor.browseDisk') }}</button>
-      <label class="multi"><input v-model="multi" type="checkbox" :disabled="disabled" />{{ t('editor.multiPick') }}</label>
-      <label class="multi"><input v-model="allSubdirs" type="checkbox" :disabled="disabled" />{{ t('editor.allSubdirs') }}</label>
+      <button type="button" class="browse" :disabled="disabled || !basePath" @click="addAllSubdirs"><Icon name="folder" /> {{ t('editor.allSubdirs') }}</button>
     </div>
     <p v-if="error" class="field-error">{{ error }}</p>
   </div>
@@ -139,11 +148,9 @@ async function browse() {
 /* 校验失败时整组 tag 容器红框 */
 .tags.invalid { border-color: var(--err); }
 .tags input { flex: 1; min-width: 120px; background: none; border: none; color: var(--fg-1); outline: none; font-size: 12.5px; padding: 2px; }
-.browse { margin-top: 4px; background: transparent; color: var(--fg-1); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 3px 8px; font-size: 12px; cursor: pointer; }
+.browse { margin-top: 4px; background: transparent; color: var(--fg-1); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 3px 8px; font-size: 12px; cursor: pointer; white-space: nowrap; }
 .browse:disabled { opacity: .4; cursor: not-allowed; }
 .browse-row { display: flex; align-items: center; gap: 10px; }
-.multi { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--fg-2); cursor: pointer; user-select: none; }
-.multi input { cursor: pointer; }
 .disabled { opacity: .5; }
 input.invalid { border-color: var(--err); }
 .field-error { color: var(--err); font-size: 11px; margin: 3px 0 0 2px; }

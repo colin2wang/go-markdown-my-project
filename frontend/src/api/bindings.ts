@@ -172,6 +172,10 @@ export const api = {
   async selectDirectory(startDir = ''): Promise<string> {
     return (await go()?.SelectDirectory(startDir)) ?? '';
   },
+  // 扫描项目（或包含目录）下所有文件扩展名（含点前缀，如 ".java"）
+  async listFileExtensions(projectPath: string, dirs: string[]): Promise<string[]> {
+    return (await go()?.ListFileExtensions(projectPath, dirs)) ?? [];
+  },
   async defaultProjectsDir(): Promise<string> {
     return (await go()?.DefaultProjectsDir()) ?? 'config/projects';
   },
