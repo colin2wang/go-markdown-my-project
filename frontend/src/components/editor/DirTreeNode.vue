@@ -1,10 +1,12 @@
-<!-- DirTreeNode：目录树递归节点，子目录懒加载（api.listSubdirs），勾选聚合选中/半选状态。
+<!-- DirTreeNode：目录树递归节点，子目录懒加载（api.listSubdirs）。
+     选中集合只保留最顶层目录：勾选父目录即覆盖整棵子树，子目录显示勾选但禁用。
      v-model:selected 由父级维护全局勾选集合（路径 Set）。 -->
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { api } from '../../api/bindings';
 import { useI18n } from '../../i18n';
 import Icon from '../ui/Icon.vue';
+import { isCovered, isDescendant, isSameDirPath } from './dirPaths';
 
 const { t } = useI18n();
 
@@ -43,32 +45,28 @@ async function toggleExpand() {
   }
 }
 
-// 聚合子树勾选状态：全选 / 全不选 / 半选
+// 祖先已勾选时本节点被整体覆盖：显示勾选但不可再单独勾选
+const covered = computed(() => [...props.selected].some((s) => isCovered(props.node.path, s)));
+const selectedSelf = computed(() => [...props.selected].some((s) => isSameDirPath(s, props.node.path)));
+const hasSelectedDescendant = computed(() => [...props.selected].some((s) => isDescendant(s, props.node.path)));
+// 勾选 / 半选（仅后代被勾选）/ 未勾选
 const state = computed<boolean | 'indeterminate'>(() => {
-  const walk = (n: DirNode): { on: number; off: number } => {
-    let r = props.selected.has(n.path) ? { on: 1, off: 0 } : { on: 0, off: 1 };
-    if (n.loaded) for (const c of n.children) {
-      // 子组件与父组件共享同一 selected Set，这里直接递归原始数据即可
-      const cr = walk(c);
-      r.on += cr.on; r.off += cr.off;
-    }
-    return r;
-  };
-  const r = walk(props.node);
-  if (r.off === 0) return true;
-  if (r.on === 0) return false;
-  return 'indeterminate';
+  if (covered.value || selectedSelf.value) return true;
+  return hasSelectedDescendant.value ? 'indeterminate' : false;
 });
 
-// 勾选/取消 = 勾选/取消整棵子树（未加载的子树按路径前缀同步，勾选后标记 loaded:false
-// 的子树也会在展开时继承父级状态——这里直接只对已加载部分操作 + 当前节点路径）
+// 勾选父目录即覆盖整棵子树：清掉祖先、同目录与后代，只保留当前目录；
+// 取消时连同其后代一起移除，保证 selected 中不存在父子冗余。
 function toggleCheck(on: boolean) {
   const next = new Set(props.selected);
-  const walk = (n: DirNode) => {
-    if (on) next.add(n.path); else next.delete(n.path);
-    if (n.loaded) n.children.forEach(walk);
-  };
-  walk(props.node);
+  const p = props.node.path;
+  for (const s of [...next]) {
+    const same = isSameDirPath(s, p);
+    if (on ? same || isCovered(p, s) || isDescendant(s, p) : same || isDescendant(s, p)) {
+      next.delete(s);
+    }
+  }
+  if (on) next.add(p);
   emit('update:selected', next);
 }
 </script>
@@ -83,7 +81,8 @@ function toggleCheck(on: boolean) {
         type="checkbox"
         :checked="state === true"
         :indeterminate.prop="state === 'indeterminate'"
-        :disabled="disabled || loading"
+        :disabled="disabled || loading || covered"
+        :title="covered ? t('editor.dirTreeCovered') : undefined"
         @change="toggleCheck(($event.target as HTMLInputElement).checked)"
       />
       <span class="name">{{ node.name }}</span>

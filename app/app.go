@@ -261,6 +261,7 @@ func scanOpts(cfg config.ProjectConfig, files, dirs []string) scanner.Options {
 		IncludeEnabled:     includeEnabled,
 		IncludePatterns:    cfg.IncludePatterns,
 		SkipBinary:         cfg.SkipBinaryFiles == nil || *cfg.SkipBinaryFiles,
+		UseGitIgnore:       cfg.UseGitIgnoreEnabled(),
 	}
 	// 全局默认排除（config/exclude_defaults.yml）：与项目配置合并去重后注入，
 	// 单点覆盖所有扫描/导出入口；项目内可增量追加，use_default_excludes: false 可整体关闭。

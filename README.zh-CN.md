@@ -130,6 +130,7 @@ directories: [src]              # 递归目录
 exclude_directories: ["**/444"] # 整目录剪枝；"**/name" 匹配任意层级
 exclude_patterns: ["*.log"]     # glob（* / ?）或相对路径前缀匹配
 max_file_size: 1048576          # 字节；0/缺省 = 不限制
+use_gitignore: true             # 按项目内所有 .gitignore 过滤；false 关闭
 
 # ─── v2 ───
 export_mode: full               # full | files | symbols | signatures | custom

@@ -90,7 +90,7 @@ func SerializeWithComments(c *ProjectConfig) (string, error) {
 		pair("Maximum file size in bytes (0 = no limit)", "max_file_size", intNode(c.MaxFileSize))
 	}
 
-	// ─── v2 字段（仅当非默认值时输出，保持 yml 简洁）───
+	// ─── v2 字段（多为非默认值才输出；use_gitignore 恒输出以明示开关状态）───
 	if c.ExportMode != "" && c.ExportMode != "full" {
 		pair("Export mode: full | files | symbols | signatures | custom", "export_mode", strNode(false, c.ExportMode))
 	}
@@ -98,6 +98,8 @@ func SerializeWithComments(c *ProjectConfig) (string, error) {
 		// 默认 true（省略即生效）；仅显式关闭时输出
 		pair("Set to false to disable the global default excludes (config/exclude_defaults.yml)", "use_default_excludes", boolNode(false))
 	}
+	// 恒输出：勾选写 true（新建项目/旧配置省略字段均为 true），取消勾选写 false
+	pair("Filter by all .gitignore files found in the project; set to false to disable", "use_gitignore", boolNode(c.UseGitIgnoreEnabled()))
 	if c.SkipBinaryFiles != nil && !*c.SkipBinaryFiles {
 		// 默认 true（省略即生效）；仅显式关闭时输出
 		pair("Set to false to include binary files (detected by content: NUL byte in the first 8KB)", "skip_binary_files", boolNode(false))

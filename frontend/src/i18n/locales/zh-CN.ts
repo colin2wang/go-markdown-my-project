@@ -35,6 +35,7 @@ const zhCN = {
 - files / directories：包含的文件与目录（directories 递归收集）
 - exclude_directories / exclude_patterns：排除目录与排除规则（如 *.log，RE2 正则）
 - use_default_excludes：是否合并全局默认排除（config/exclude_defaults.yml，默认 true；含 node_modules、dist、图片、编译产物等，无需手动排除）
+- use_gitignore：按项目内所有 .gitignore 过滤（递归自动查找，默认 true；设 false 可关闭）
 - skip_binary_files：按内容自动跳过二进制文件（前 8KB 含 NUL 即判定，默认 true；避免字体等文件导出成乱码）
 - include_enabled / include_patterns：激活后仅加载匹配的文件
 - max_file_size：单文件大小上限（字节，0 = 不限制）
@@ -303,7 +304,8 @@ redaction:
     includeFiles: '包含文件',
     includeDirs: '包含目录',
     excludeDirs: '排除目录',
-    excludePatterns: '排除规则',
+    excludePatterns: '排除扩展名',
+    useGitIgnore: '根据 .gitignore 过滤（自动查找项目内所有 .gitignore）',
     useDefaultExcludes: '启用全局默认排除',
     skipBinary: '自动跳过二进制文件（按内容检测，默认开启）',
     defaultExcludes: '默认排除（自动生效，只读）',
@@ -331,6 +333,7 @@ redaction:
     treeSelect: '目录多选',
     dirTreeTitle: '目录多选',
     dirTreeHint: '勾选要包含的目录（勾选父目录将包含其整个子树），可多选',
+    dirTreeCovered: '已由上级目录包含，无需重复选择',
     dirTreeLoading: '加载中…',
     noSubdirs: '该目录下没有子文件夹：{dir}',
     noExtensions: '未扫描到任何文件扩展名',

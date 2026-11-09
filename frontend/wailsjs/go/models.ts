@@ -282,6 +282,7 @@ export namespace config {
 	    split_tokens?: number;
 	    template?: string;
 	    use_default_excludes?: boolean;
+	    use_gitignore?: boolean;
 	    skip_binary_files?: boolean;
 	    write_bom?: boolean;
 	
@@ -307,6 +308,7 @@ export namespace config {
 	        this.split_tokens = source["split_tokens"];
 	        this.template = source["template"];
 	        this.use_default_excludes = source["use_default_excludes"];
+	        this.use_gitignore = source["use_gitignore"];
 	        this.skip_binary_files = source["skip_binary_files"];
 	        this.write_bom = source["write_bom"];
 	    }

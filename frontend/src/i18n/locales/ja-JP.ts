@@ -36,6 +36,7 @@ const jaJP: Messages = {
 - files / directories：含めるファイルとディレクトリ（directories は再帰的に収集）
 - exclude_directories / exclude_patterns：除外ディレクトリと除外パターン（例: *.log、RE2 正規表現）
 - use_default_excludes：グローバル既定除外（config/exclude_defaults.yml）を統合するか（既定 true；node_modules、dist、画像、ビルド成果物などを手動で書く必要なし）
+- use_gitignore：プロジェクト内のすべての .gitignore に従って除外（再帰的に自動検出、既定 true；false で無効化）
 - skip_binary_files：内容によりバイナリファイルを自動スキップ（先頭 8KB に NUL があればバイナリ、既定 true；フォント等の文字化けエクスポートを防止）
 - include_enabled / include_patterns：有効時は一致するファイルのみ読み込み
 - max_file_size：1 ファイルのサイズ上限（バイト、0 = 無制限）
@@ -304,7 +305,8 @@ redaction:
     includeFiles: '含めるファイル',
     includeDirs: '含めるディレクトリ',
     excludeDirs: '除外ディレクトリ',
-    excludePatterns: '除外パターン',
+    excludePatterns: '除外する拡張子',
+    useGitIgnore: '.gitignore で除外（プロジェクト内のすべての .gitignore を自動検出）',
     useDefaultExcludes: 'グローバル既定除外を有効化',
     skipBinary: 'バイナリファイルを自動スキップ（内容判定、既定オン）',
     defaultExcludes: '既定除外（自動・読み取り専用）',
@@ -332,6 +334,7 @@ redaction:
     treeSelect: 'フォルダ複数選択',
     dirTreeTitle: 'フォルダ複数選択',
     dirTreeHint: '含めるフォルダにチェック（親をチェックすると子孫全体が含まれます）、複数選択可',
+    dirTreeCovered: '親フォルダに含まれるため選択不要',
     dirTreeLoading: '読み込み中…',
     noSubdirs: 'サブフォルダがありません: {dir}',
     noExtensions: 'ファイル拡張子が見つかりません',

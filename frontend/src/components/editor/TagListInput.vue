@@ -6,6 +6,7 @@ import { useLogStore } from '../../stores/log';
 import { useI18n } from '../../i18n';
 import Icon from '../ui/Icon.vue';
 import DirTreeDialog from './DirTreeDialog.vue';
+import { normalizeDirSelection } from './dirPaths';
 
 const { t } = useI18n();
 const props = defineProps<{
@@ -14,6 +15,7 @@ const props = defineProps<{
   error?: string;
   dirSelect?: boolean;   // 显示「从磁盘选…」「添加所有子文件夹」按钮（目录）
   treeSelect?: boolean;  // 显示「选择子目录…」按钮：应用内目录树多选对话框（目录）
+  dirHierarchy?: boolean; // 目录列表按父子层级去重（父目录已选中时子目录多余）
   fileSelect?: boolean;  // 显示「从磁盘选文件…」按钮（文件），对话框默认打开 basePath
   extScan?: boolean;     // 显示「添加所有扩展名」按钮（包含模式）
   basePath?: string;     // 项目根目录：对话框起始目录、扩展名扫描根、结果转相对路径
@@ -29,11 +31,17 @@ const treeOpen = ref(false);
 function add(raw: string) {
   const items = raw.split(/[,\n]/).map((s) => s.trim().replace(/\\/g, '/')).filter(Boolean);
   // modelValue 可能是 undefined（YAML 中省略的数组字段），兜底为空数组
-  const next = [...(props.modelValue ?? [])];
+  let next = [...(props.modelValue ?? [])];
   let dup = 0;
   for (const it of items) {
     if (next.includes(it)) { dup++; continue; }
     next.push(it);
+  }
+  // 目录列表：父目录已选中时子目录多余；后来加入父目录则清掉已有子目录
+  if (props.dirHierarchy) {
+    const normalized = normalizeDirSelection(next);
+    dup += next.length - normalized.length;
+    next = normalized;
   }
   if (dup) log.warn(t('editor.tagDupIgnored', { n: dup }));
   emit('update:modelValue', next);
@@ -84,9 +92,11 @@ function toRelative(dir: string): string {
   return dir;
 }
 
-// 目录树对话框返回的绝对路径批量加入（转相对路径去重）
+// 目录树对话框返回的是完整选择集合（可为空）：转相对路径并整体替换，
+// 这样取消勾选 / 清空也会生效，且不会与旧标签叠加出父子冗余。
 function addFromTree(paths: string[]) {
-  add(paths.map((p) => toRelative(p.replace(/\\/g, '/'))).join('\n'));
+  const rel = paths.map((p) => toRelative(p.replace(/\\/g, '/')));
+  emit('update:modelValue', normalizeDirSelection(rel));
 }
 
 // 系统目录选择对话框：每次选一个目录，转相对路径后去重加入；

@@ -130,6 +130,7 @@ directories: [src]              # recursive directories
 exclude_directories: ["**/444"] # prunes whole directories; "**/name" matches anywhere
 exclude_patterns: ["*.log"]     # glob (* / ?) or prefix match on relative paths
 max_file_size: 1048576          # bytes; 0/omitted = no limit
+use_gitignore: true             # filter by all .gitignore files in the project; false disables it
 
 # ─── v2 ───
 export_mode: full               # full | files | symbols | signatures | custom

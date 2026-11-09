@@ -28,6 +28,8 @@ export interface ProjectConfig {
   template?: string;
   /** 是否合并全局默认排除（config/exclude_defaults.yml）；省略 = true */
   use_default_excludes?: boolean;
+  /** 是否按项目内所有 .gitignore 过滤；省略 = true（GUI 默认勾选） */
+  use_gitignore?: boolean;
   /** 按内容跳过二进制文件（前 8KB 含 NUL）；省略 = true */
   skip_binary_files?: boolean;
   /** 输出文件写入 UTF-8 BOM（避免 Windows 查看器误判编码）；省略 = true */

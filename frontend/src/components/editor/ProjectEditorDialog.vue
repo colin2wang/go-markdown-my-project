@@ -10,6 +10,7 @@ import PathInput from './PathInput.vue';
 import TagListInput from './TagListInput.vue';
 import YamlPreview from './YamlPreview.vue';
 import ScanPreviewCard from './ScanPreviewCard.vue';
+import { normalizeDirSelection } from './dirPaths';
 
 const props = defineProps<{
   configPath?: string;          // 编辑模式：已有配置文件路径
@@ -112,6 +113,8 @@ function onPathValidated(r: { exists: boolean; isDir: boolean }) {
 
 async function onSave() {
   saveError.value = '';
+  // 保存前统一去掉被父目录覆盖的子目录（含历史配置里已有的冗余）
+  if (ed.draft) ed.draft.directories = normalizeDirSelection(ed.draft.directories ?? []);
   saving.value = true;
   try {
     ed.updateConfigPath(savePath.value);
@@ -190,7 +193,7 @@ function onCancel() {
               <label class="plain">{{ t('editor.includeFiles') }}</label>
               <TagListInput v-model="ed.draft!.files!" :placeholder="t('editor.phFiles')" file-select :base-path="ed.draft!.project_path" />
               <label class="plain">{{ t('editor.includeDirs') }}</label>
-              <TagListInput v-model="ed.draft!.directories!" :placeholder="t('editor.phDirs')" dir-select tree-select :base-path="ed.draft!.project_path" />
+              <TagListInput v-model="ed.draft!.directories!" :placeholder="t('editor.phDirs')" dir-select tree-select dir-hierarchy :base-path="ed.draft!.project_path" />
             </EditorSection>
 
             <EditorSection id="sec-exclude" icon="ban" :title="t('editor.sectionExclude')" :error-count="ed.errors.exclude_patterns ? 1 : 0">
@@ -209,6 +212,10 @@ function onCancel() {
               <label class="inline">
                 <input type="checkbox" :checked="ed.draft.skip_binary_files !== false" @change="ed.draft!.skip_binary_files = ($event.target as HTMLInputElement).checked" />
                 {{ t('editor.skipBinary') }}
+              </label>
+              <label class="inline">
+                <input type="checkbox" :checked="ed.draft.use_gitignore !== false" @change="ed.draft!.use_gitignore = ($event.target as HTMLInputElement).checked" />
+                {{ t('editor.useGitIgnore') }}
               </label>
               <template v-if="ed.draft.use_default_excludes !== false && excludeDefaults">
                 <label>{{ t('editor.defaultExcludes') }}</label>

@@ -47,6 +47,8 @@ type ProjectConfig struct {
 	Template    string          `yaml:"template,omitempty" json:"template,omitempty"`
 	// UseDefaultExcludes 是否合并全局默认排除（config/exclude_defaults.yml）；nil = true
 	UseDefaultExcludes *bool `yaml:"use_default_excludes,omitempty" json:"use_default_excludes,omitempty"`
+	// UseGitIgnore 是否按项目内所有 .gitignore 的规则过滤；nil = true（默认开启）
+	UseGitIgnore *bool `yaml:"use_gitignore,omitempty" json:"use_gitignore,omitempty"`
 	// SkipBinaryFiles 按内容跳过二进制文件（前 8KB 含 NUL）；nil = true
 	SkipBinaryFiles *bool `yaml:"skip_binary_files,omitempty" json:"skip_binary_files,omitempty"`
 	// WriteBOM 输出文件写入 UTF-8 BOM（避免 Windows 查看器误判编码）；nil = true
@@ -56,6 +58,11 @@ type ProjectConfig struct {
 // UseDefaultsEnabled 判断是否合并全局默认排除（nil 视为 true）。
 func (c *ProjectConfig) UseDefaultsEnabled() bool {
 	return c.UseDefaultExcludes == nil || *c.UseDefaultExcludes
+}
+
+// UseGitIgnoreEnabled 判断是否按项目内所有 .gitignore 过滤（nil 视为 true）。
+func (c *ProjectConfig) UseGitIgnoreEnabled() bool {
+	return c.UseGitIgnore == nil || *c.UseGitIgnore
 }
 
 // WriteBOMEnabled 判断输出是否写 UTF-8 BOM（nil 视为 true）。

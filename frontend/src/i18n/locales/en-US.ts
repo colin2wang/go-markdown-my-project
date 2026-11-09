@@ -36,6 +36,7 @@ const enUS: Messages = {
 - files / directories: included files and directories (directories are collected recursively)
 - exclude_directories / exclude_patterns: excluded directories and patterns (e.g. *.log, RE2 regex)
 - use_default_excludes: merge the global default excludes (config/exclude_defaults.yml, true by default; node_modules, dist, images, build artifacts, etc. — no need to list them manually)
+- use_gitignore: filter by every .gitignore file found in the project (detected recursively, true by default; set false to disable)
 - skip_binary_files: auto-skip binary files by content (NUL byte within the first 8KB, true by default; avoids exporting fonts and similar files as garbage)
 - include_enabled / include_patterns: when enabled, only matching files are loaded
 - max_file_size: per-file size limit in bytes (0 = unlimited)
@@ -304,7 +305,8 @@ redaction:
     includeFiles: 'Included files',
     includeDirs: 'Included directories',
     excludeDirs: 'Excluded directories',
-    excludePatterns: 'Exclude patterns',
+    excludePatterns: 'Excluded extensions',
+    useGitIgnore: 'Filter by .gitignore (all .gitignore files in the project are detected automatically)',
     useDefaultExcludes: 'Enable global default excludes',
     skipBinary: 'Auto-skip binary files (content-based, on by default)',
     defaultExcludes: 'Default excludes (automatic, read-only)',
@@ -332,6 +334,7 @@ redaction:
     treeSelect: 'Multi-select folders',
     dirTreeTitle: 'Multi-select folders',
     dirTreeHint: 'Check folders to include (checking a parent includes its whole subtree), multiple allowed',
+    dirTreeCovered: 'Already included by a parent directory',
     dirTreeLoading: 'Loading…',
     noSubdirs: 'No subfolders in: {dir}',
     noExtensions: 'No file extensions found',

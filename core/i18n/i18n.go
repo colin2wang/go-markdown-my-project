@@ -119,6 +119,16 @@ var dicts = map[string]map[Locale]string{
 		EnUS: "Skipping file due to exclude pattern",
 		JaJP: "除外ルールによりファイルをスキップ",
 	},
+	"log.skipByGitignore": {
+		ZhCN: "按 .gitignore 规则跳过文件",
+		EnUS: "Skipping file due to .gitignore rules",
+		JaJP: ".gitignore ルールによりファイルをスキップ",
+	},
+	"log.gitignoreFail": {
+		ZhCN: ".gitignore 规则读取失败，本次忽略该过滤",
+		EnUS: "Failed to read .gitignore rules; filtering is skipped for this run",
+		JaJP: ".gitignore ルールの読み込みに失敗したため、今回はフィルタしません",
+	},
 	"log.skipBinary": {
 		ZhCN: "跳过二进制文件",
 		EnUS: "Skipping binary file",

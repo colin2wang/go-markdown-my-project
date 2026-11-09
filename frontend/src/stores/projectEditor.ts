@@ -19,6 +19,7 @@ export function emptyConfig(): ProjectConfig {
     include_enabled: false,
     include_patterns: [],
     max_file_size: 0,
+    use_gitignore: true,
     export_mode: 'full',
     split_tokens: 0,
     redaction: { enabled: true, strategy: 'placeholder', placeholder: '[REDACTED]', rule_profile: 'standard', custom_patterns: [] },
@@ -147,6 +148,7 @@ export const useProjectEditor = defineStore('projectEditor', () => {
     copy.exclude_patterns ??= [];
     copy.include_patterns ??= [];
     copy.include_enabled ??= false;
+    copy.use_gitignore ??= true;
     if (copy.redaction) {
       copy.redaction.custom_patterns ??= [];
       copy.redaction.allowlist ??= [];

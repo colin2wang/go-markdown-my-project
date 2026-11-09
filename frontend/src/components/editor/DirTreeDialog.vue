@@ -5,6 +5,7 @@ import { ref, watch } from 'vue';
 import { api } from '../../api/bindings';
 import { useI18n } from '../../i18n';
 import DirTreeNode, { type DirNode } from './DirTreeNode.vue';
+import { normalizeDirSelection } from './dirPaths';
 
 const { t } = useI18n();
 
@@ -24,21 +25,25 @@ const busy = ref(false);        // 任一节点懒加载子目录中（仅禁用
 // 把标签值（相对路径或绝对路径）换算成树中的绝对路径用于预勾选。
 // 树节点路径统一为正斜杠（listSubdirs 原始返回为反斜杠），这里保持一致才能命中 Set。
 function toAbs(rel: string): string {
-  const norm = rel.replace(/\\/g, '/');
-  if (/^[a-zA-Z]:/.test(norm) || norm.startsWith('/')) return norm.replace(/\/+$/, '');
+  let norm = rel.replace(/\\/g, '/').replace(/\/+$/, '');
+  if (/^[a-zA-Z]:/.test(norm) || norm.startsWith('/')) return norm;
+  norm = norm.replace(/^\.\//, '');
   if (!props.root) return norm;
   const base = props.root.replace(/\\/g, '/').replace(/\/+$/, '');
+  // "." 表示项目根，与树根路径一致
+  if (norm === '' || norm === '.') return base;
   return `${base}/${norm}`;
 }
 
-// 每次打开重建树根、按当前标签回填勾选，并自动加载根目录的子目录
+// 每次打开重建树根、按当前标签回填勾选（去掉被父目录覆盖的子目录），并自动加载根目录的子目录
 watch(
   () => props.open,
   (open) => {
     if (!open || !props.root) return;
-    const name = props.root.replace(/[\\/]+$/, '').split(/[\\/]/).pop() ?? props.root;
-    rootNode.value = { name, path: props.root, loaded: false, expanded: true, children: [] };
-    selected.value = new Set((props.initialSelected ?? []).map(toAbs));
+    const rootPath = props.root.replace(/\\/g, '/').replace(/\/+$/, '');
+    const name = rootPath.split('/').pop() ?? rootPath;
+    rootNode.value = { name, path: rootPath, loaded: false, expanded: true, children: [] };
+    selected.value = new Set(normalizeDirSelection((props.initialSelected ?? []).map(toAbs)));
     void loadRoot();
   },
 );
@@ -58,9 +63,9 @@ async function loadRoot() {
   rootLoading.value = false;
 }
 
+// 返回对话框的完整选择集合（可为空），由 TagListInput 替换写回，取消勾选/清空才会生效
 function confirm() {
-  const paths = [...selected.value];
-  if (paths.length) emit('pick', paths);
+  emit('pick', normalizeDirSelection([...selected.value]));
   emit('close');
 }
 </script>
@@ -83,7 +88,7 @@ function confirm() {
       </div>
       <div class="actions">
         <button @click="emit('close')">{{ t('common.cancel') }}</button>
-        <button class="primary" :disabled="busy || !selected.size" @click="confirm">{{ t('common.confirm') }}</button>
+        <button class="primary" :disabled="busy" @click="confirm">{{ t('common.confirm') }}</button>
       </div>
     </div>
   </div>

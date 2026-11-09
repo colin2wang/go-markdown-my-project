@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 
+	"go-markdown-my-project/core/gitignore"
 	"go-markdown-my-project/core/i18n"
 	"go-markdown-my-project/core/logger"
 )
@@ -60,6 +61,8 @@ type Options struct {
 	// SkipBinary 按内容跳过二进制文件（前 8KB 含 NUL 字节即判定），
 	// 覆盖没有常见扩展名的二进制（如字体、无后缀的编译产物），导出后只会是乱码。
 	SkipBinary bool
+	// UseGitIgnore 按项目内所有 .gitignore 的规则过滤文件与目录（项目配置默认开启）
+	UseGitIgnore bool
 }
 
 // ProcessFiles 处理配置指定的文件与目录，返回 (路径, 内容) 列表。
@@ -68,11 +71,24 @@ type Options struct {
 func ProcessFiles(opts Options) ([]FileResult, error) {
 	var results []FileResult
 
+	// .gitignore 规则（项目内所有 .gitignore）：只加载一次，files 与 directories 两条链路共用。
+	// 加载失败仅告警并跳过该过滤，不中断扫描/导出。
+	var ignores *gitignore.Matcher
+	if opts.UseGitIgnore && opts.ProjectPath != "" {
+		m, err := gitignore.Load(opts.ProjectPath)
+		if err != nil {
+			logger.Warn(i18n.T("log.gitignoreFail"), "err", err.Error())
+		}
+		if m != nil {
+			ignores = m
+		}
+	}
+
 	// 逐个处理指定文件
 	for _, file := range opts.Files {
 		fullPath := filepath.Join(opts.ProjectPath, filepath.FromSlash(file))
 		if info, err := os.Stat(fullPath); err == nil && !info.IsDir() {
-			include, err := shouldIncludeFile(fullPath, opts.ExcludePatterns, opts.MaxFileSize, opts.ProjectPath, opts.IncludeEnabled, opts.IncludePatterns)
+			include, err := shouldIncludeFile(fullPath, opts.ExcludePatterns, opts.MaxFileSize, opts.ProjectPath, opts.IncludeEnabled, opts.IncludePatterns, ignores)
 			if err != nil {
 				return nil, err
 			}
@@ -94,7 +110,7 @@ func ProcessFiles(opts Options) ([]FileResult, error) {
 	for _, dir := range opts.Directories {
 		fullDir := filepath.Join(opts.ProjectPath, filepath.FromSlash(dir))
 		if info, err := os.Stat(fullDir); err == nil && info.IsDir() {
-			parallelProcessDirectory(fullDir, &results, opts)
+			parallelProcessDirectory(fullDir, &results, opts, ignores)
 		}
 	}
 
@@ -103,7 +119,26 @@ func ProcessFiles(opts Options) ([]FileResult, error) {
 
 // parallelProcessDirectory 用 goroutine worker pool 并行读取目录内文件，
 // 对齐 process_directory_parallel（rayon → worker pool）。
-func parallelProcessDirectory(dir string, results *[]FileResult, opts Options) {
+func parallelProcessDirectory(dir string, results *[]FileResult, opts Options, ignores *gitignore.Matcher) {
+	// 目录剪枝：项目排除规则 + .gitignore 规则（相对项目根的路径）
+	excludedDir := func(p string) bool {
+		if ShouldExcludeDirectory(p, opts.ExcludeDirectories) {
+			return true
+		}
+		if ignores == nil {
+			return false
+		}
+		rel, err := filepath.Rel(opts.ProjectPath, p)
+		if err != nil {
+			return false
+		}
+		relSlash := filepath.ToSlash(rel)
+		if relSlash == ".." || strings.HasPrefix(relSlash, "../") {
+			return false
+		}
+		return ignores.Ignored(relSlash, true)
+	}
+
 	// 先收集全部文件路径（剪枝排除目录）
 	var paths []string
 	err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
@@ -112,7 +147,7 @@ func parallelProcessDirectory(dir string, results *[]FileResult, opts Options) {
 			return nil
 		}
 		if d.IsDir() {
-			if ShouldExcludeDirectory(p, opts.ExcludeDirectories) {
+			if excludedDir(p) {
 				return filepath.SkipDir
 			}
 			return nil
@@ -121,7 +156,7 @@ func parallelProcessDirectory(dir string, results *[]FileResult, opts Options) {
 		// 对非普通文件再 Stat 解析真实类型，指向目录的链接按目录处理（剪枝+跳过）
 		if d.Type()&os.ModeSymlink != 0 || d.Type()&os.ModeIrregular != 0 {
 			if info, serr := os.Stat(p); serr == nil && info.IsDir() {
-				if ShouldExcludeDirectory(p, opts.ExcludeDirectories) {
+				if excludedDir(p) {
 					return filepath.SkipDir
 				}
 				return nil
@@ -153,7 +188,7 @@ func parallelProcessDirectory(dir string, results *[]FileResult, opts Options) {
 		go func() {
 			defer wg.Done()
 			for p := range jobs {
-				include, err := shouldIncludeFile(p, opts.ExcludePatterns, opts.MaxFileSize, opts.ProjectPath, opts.IncludeEnabled, opts.IncludePatterns)
+				include, err := shouldIncludeFile(p, opts.ExcludePatterns, opts.MaxFileSize, opts.ProjectPath, opts.IncludeEnabled, opts.IncludePatterns, ignores)
 				if err != nil || !include {
 					continue
 				}
@@ -199,11 +234,11 @@ func isBinary(content string) bool {
 // ShouldIncludeFile 判断文件是否应包含：大小限制 → 排除模式 → 包含模式（激活时白名单）。
 // 对齐 should_include_file。
 func ShouldIncludeFile(filePath string, excludePatterns []string, maxSize int64, projectRoot string) (bool, error) {
-	return shouldIncludeFile(filePath, excludePatterns, maxSize, projectRoot, false, nil)
+	return shouldIncludeFile(filePath, excludePatterns, maxSize, projectRoot, false, nil, nil)
 }
 
-// shouldIncludeFile 完整判定：大小限制 → 排除模式 → 包含模式（includeEnabled 激活时白名单）。
-func shouldIncludeFile(filePath string, excludePatterns []string, maxSize int64, projectRoot string, includeEnabled bool, includePatterns []string) (bool, error) {
+// shouldIncludeFile 完整判定：大小限制 → 排除模式 → .gitignore → 包含模式（includeEnabled 激活时白名单）。
+func shouldIncludeFile(filePath string, excludePatterns []string, maxSize int64, projectRoot string, includeEnabled bool, includePatterns []string, ignores *gitignore.Matcher) (bool, error) {
 	// 大小限制
 	if maxSize > 0 {
 		info, err := os.Stat(filePath)
@@ -245,6 +280,12 @@ func shouldIncludeFile(filePath string, excludePatterns []string, maxSize int64,
 				return false, nil
 			}
 		}
+	}
+
+	// .gitignore 规则（与上方自定义排除规则叠加，作用于相对项目根的完整路径）
+	if ignores != nil && ignores.Ignored(relSlash, false) {
+		logger.Debug(i18n.T("log.skipByGitignore"), "path", filePath)
+		return false, nil
 	}
 
 	// 包含规则（激活时白名单）：仅保留扩展名匹配任一模式的文件
