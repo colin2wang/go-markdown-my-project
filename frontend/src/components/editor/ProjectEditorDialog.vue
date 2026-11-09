@@ -190,7 +190,7 @@ function onCancel() {
               <label class="plain">{{ t('editor.includeFiles') }}</label>
               <TagListInput v-model="ed.draft!.files!" :placeholder="t('editor.phFiles')" file-select :base-path="ed.draft!.project_path" />
               <label class="plain">{{ t('editor.includeDirs') }}</label>
-              <TagListInput v-model="ed.draft!.directories!" :placeholder="t('editor.phDirs')" dir-select :base-path="ed.draft!.project_path" />
+              <TagListInput v-model="ed.draft!.directories!" :placeholder="t('editor.phDirs')" dir-select tree-select :base-path="ed.draft!.project_path" />
             </EditorSection>
 
             <EditorSection id="sec-exclude" icon="ban" :title="t('editor.sectionExclude')" :error-count="ed.errors.exclude_patterns ? 1 : 0">

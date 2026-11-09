@@ -114,6 +114,7 @@ redaction:
   },
   common: {
     cancel: 'キャンセル',
+    confirm: 'OK',
     close: '閉じる',
     save: '保存',
     saving: '保存中…',
@@ -326,6 +327,10 @@ redaction:
     clearAll: 'すべてクリア',
     addAllExts: 'すべての拡張子を追加',
     allSubdirs: 'すべてのサブフォルダを追加',
+    treeSelect: 'フォルダ複数選択',
+    dirTreeTitle: 'フォルダ複数選択',
+    dirTreeHint: '含めるフォルダにチェック（親をチェックすると子孫全体が含まれます）、複数選択可',
+    dirTreeLoading: '読み込み中…',
     noSubdirs: 'サブフォルダがありません: {dir}',
     noExtensions: 'ファイル拡張子が見つかりません',
     pathChecking: '検証中…',

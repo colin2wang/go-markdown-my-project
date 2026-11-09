@@ -5,6 +5,7 @@ import { api } from '../../api/bindings';
 import { useLogStore } from '../../stores/log';
 import { useI18n } from '../../i18n';
 import Icon from '../ui/Icon.vue';
+import DirTreeDialog from './DirTreeDialog.vue';
 
 const { t } = useI18n();
 const props = defineProps<{
@@ -12,6 +13,7 @@ const props = defineProps<{
   placeholder?: string;
   error?: string;
   dirSelect?: boolean;   // 显示「从磁盘选…」「添加所有子文件夹」按钮（目录）
+  treeSelect?: boolean;  // 显示「选择子目录…」按钮：应用内目录树多选对话框（目录）
   fileSelect?: boolean;  // 显示「从磁盘选文件…」按钮（文件），对话框默认打开 basePath
   extScan?: boolean;     // 显示「添加所有扩展名」按钮（包含模式）
   basePath?: string;     // 项目根目录：对话框起始目录、扩展名扫描根、结果转相对路径
@@ -22,6 +24,7 @@ const emit = defineEmits<{ (e: 'update:modelValue', v: string[]): void }>();
 
 const log = useLogStore();
 const input = ref('');
+const treeOpen = ref(false);
 
 function add(raw: string) {
   const items = raw.split(/[,\n]/).map((s) => s.trim().replace(/\\/g, '/')).filter(Boolean);
@@ -81,6 +84,11 @@ function toRelative(dir: string): string {
   return dir;
 }
 
+// 目录树对话框返回的绝对路径批量加入（转相对路径去重）
+function addFromTree(paths: string[]) {
+  add(paths.map((p) => toRelative(p.replace(/\\/g, '/'))).join('\n'));
+}
+
 // 系统目录选择对话框：每次选一个目录，转相对路径后去重加入；
 // 取消时不动。需要多个目录可重复点击或用「添加所有子文件夹」。
 async function browse() {
@@ -130,12 +138,14 @@ async function addAllExtensions() {
       />
     </div>
     <div class="browse-row">
+      <button v-if="treeSelect" type="button" class="browse" :disabled="disabled || !basePath" @click="treeOpen = true"><Icon name="folder" /> {{ t('editor.treeSelect') }}</button>
       <button v-if="fileSelect" type="button" class="browse" :disabled="disabled" @click="browseFiles"><Icon name="doc" /> {{ t('editor.browseDiskFiles') }}</button>
       <button v-if="extScan" type="button" class="browse" :disabled="disabled || !basePath" @click="addAllExtensions"><Icon name="doc" /> {{ t('editor.addAllExts') }}</button>
       <button v-if="dirSelect" type="button" class="browse" :disabled="disabled" @click="browse"><Icon name="folder" /> {{ t('editor.browseDisk') }}</button>
       <button v-if="dirSelect" type="button" class="browse" :disabled="disabled || !basePath" @click="addAllSubdirs"><Icon name="folder" /> {{ t('editor.allSubdirs') }}</button>
       <button type="button" class="browse clear" :disabled="disabled || !(modelValue ?? []).length" @click="clearAll"><Icon name="close" :size="10" /> {{ t('editor.clearAll') }}</button>
     </div>
+    <DirTreeDialog :open="treeOpen" :root="basePath ?? ''" @close="treeOpen = false" @pick="addFromTree" />
     <p v-if="error" class="field-error">{{ error }}</p>
   </div>
 </template>

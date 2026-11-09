@@ -113,6 +113,7 @@ redaction:
   },
   common: {
     cancel: '取消',
+    confirm: '确定',
     close: '关闭',
     save: '保存',
     saving: '保存中…',
@@ -325,6 +326,10 @@ redaction:
     clearAll: '清除所有',
     addAllExts: '添加所有扩展名',
     allSubdirs: '添加所有子文件夹',
+    treeSelect: '目录多选',
+    dirTreeTitle: '目录多选',
+    dirTreeHint: '勾选要包含的目录（勾选父目录将包含其整个子树），可多选',
+    dirTreeLoading: '加载中…',
     noSubdirs: '该目录下没有子文件夹：{dir}',
     noExtensions: '未扫描到任何文件扩展名',
     pathChecking: '校验中…',

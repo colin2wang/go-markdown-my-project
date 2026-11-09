@@ -114,6 +114,7 @@ redaction:
   },
   common: {
     cancel: 'Cancel',
+    confirm: 'OK',
     close: 'Close',
     save: 'Save',
     saving: 'Saving…',
@@ -326,6 +327,10 @@ redaction:
     clearAll: 'Clear all',
     addAllExts: 'Add all extensions',
     allSubdirs: 'Add all subfolders',
+    treeSelect: 'Multi-select folders',
+    dirTreeTitle: 'Multi-select folders',
+    dirTreeHint: 'Check folders to include (checking a parent includes its whole subtree), multiple allowed',
+    dirTreeLoading: 'Loading…',
     noSubdirs: 'No subfolders in: {dir}',
     noExtensions: 'No file extensions found',
     pathChecking: 'Checking…',
