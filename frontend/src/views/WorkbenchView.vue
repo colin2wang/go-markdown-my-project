@@ -38,6 +38,8 @@ onMounted(async () => {
   try {
     await projects.open(props.configPath);
     await rescan();
+    // 已配置脱敏的项目进入工作台自动扫描一次，无需手动触发
+    if (projects.current?.redaction?.enabled) scanSensitive();
   } catch (e) {
     loadError.value = String(e);
   }
@@ -87,16 +89,21 @@ function fmtSize(n: number): string {
 const sensitive = ref<{ state: 'none' | 'hit' | 'unscanned'; count: number; hits: SensitiveHit[] }>({
   state: 'unscanned', count: 0, hits: [],
 });
-export interface SensitiveHit { file: string; line: number; rule: string; masked: string }
+export interface SensitiveHit { file: string; line: number; rule: string; masked: string; value?: string }
 const showSensitiveDrawer = ref(false);
 const sensitiveScanning = ref(false);
-const redactEnabled = ref(true);
-const redactPlaceholder = ref('[REDACTED]');
-const redactStrategy = ref('placeholder');
+// 是否脱敏完全由项目配置 redaction.enabled 决定；工作台只负责扫描与展示
+const redactEnabled = computed(() => projects.current?.redaction?.enabled ?? false);
+// 命中抽屉顶部展示的统一替换值；drop_line 策略为空串（表示整行删除）
+const replaceTo = computed(() =>
+  projects.current?.redaction?.strategy === 'drop_line'
+    ? ''
+    : projects.current?.redaction?.placeholder || '[REDACTED]',
+);
 
 async function scanSensitive() {
   if (!projects.current) return;
-  log.info(t('wb.logSensitiveScan', { n: exp.checkedPaths.size, strategy: redactStrategy.value }));
+  log.info(t('wb.logSensitiveScan', { n: exp.checkedPaths.size, strategy: projects.current.redaction?.strategy ?? 'placeholder' }));
   sensitiveScanning.value = true;
   try {
     const hits: SensitiveHit[] = await api.scanSensitive(projects.current, [...exp.checkedPaths]);
@@ -123,17 +130,6 @@ function fillBudget() {
   exp.budgetTokens = Math.max(1000, Math.round((estTokens.value * 0.8) / 1000) * 1000);
 }
 
-// —— 导出前未扫描确认 ——
-const showUnscannedConfirm = ref(false);
-
-function onExportClick() {
-  if (redactEnabled.value && sensitive.value.state === 'unscanned') {
-    showUnscannedConfirm.value = true;
-    return;
-  }
-  doExport();
-}
-
 async function doExport() {
   if (!projects.current) return;
   log.info(t('wb.logExport', {
@@ -143,7 +139,6 @@ async function doExport() {
   }));
   previewData.value = null; // 导出后右栏切换到结果卡片
   exporting.value = true;
-  exp.redact = redactEnabled.value;
   exp.splitTokens = splitEnabled.value ? splitTokens.value : 0;
   try {
     await exp.run(projects.current);
@@ -162,7 +157,6 @@ const previewData = ref<PreviewResult | null>(null);
 async function doPreview() {
   if (!projects.current) return;
   previewing.value = true;
-  exp.redact = redactEnabled.value;
   exp.result = null; // 预览优先于旧导出结果卡片（与 doExport 清 previewData 对称）
   try {
     previewData.value = await exp.preview(projects.current);
@@ -253,20 +247,7 @@ async function copyResult() {
         </template>
 
         <h3>{{ t('wb.redaction') }}</h3>
-        <label class="inline">
-          <input v-model="redactEnabled" type="checkbox" />
-          {{ t('wb.redactEnable') }}
-        </label>
         <template v-if="redactEnabled">
-          <label class="block">{{ t('wb.strategy') }}:
-            <select v-model="redactStrategy">
-              <option value="placeholder">{{ t('wb.strategyPlaceholder') }}</option>
-              <option value="drop_line">{{ t('wb.strategyDropLine') }}</option>
-            </select>
-          </label>
-          <label class="block">{{ t('wb.replaceWith') }}:
-            <input v-model="redactPlaceholder" :disabled="redactStrategy === 'drop_line'" />
-          </label>
           <button :disabled="sensitiveScanning" @click="scanSensitive">
             {{ sensitiveScanning ? t('common.scanning') : t('wb.scanSensitive') }}
           </button>
@@ -279,6 +260,7 @@ async function copyResult() {
             <template v-else>{{ t('wb.unscanned') }}</template>
           </div>
         </template>
+        <p v-else class="muted">{{ t('wb.redactDisabledHint') }}</p>
 
         <h3>{{ t('wb.tokenSaving') }}</h3>
         <label class="inline">
@@ -365,27 +347,16 @@ async function copyResult() {
       </span>
       <span class="status-right">
         <button :disabled="exporting || previewing" @click="doPreview">{{ previewing ? t('wb.previewing') : t('wb.previewBtn') }}</button>
-        <button class="primary" :disabled="exporting" @click="onExportClick">{{ t('wb.exportBtn') }}</button>
+        <button class="primary" :disabled="exporting" @click="doExport">{{ t('wb.exportBtn') }}</button>
       </span>
     </footer>
 
     <SensitiveDrawer
       v-if="showSensitiveDrawer"
       :hits="sensitive.hits"
+      :replace-to="replaceTo"
       @close="showSensitiveDrawer = false"
     />
-
-    <div v-if="showUnscannedConfirm" class="modal" @click.self="showUnscannedConfirm = false">
-      <div class="modal-body">
-        <h3>{{ t('wb.unscannedTitle') }}</h3>
-        <p>{{ t('wb.unscannedBody') }}</p>
-        <div class="actions">
-          <button class="primary" @click="showUnscannedConfirm = false; scanSensitive()">{{ t('wb.scanAndContinue') }}</button>
-          <button @click="showUnscannedConfirm = false; doExport()">{{ t('wb.directExport') }}</button>
-          <button @click="showUnscannedConfirm = false">{{ t('common.cancel') }}</button>
-        </div>
-      </div>
-    </div>
   </main>
 </template>
 

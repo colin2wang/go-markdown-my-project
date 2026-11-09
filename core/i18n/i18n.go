@@ -184,6 +184,11 @@ var dicts = map[string]map[Locale]string{
 		EnUS: "Invalid regex: {err}",
 		JaJP: "正規表現が無効: {err}",
 	},
+	"val.ruleProfileInvalid": {
+		ZhCN: "规则模板无效（应为 strict / standard / relaxed）: {val}",
+		EnUS: "Invalid rule profile (must be strict / standard / relaxed): {val}",
+		JaJP: "ルールテンプレートが無効（strict / standard / relaxed のいずれか）: {val}",
+	},
 	"log.suggest": {
 		ZhCN: "自动分析项目结构",
 		EnUS: "Analyzing project structure",

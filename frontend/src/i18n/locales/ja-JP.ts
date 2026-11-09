@@ -107,6 +107,8 @@ redaction:
   placeholder: '[REDACTED]'
   # 方針：placeholder（置換）/ drop_line（行ごと削除）
   strategy: placeholder
+  # ルールテンプレート：strict / standard（デフォルト）/ relaxed（高確信キーのみ）
+  rule_profile: standard
   # カスタム正規表現ルール（RE2）
   custom_patterns: []
   # 放行リスト、形式：相対パス:行:ルール名
@@ -203,11 +205,8 @@ redaction:
     lineNumbers: '行番号を表示',
     sigLen: 'シグネチャの切り詰め長',
     redaction: '機密情報フィルタ',
-    redactEnable: 'エクスポート時にパスワード/キーを除去',
-    strategy: '方針',
+    redactDisabledHint: '機密フィルタは無効です（プロジェクト設定の「機密」で有効化）',
     strategyPlaceholder: 'プレースホルダに置換',
-    strategyDropLine: '行ごと削除',
-    replaceWith: '置換後',
     scanSensitive: '機密情報をスキャン',
     noHit: '機密情報は見つかりませんでした',
     hits: '{n} 件検出',
@@ -242,10 +241,6 @@ redaction:
     statusExporting: '⏳ エクスポート中…',
     statusReady: '● 準備完了',
     statusStats: '{count} ファイル · {size} · ≈{tokens} トークン',
-    unscannedTitle: '機密情報を未スキャン',
-    unscannedBody: '機密フィルタが有効ですが、まだスキャンしていません。先にスキャンすることを推奨します。',
-    scanAndContinue: 'スキャンして続行',
-    directExport: 'そのままエクスポート',
     redactOn: '有効',
     redactOff: '無効',
     logScan: 'プロジェクトをスキャン：{name}',
@@ -271,7 +266,10 @@ redaction:
   },
   sensitive: {
     title: '機密情報の検出 ({n})',
-    tip: 'マスク済みプレビューのみ表示し、平文をディスクに書き込みません。エクスポート時は方針に従って置換します。',
+    replaceTo: 'エクスポート時の統一置換値：{to}',
+    dropLine: 'エクスポート時に行ごと削除されます',
+    lineDropped: '（行ごと削除されます）',
+    tip: '検出結果は原文を表示します（メモリ内表示のみ。ディスクに書き込まずログにも記録しません）。エクスポート時は方針に従って置換します。',
     none: '検出なし',
     ok: '了解',
   },
@@ -317,6 +315,10 @@ redaction:
     splitTokens: 'トークン分割',
     splitHint: '（0 = 分割しない）',
     redactEnable: 'エクスポート時にパスワード/キーを除去',
+    ruleProfile: 'ルールテンプレート',
+    profileStrict: '厳格（全ルール）',
+    profileStandard: '標準（デフォルト）',
+    profileRelaxed: '緩い（高確信キーのみ）',
     strategy: '方針',
     replaceWith: '置換後',
     customPatterns: 'カスタム正規表現ルール',

@@ -3,7 +3,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { api } from '../../api/bindings';
+import { useI18n } from '../../i18n';
 import Icon from '../ui/Icon.vue';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   node: DirNode;
@@ -28,7 +31,9 @@ async function toggleExpand() {
       const subs = await api.listSubdirs(props.node.path);
       props.node.children = subs.map((p) => ({
         name: p.replace(/[\\/]+$/, '').split(/[\\/]/).pop() ?? p,
-        path: p, loaded: false, expanded: false, children: [],
+        // 统一正斜杠：与对话框预勾选路径保持一致，避免 Set 匹配不上
+        path: p.replace(/\\/g, '/').replace(/\/+$/, ''),
+        loaded: false, expanded: false, children: [],
       }));
       props.node.loaded = true;
     } finally {
@@ -83,6 +88,10 @@ function toggleCheck(on: boolean) {
       />
       <span class="name">{{ node.name }}</span>
     </div>
+    <!-- 展开但子目录尚未加载完成时，在原位显示加载提示，不卸载整棵树 -->
+    <div v-if="node.expanded && loading" class="child-loading" :style="{ paddingLeft: (depth + 1) * 16 + 2 + 'px' }">
+      {{ t('editor.dirTreeLoading') }}
+    </div>
     <div v-if="node.expanded && node.loaded" class="children">
       <DirTreeNode
         v-for="child in node.children"
@@ -119,4 +128,5 @@ export default defineComponent({ name: 'DirTreeNode' });
 .arrow.open { transform: none; }
 .arrow:disabled { opacity: .4; cursor: default; }
 .name { font-size: 12.5px; color: var(--fg-1); font-family: ui-monospace, Consolas, monospace; user-select: none; }
+.child-loading { font-size: 12px; color: var(--fg-3); padding: 2px 0; }
 </style>

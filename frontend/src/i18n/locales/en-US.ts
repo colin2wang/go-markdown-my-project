@@ -107,6 +107,8 @@ redaction:
   placeholder: '[REDACTED]'
   # Strategy: placeholder (replace) / drop_line (drop the whole line)
   strategy: placeholder
+  # Rule profile: strict / standard (default) / relaxed (high-confidence keys only)
+  rule_profile: standard
   # Custom regex rules (RE2)
   custom_patterns: []
   # Allowlist, format: relative path:line:rule name
@@ -203,11 +205,8 @@ redaction:
     lineNumbers: 'Show line numbers',
     sigLen: 'Signature truncation length',
     redaction: 'Sensitive data filter',
-    redactEnable: 'Remove passwords/keys when exporting',
-    strategy: 'Strategy',
+    redactDisabledHint: 'Sensitive filter is off (enable it in project config → Sensitive)',
     strategyPlaceholder: 'Replace with placeholder',
-    strategyDropLine: 'Drop the whole line',
-    replaceWith: 'Replace with',
     scanSensitive: 'Scan for sensitive data',
     noHit: 'No sensitive data found',
     hits: '{n} hit(s) found',
@@ -242,10 +241,6 @@ redaction:
     statusExporting: '⏳ Exporting…',
     statusReady: '● Ready',
     statusStats: '{count} files · {size} · ≈{tokens} tokens',
-    unscannedTitle: 'Sensitive data not scanned yet',
-    unscannedBody: 'The sensitive filter is on but you have not scanned yet; scanning first is recommended.',
-    scanAndContinue: 'Scan and continue',
-    directExport: 'Export directly',
     redactOn: 'on',
     redactOff: 'off',
     logScan: 'Scanning project: {name}',
@@ -271,7 +266,10 @@ redaction:
   },
   sensitive: {
     title: 'Sensitive hits ({n})',
-    tip: 'Only masked previews are shown; plaintext is never written to disk. Export replaces them per strategy.',
+    replaceTo: 'Unified replacement on export: {to}',
+    dropLine: 'The whole line is dropped on export',
+    lineDropped: '(the whole line will be dropped)',
+    tip: 'Hits show the original text (in-memory display only; never written to disk or logged). Export replaces them per strategy.',
     none: 'No hits',
     ok: 'Got it',
   },
@@ -317,6 +315,10 @@ redaction:
     splitTokens: 'Token split',
     splitHint: '(0 = no split)',
     redactEnable: 'Remove passwords/keys when exporting',
+    ruleProfile: 'Rule profile',
+    profileStrict: 'Strict (all rules)',
+    profileStandard: 'Standard (default)',
+    profileRelaxed: 'Relaxed (high-confidence keys only)',
     strategy: 'Strategy',
     replaceWith: 'Replace with',
     customPatterns: 'Custom regex rules',

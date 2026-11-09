@@ -34,7 +34,7 @@ cd frontend && pnpm dev    # 纯前端开发
 
 - **黄金快照回归**：`core/generator/generator_test.go` 用 `testdata/golden.md` 锁死 `full` 模式输出；另一测试与旧版 `Example.md` 做结构对比（CRLF 归一化、容忍快照后新增的文件）。改动生成逻辑导致快照失败时，先确认是预期变更再 `-update`。
 - **byte-equal 优先级**：`full` 模式输出须与旧 Rust 版逐字节一致——文件标题路径用**原生分隔符**（`relPathNative`），树形字符 `├── └── │` 与缩进逐字符对齐，勿"顺手改成 /"。
-- **敏感信息最高原则**：redactor 采用两阶段（扫描报告→确认→导出替换），日志只记数量与规则名，**绝不落盘明文**；`allowlist` key 格式为 `相对路径:行号:规则名`。
+- **敏感信息最高原则**：redactor 采用两阶段（扫描报告→确认→导出替换），日志只记数量与规则名，**绝不落盘明文**；`allowlist` key 格式为 `相对路径:行号:规则名`。命中抽屉（SensitiveDrawer）显示原始明文与统一替换值，属用户明确要求的内存内展示——明文仅经 `SensitiveHit.Value` 传给前端抽屉，不写盘、不进日志。规则定义唯一入口在项目配置「敏感」页（enabled / strategy / placeholder / `rule_profile` / custom_patterns / allowlist），`rule_profile` 取值 `strict | standard | relaxed`（空 = standard；relaxed 剔除 generic-password-assign / connection-string / htpasswd-like 三条易误报规则，筛选在 `core/redactor` 的 `allRules`）；是否脱敏由 `cfg.Redaction.Enabled` 决定（`ExportOptions` 已无 `Redact` 字段），`ScanSensitive` 与导出共用 `redactorConfig(cfg.Redaction)`，保证扫描报告与导出规则集一致。工作台只保留扫描按钮 + 命中展示（enabled 项目进入工作台自动扫描一次），不再提供开关/策略/占位符控件，也没有"未扫描"导出确认弹窗；新建项目默认 `enabled: true` + `standard`。
 - **pnpm 12**：构建脚本白名单在 `frontend/pnpm-workspace.yaml` 的 `allowBuilds`（package.json 里旧 `pnpm` 字段已失效）；build.ps1 用 ASCII 输出，PowerShell 5.1 下非 BOM 中文会解析失败。
 - **路径约定**：落盘/展示用 `/` 相对路径；仅 `full` 模式的文件标题保留原生分隔符（见上）。
 - **正则限制**：所有规则用 RE2（Go `regexp`），不支持反向引用；symbol 提取器为逐行正则（允许漏报），Go 方法规则靠 `nameGroup: 2` 取名。

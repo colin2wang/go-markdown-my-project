@@ -106,6 +106,8 @@ redaction:
   placeholder: '[REDACTED]'
   # 策略：placeholder（占位符替换）/ drop_line（删除整行）
   strategy: placeholder
+  # 规则模板：strict（严格）/ standard（标准，默认）/ relaxed（宽松，仅高置信密钥）
+  rule_profile: standard
   # 自定义正则规则（RE2）
   custom_patterns: []
   # 放行清单，格式：相对路径:行号:规则名
@@ -202,11 +204,8 @@ redaction:
     lineNumbers: '显示行号',
     sigLen: '签名截断长度',
     redaction: '敏感信息过滤',
-    redactEnable: '导出时自动剔除密码/密钥',
-    strategy: '策略',
+    redactDisabledHint: '敏感过滤未启用（在项目配置「敏感」页开启）',
     strategyPlaceholder: '占位符替换',
-    strategyDropLine: '删除所在行',
-    replaceWith: '替换为',
     scanSensitive: '扫描敏感信息',
     noHit: '未发现敏感信息',
     hits: '发现 {n} 处',
@@ -241,10 +240,6 @@ redaction:
     statusExporting: '⏳ 正在导出…',
     statusReady: '● 就绪',
     statusStats: '{count} 文件 · {size} · ≈{tokens} tokens',
-    unscannedTitle: '尚未扫描敏感信息',
-    unscannedBody: '已开启敏感过滤但还未扫描，建议先扫描确认命中情况。',
-    scanAndContinue: '扫描并继续',
-    directExport: '直接导出',
     redactOn: '开',
     redactOff: '关',
     logScan: '扫描项目：{name}',
@@ -270,7 +265,10 @@ redaction:
   },
   sensitive: {
     title: '敏感信息命中 ({n})',
-    tip: '命中仅显示掩码预览，绝不落盘明文。导出时按策略替换。',
+    replaceTo: '导出时统一替换为：{to}',
+    dropLine: '导出时统一删除命中所在行',
+    lineDropped: '（所在行将被删除）',
+    tip: '命中显示原始明文（仅内存展示，不落盘、不进日志）。导出时按策略替换。',
     none: '无命中',
     ok: '知道了',
   },
@@ -316,6 +314,10 @@ redaction:
     splitTokens: 'Token 分片',
     splitHint: '（0 = 不分片）',
     redactEnable: '导出时剔除密码/密钥',
+    ruleProfile: '规则模板',
+    profileStrict: '严格（全部规则）',
+    profileStandard: '标准（默认）',
+    profileRelaxed: '宽松（仅高置信密钥）',
     strategy: '策略',
     replaceWith: '替换为',
     customPatterns: '自定义正则规则',

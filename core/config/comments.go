@@ -45,11 +45,14 @@ func strSeq(items []string) *yaml.Node {
 	return seq
 }
 
-// redactionDefault 判断敏感过滤配置是否全部为默认值（默认值则整个节省略）。
+// redactionDefault 判断是否可整体省略 redaction 块：
+// 仅当未开启且无任何自定义配置时省略；开启时始终输出（含默认档位，
+// 让 YAML 明示 rule_profile，编辑器回显与落盘一致）。
 func redactionDefault(r RedactionConfig) bool {
-	return r.Enabled &&
+	return !r.Enabled &&
 		(r.Strategy == "" || r.Strategy == "placeholder") &&
 		(r.Placeholder == "" || r.Placeholder == defaultPlaceholder) &&
+		(r.RuleProfile == "" || r.RuleProfile == "standard") &&
 		len(r.CustomPatterns) == 0 && len(r.Allowlist) == 0
 }
 
@@ -120,6 +123,9 @@ func SerializeWithComments(c *ProjectConfig) (string, error) {
 		}
 		if c.Redaction.Strategy != "" && c.Redaction.Strategy != "placeholder" {
 			rp("strategy", strNode(false, c.Redaction.Strategy))
+		}
+		if c.Redaction.RuleProfile != "" {
+			rp("rule_profile", strNode(false, c.Redaction.RuleProfile))
 		}
 		if len(c.Redaction.CustomPatterns) > 0 {
 			rp("custom_patterns", strSeq(c.Redaction.CustomPatterns))

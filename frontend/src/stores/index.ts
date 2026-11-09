@@ -42,7 +42,6 @@ export const useExportStore = defineStore('export', () => {
   const files = ref<FileInfo[]>([]);
   const checkedPaths = ref<Set<string>>(new Set());
   const mode = ref<string>('full');
-  const redact = ref(true);
   const splitTokens = ref(0);
   const compress = ref(false); // 空白精简输出
   const includeLineNumbers = ref(true);
@@ -63,7 +62,6 @@ export const useExportStore = defineStore('export', () => {
   function buildOptions(): ExportOptions {
     return {
       mode: mode.value,
-      redact: redact.value,
       splitTokens: splitTokens.value,
       compress: compress.value,
       fileOverrides: [...checkedPaths.value],
@@ -88,7 +86,7 @@ export const useExportStore = defineStore('export', () => {
   }
 
   return {
-    files, checkedPaths, mode, redact, splitTokens, compress,
+    files, checkedPaths, mode, splitTokens, compress,
     includeLineNumbers, maxSignatureLen,
     budgetTokens, stripComments, keepMarkedComments, maxLineLen, smartFullTokens,
     result, scan, run, preview,

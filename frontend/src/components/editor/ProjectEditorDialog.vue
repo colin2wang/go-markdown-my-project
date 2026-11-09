@@ -254,6 +254,13 @@ function onCancel() {
                 {{ t('editor.redactEnable') }}
               </label>
               <template v-if="ed.draft.redaction?.enabled">
+                <label class="inline">{{ t('editor.ruleProfile') }}
+                  <select v-model="ed.draft!.redaction!.rule_profile">
+                    <option value="strict">{{ t('editor.profileStrict') }}</option>
+                    <option value="standard">{{ t('editor.profileStandard') }}</option>
+                    <option value="relaxed">{{ t('editor.profileRelaxed') }}</option>
+                  </select>
+                </label>
                 <label class="inline">{{ t('editor.strategy') }}
                   <select v-model="ed.draft!.redaction!.strategy">
                     <option value="placeholder">{{ t('wb.strategyPlaceholder') }}</option>

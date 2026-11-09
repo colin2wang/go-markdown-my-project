@@ -145,7 +145,7 @@ async function addAllExtensions() {
       <button v-if="dirSelect" type="button" class="browse" :disabled="disabled || !basePath" @click="addAllSubdirs"><Icon name="folder" /> {{ t('editor.allSubdirs') }}</button>
       <button type="button" class="browse clear" :disabled="disabled || !(modelValue ?? []).length" @click="clearAll"><Icon name="close" :size="10" /> {{ t('editor.clearAll') }}</button>
     </div>
-    <DirTreeDialog :open="treeOpen" :root="basePath ?? ''" @close="treeOpen = false" @pick="addFromTree" />
+    <DirTreeDialog :open="treeOpen" :root="basePath ?? ''" :initial-selected="modelValue ?? []" @close="treeOpen = false" @pick="addFromTree" />
     <p v-if="error" class="field-error">{{ error }}</p>
   </div>
 </template>

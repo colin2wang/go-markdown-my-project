@@ -16,7 +16,6 @@ export namespace app {
 	}
 	export class ExportOptions {
 	    mode: string;
-	    redact: boolean;
 	    splitTokens: number;
 	    compress: boolean;
 	    fileOverrides: string[];
@@ -35,7 +34,6 @@ export namespace app {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.mode = source["mode"];
-	        this.redact = source["redact"];
 	        this.splitTokens = source["splitTokens"];
 	        this.compress = source["compress"];
 	        this.fileOverrides = source["fileOverrides"];
@@ -179,6 +177,7 @@ export namespace app {
 	    line: number;
 	    rule: string;
 	    masked: string;
+	    value?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SensitiveHit(source);
@@ -190,6 +189,7 @@ export namespace app {
 	        this.line = source["line"];
 	        this.rule = source["rule"];
 	        this.masked = source["masked"];
+	        this.value = source["value"];
 	    }
 	}
 	export class SuggestResult {
@@ -247,6 +247,7 @@ export namespace config {
 	    enabled: boolean;
 	    placeholder?: string;
 	    strategy?: string;
+	    rule_profile?: string;
 	    allowlist?: string[];
 	    custom_patterns?: string[];
 	
@@ -259,6 +260,7 @@ export namespace config {
 	        this.enabled = source["enabled"];
 	        this.placeholder = source["placeholder"];
 	        this.strategy = source["strategy"];
+	        this.rule_profile = source["rule_profile"];
 	        this.allowlist = source["allowlist"];
 	        this.custom_patterns = source["custom_patterns"];
 	    }

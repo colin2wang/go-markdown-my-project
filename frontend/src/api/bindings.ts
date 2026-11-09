@@ -19,6 +19,8 @@ export interface ProjectConfig {
     enabled: boolean;
     placeholder?: string;
     strategy?: string;
+    /** 规则模板档位：strict | standard | relaxed，省略 = standard */
+    rule_profile?: string;
     allowlist?: string[];
     custom_patterns?: string[];
   };
@@ -57,7 +59,6 @@ export interface ProjectSummary {
 
 export interface ExportOptions {
   mode: string;
-  redact: boolean;
   splitTokens: number;
   /** 精简空白输出（裁剪行尾空白、折叠空行，保持语法） */
   compress?: boolean;
@@ -99,6 +100,8 @@ export interface SensitiveHit {
   line: number;
   rule: string;
   masked: string;
+  /** 命中原文，仅供命中抽屉内存展示，不落盘、不进日志 */
+  value?: string;
 }
 
 export interface FieldError {

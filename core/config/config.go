@@ -19,6 +19,7 @@ type RedactionConfig struct {
 	Enabled        bool     `yaml:"enabled" json:"enabled"`
 	Placeholder    string   `yaml:"placeholder,omitempty" json:"placeholder,omitempty"`
 	Strategy       string   `yaml:"strategy,omitempty" json:"strategy,omitempty"`   // placeholder | drop_line
+	RuleProfile    string   `yaml:"rule_profile,omitempty" json:"rule_profile,omitempty"` // strict | standard | relaxed，空 = standard
 	Allowlist      []string `yaml:"allowlist,omitempty" json:"allowlist,omitempty"` // key = 相对路径:行号:规则名
 	CustomPatterns []string `yaml:"custom_patterns,omitempty" json:"custom_patterns,omitempty"`
 }

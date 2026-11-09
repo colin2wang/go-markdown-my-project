@@ -21,7 +21,7 @@ export function emptyConfig(): ProjectConfig {
     max_file_size: 0,
     export_mode: 'full',
     split_tokens: 0,
-    redaction: { enabled: true, strategy: 'placeholder', placeholder: '[REDACTED]', custom_patterns: [] },
+    redaction: { enabled: true, strategy: 'placeholder', placeholder: '[REDACTED]', rule_profile: 'standard', custom_patterns: [] },
   };
 }
 
@@ -150,6 +150,10 @@ export const useProjectEditor = defineStore('projectEditor', () => {
     if (copy.redaction) {
       copy.redaction.custom_patterns ??= [];
       copy.redaction.allowlist ??= [];
+      // 下拉框等控件不留空白：省略的字段回填默认值
+      copy.redaction.rule_profile ??= 'standard';
+      copy.redaction.strategy ??= 'placeholder';
+      copy.redaction.placeholder ??= '[REDACTED]';
     }
     return copy;
   }

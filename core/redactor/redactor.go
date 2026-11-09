@@ -52,20 +52,49 @@ type Finding struct {
 	Kind   string `json:"kind"`
 	Rule   string `json:"rule"`
 	Masked string `json:"masked"` // 掩码预览
+	// Value 命中原文（仅供 GUI 命中抽屉内存展示，不落盘、不进日志）。
+	Value string `json:"value,omitempty"`
 }
 
 // Config 替换配置。
 type Config struct {
 	Placeholder string // 默认 [REDACTED]
 	Strategy    string // placeholder | drop_line
-	Allowlist   map[string]bool
+	// Profile 规则模板档位：strict | standard | relaxed，空值 = standard。
+	// relaxed 仅保留高置信规则，去掉易误报的 generic/连接串/htpasswd 三条。
+	Profile   string
+	Allowlist map[string]bool
 	// CustomPatterns 用户自定义正则（RE2），全部按 Kind=password 处理
 	CustomPatterns []*regexp.Regexp
 }
 
+// 规则模板档位。
+const (
+	ProfileStrict   = "strict"
+	ProfileStandard = "standard"
+	ProfileRelaxed  = "relaxed"
+)
+
+// relaxedRules relaxed 档剔除的低置信规则名（易误报）。
+var relaxedRules = map[string]bool{
+	"generic-password-assign": true,
+	"connection-string":       true,
+	"htpasswd-like":           true,
+}
+
+// normalizeProfile 规整档位：未知/空值回退 standard。
+func normalizeProfile(p string) string {
+	switch p {
+	case ProfileStrict, ProfileRelaxed:
+		return p
+	default:
+		return ProfileStandard
+	}
+}
+
 // DefaultConfig 默认配置。
 func DefaultConfig() Config {
-	return Config{Placeholder: "[REDACTED]", Strategy: "placeholder"}
+	return Config{Placeholder: "[REDACTED]", Strategy: "placeholder", Profile: ProfileStandard}
 }
 
 // falsePositives 误报抑制：值包含这些子串则忽略。
@@ -113,7 +142,7 @@ func ScanContent(file, content string, cfg Config) []Finding {
 			if r.whole {
 				masked = Masked("-----BEGIN PRIVATE KEY-----")
 			}
-			findings = append(findings, Finding{File: file, Line: line, Kind: r.kind, Rule: r.name, Masked: masked})
+			findings = append(findings, Finding{File: file, Line: line, Kind: r.kind, Rule: r.name, Masked: masked, Value: value})
 		}
 	}
 	return findings
@@ -191,8 +220,14 @@ func RedactContent(file, content string, cfg Config) (string, int) {
 }
 
 func allRules(cfg Config) []rule {
+	profile := normalizeProfile(cfg.Profile)
 	rules := make([]rule, 0, len(builtinRules)+len(cfg.CustomPatterns))
-	rules = append(rules, builtinRules...)
+	for _, r := range builtinRules {
+		if profile == ProfileRelaxed && relaxedRules[r.name] {
+			continue
+		}
+		rules = append(rules, r)
+	}
 	for _, p := range cfg.CustomPatterns {
 		rules = append(rules, rule{name: "custom", kind: KindPassword, re: p})
 	}

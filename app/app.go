@@ -46,7 +46,6 @@ type ProjectSummary struct {
 // ExportOptions 导出选项（对齐设计文档 §5.2/§9）。
 type ExportOptions struct {
 	Mode          string   `json:"mode"`
-	Redact        bool     `json:"redact"`
 	SplitTokens   int      `json:"splitTokens"`
 	Compress      bool     `json:"compress"`      // 空白精简输出（裁行尾空白、折叠空行，保持语法）
 	FileOverrides []string `json:"fileOverrides"` // GUI 勾选覆盖配置（相对路径）
@@ -227,6 +226,10 @@ func (a *App) ValidateConfig(cfg config.ProjectConfig) []FieldError {
 			break
 		}
 	}
+	if rp := cfg.Redaction.RuleProfile; rp != "" &&
+		rp != "strict" && rp != "standard" && rp != "relaxed" {
+		add("rule_profile", i18n.T("val.ruleProfileInvalid", "val", rp))
+	}
 	for _, p := range cfg.Redaction.CustomPatterns {
 		if _, err := regexp.Compile(p); err != nil {
 			add("custom_patterns", i18n.T("val.regexInvalid", "err", err.Error()))
@@ -342,12 +345,13 @@ func (a *App) DeleteProject(configPath string) error {
 	return removeFile(configPath)
 }
 
-// SensitiveHit 敏感信息命中（掩码预览，绝不落盘明文）。
+// SensitiveHit 敏感信息命中（Value 原文仅供命中抽屉内存展示，不落盘、不进日志）。
 type SensitiveHit struct {
 	File   string `json:"file"`
 	Line   int    `json:"line"`
 	Rule   string `json:"rule"`
 	Masked string `json:"masked"`
+	Value  string `json:"value,omitempty"`
 }
 
 // ScanSensitive 扫描勾选文件的敏感信息（F99），返回掩码后的命中列表。
@@ -357,7 +361,7 @@ func (a *App) ScanSensitive(cfg config.ProjectConfig, fileOverrides []string) ([
 	if err != nil {
 		return nil, err
 	}
-	rcfg := redactor.DefaultConfig()
+	rcfg := redactorConfig(cfg.Redaction)
 	out := make([]SensitiveHit, 0)
 	for _, r := range results {
 		rel, err := filepath.Rel(cfg.ProjectPath, r.FullPath)
@@ -365,7 +369,7 @@ func (a *App) ScanSensitive(cfg config.ProjectConfig, fileOverrides []string) ([
 			rel = r.FullPath
 		}
 		for _, f := range redactor.ScanContent(filepath.ToSlash(rel), r.Content, rcfg) {
-			out = append(out, SensitiveHit{File: f.File, Line: f.Line, Rule: f.Rule, Masked: f.Masked})
+			out = append(out, SensitiveHit{File: f.File, Line: f.Line, Rule: f.Rule, Masked: f.Masked, Value: f.Value})
 		}
 	}
 	return out, nil
@@ -470,9 +474,9 @@ func prepareExport(cfg config.ProjectConfig, opt ExportOptions) (exportPlan, err
 	}
 	scanner.SortByRelPath(results)
 
-	// 敏感信息替换（F99 两阶段第二阶段）：前端已确认报告，导出时替换；
+	// 敏感信息替换（F99 两阶段第二阶段）：是否脱敏由项目配置决定；
 	// 日志只记数量与规则名，绝不落盘明文。
-	if opt.Redact {
+	if cfg.Redaction.Enabled {
 		rcfg := redactorConfig(cfg.Redaction)
 		total := 0
 		for i := range results {
@@ -557,6 +561,7 @@ func redactorConfig(rc config.RedactionConfig) redactor.Config {
 	if rc.Strategy != "" {
 		cfg.Strategy = rc.Strategy
 	}
+	cfg.Profile = rc.RuleProfile
 	if len(rc.Allowlist) > 0 {
 		m := make(map[string]bool, len(rc.Allowlist))
 		for _, k := range rc.Allowlist {

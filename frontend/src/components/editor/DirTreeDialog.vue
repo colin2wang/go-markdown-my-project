@@ -8,36 +8,54 @@ import DirTreeNode, { type DirNode } from './DirTreeNode.vue';
 
 const { t } = useI18n();
 
-const props = defineProps<{ open: boolean; root: string }>();
+const props = defineProps<{
+  open: boolean;
+  root: string;
+  /** 打开时预勾选的目录（TagListInput 的当前值，相对 basePath 的路径或绝对路径） */
+  initialSelected?: string[];
+}>();
 const emit = defineEmits<{ (e: 'close'): void; (e: 'pick', paths: string[]): void }>();
 
 const rootNode = ref<DirNode | null>(null);
 const selected = ref(new Set<string>());
-const loading = ref(false);
+const rootLoading = ref(false); // 首次构建树根的加载态
+const busy = ref(false);        // 任一节点懒加载子目录中（仅禁用勾选，不拆树）
 
-// 每次打开重建树根并自动加载根目录的子目录；加载完成前禁止选择
+// 把标签值（相对路径或绝对路径）换算成树中的绝对路径用于预勾选。
+// 树节点路径统一为正斜杠（listSubdirs 原始返回为反斜杠），这里保持一致才能命中 Set。
+function toAbs(rel: string): string {
+  const norm = rel.replace(/\\/g, '/');
+  if (/^[a-zA-Z]:/.test(norm) || norm.startsWith('/')) return norm.replace(/\/+$/, '');
+  if (!props.root) return norm;
+  const base = props.root.replace(/\\/g, '/').replace(/\/+$/, '');
+  return `${base}/${norm}`;
+}
+
+// 每次打开重建树根、按当前标签回填勾选，并自动加载根目录的子目录
 watch(
   () => props.open,
   (open) => {
     if (!open || !props.root) return;
     const name = props.root.replace(/[\\/]+$/, '').split(/[\\/]/).pop() ?? props.root;
     rootNode.value = { name, path: props.root, loaded: false, expanded: true, children: [] };
-    selected.value = new Set();
+    selected.value = new Set((props.initialSelected ?? []).map(toAbs));
     void loadRoot();
   },
 );
 
 async function loadRoot() {
-  loading.value = true;
+  rootLoading.value = true;
   const subs = await api.listSubdirs(props.root);
   if (rootNode.value) {
     rootNode.value.children = subs.map((p) => ({
       name: p.replace(/[\\/]+$/, '').split(/[\\/]/).pop() ?? p,
-      path: p, loaded: false, expanded: false, children: [],
+      // 统一正斜杠：与 toAbs 生成的预勾选路径、确认后 addFromTree 的换算一致
+      path: p.replace(/\\/g, '/').replace(/\/+$/, ''),
+      loaded: false, expanded: false, children: [],
     }));
     rootNode.value.loaded = true;
   }
-  loading.value = false;
+  rootLoading.value = false;
 }
 
 function confirm() {
@@ -53,19 +71,19 @@ function confirm() {
       <h3>{{ t('editor.dirTreeTitle') }}</h3>
       <p class="hint">{{ t('editor.dirTreeHint') }}</p>
       <div class="tree">
-        <p v-if="loading" class="loading">{{ t('editor.dirTreeLoading') }}</p>
+        <p v-if="rootLoading" class="loading">{{ t('editor.dirTreeLoading') }}</p>
         <DirTreeNode
-          v-else
+          v-else-if="rootNode"
           :node="rootNode"
           :selected="selected"
           :depth="0"
           @update:selected="selected = $event"
-          @busy="loading = $event"
+          @busy="busy = $event"
         />
       </div>
       <div class="actions">
         <button @click="emit('close')">{{ t('common.cancel') }}</button>
-        <button class="primary" :disabled="loading || !selected.size" @click="confirm">{{ t('common.confirm') }}</button>
+        <button class="primary" :disabled="busy || !selected.size" @click="confirm">{{ t('common.confirm') }}</button>
       </div>
     </div>
   </div>
