@@ -752,6 +752,20 @@ func (a *App) SelectDirectory(startDir string) (string, error) {
 	return runtime.OpenDirectoryDialog(a.ctx, opts)
 }
 
+// SelectFiles 弹出系统文件选择对话框（可多选），返回所选文件路径列表；取消返回空列表。
+// startDir 为初始打开目录（可为空；不存在或非目录时忽略）。
+func (a *App) SelectFiles(startDir string) ([]string, error) {
+	opts := runtime.OpenDialogOptions{Title: "选择文件"}
+	if startDir != "" {
+		if abs, err := filepath.Abs(startDir); err == nil {
+			if info, err := os.Stat(abs); err == nil && info.IsDir() {
+				opts.DefaultDirectory = abs
+			}
+		}
+	}
+	return runtime.OpenMultipleFilesDialog(a.ctx, opts)
+}
+
 // ListFileExtensions 扫描项目下所有文件的扩展名（含点前缀，小写，去重排序）。
 // dirs 为包含目录列表（相对 projectPath，/ 分隔）；为空时扫描整个项目目录。
 func (a *App) ListFileExtensions(projectPath string, dirs []string) ([]string, error) {

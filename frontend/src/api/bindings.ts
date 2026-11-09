@@ -172,6 +172,10 @@ export const api = {
   async selectDirectory(startDir = ''): Promise<string> {
     return (await go()?.SelectDirectory(startDir)) ?? '';
   },
+  // 多选文件对话框，startDir 为默认打开目录；取消返回空数组
+  async selectFiles(startDir = ''): Promise<string[]> {
+    return (await go()?.SelectFiles(startDir)) ?? [];
+  },
   // 扫描项目（或包含目录）下所有文件扩展名（含点前缀，如 ".java"）
   async listFileExtensions(projectPath: string, dirs: string[]): Promise<string[]> {
     return (await go()?.ListFileExtensions(projectPath, dirs)) ?? [];

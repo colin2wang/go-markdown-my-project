@@ -321,6 +321,8 @@ redaction:
     strategyDropLine: '删除整行',
     exportModeCustom: '自定义模板',
     browseDisk: '从磁盘选…',
+    browseDiskFiles: '从磁盘选文件…',
+    clearAll: '清除所有',
     addAllExts: '添加所有扩展名',
     allSubdirs: '添加所有子文件夹',
     noSubdirs: '该目录下没有子文件夹：{dir}',

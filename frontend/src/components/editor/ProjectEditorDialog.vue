@@ -188,7 +188,7 @@ function onCancel() {
 
             <EditorSection id="sec-scope" icon="search" :title="t('editor.sectionScope')" :hint="t('editor.hintScope')">
               <label class="plain">{{ t('editor.includeFiles') }}</label>
-              <TagListInput v-model="ed.draft!.files!" :placeholder="t('editor.phFiles')" ext-scan :base-path="ed.draft!.project_path" :scan-dirs="ed.draft!.directories" />
+              <TagListInput v-model="ed.draft!.files!" :placeholder="t('editor.phFiles')" file-select :base-path="ed.draft!.project_path" />
               <label class="plain">{{ t('editor.includeDirs') }}</label>
               <TagListInput v-model="ed.draft!.directories!" :placeholder="t('editor.phDirs')" dir-select :base-path="ed.draft!.project_path" />
             </EditorSection>
@@ -224,7 +224,7 @@ function onCancel() {
               <label class="inline"><input v-model="ed.includeEnabled" type="checkbox" /> {{ t('editor.includeEnabled') }}</label>
               <template v-if="ed.includeEnabled">
                 <label class="plain">{{ t('editor.includePatterns') }}</label>
-                <TagListInput v-model="ed.draft!.include_patterns!" :placeholder="t('editor.phIncludePatterns')" :error="ed.errors.include_patterns" />
+                <TagListInput v-model="ed.draft!.include_patterns!" :placeholder="t('editor.phIncludePatterns')" :error="ed.errors.include_patterns" ext-scan :base-path="ed.draft!.project_path" :scan-dirs="ed.draft!.directories" />
               </template>
             </EditorSection>
 

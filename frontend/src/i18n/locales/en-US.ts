@@ -322,6 +322,8 @@ redaction:
     strategyDropLine: 'Drop the whole line',
     exportModeCustom: 'Custom template',
     browseDisk: 'Pick from disk…',
+    browseDiskFiles: 'Pick files from disk…',
+    clearAll: 'Clear all',
     addAllExts: 'Add all extensions',
     allSubdirs: 'Add all subfolders',
     noSubdirs: 'No subfolders in: {dir}',

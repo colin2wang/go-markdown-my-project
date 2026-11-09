@@ -78,6 +78,10 @@ export function SelectDirectory(arg1) {
   return window['go']['app']['App']['SelectDirectory'](arg1);
 }
 
+export function SelectFiles(arg1) {
+  return window['go']['app']['App']['SelectFiles'](arg1);
+}
+
 export function SerializeYAML(arg1) {
   return window['go']['app']['App']['SerializeYAML'](arg1);
 }

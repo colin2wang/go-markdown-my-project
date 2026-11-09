@@ -12,7 +12,8 @@ const props = defineProps<{
   placeholder?: string;
   error?: string;
   dirSelect?: boolean;   // 显示「从磁盘选…」「添加所有子文件夹」按钮（目录）
-  extScan?: boolean;     // 显示「添加所有扩展名」按钮（包含文件）
+  fileSelect?: boolean;  // 显示「从磁盘选文件…」按钮（文件），对话框默认打开 basePath
+  extScan?: boolean;     // 显示「添加所有扩展名」按钮（包含模式）
   basePath?: string;     // 项目根目录：对话框起始目录、扩展名扫描根、结果转相对路径
   scanDirs?: string[];   // 扩展名扫描的包含目录（相对 basePath）
   disabled?: boolean;
@@ -40,6 +41,19 @@ function remove(idx: number) {
   const next = [...(props.modelValue ?? [])];
   next.splice(idx, 1);
   emit('update:modelValue', next);
+}
+
+// 清空全部标签
+function clearAll() {
+  emit('update:modelValue', []);
+  input.value = '';
+}
+
+// 系统文件多选对话框：默认打开项目根目录，转相对路径后去重加入；取消时不动。
+async function browseFiles() {
+  const files = await api.selectFiles(props.basePath ?? '');
+  if (!files.length) return;
+  add(files.map((f) => toRelative(f.replace(/\\/g, '/'))).join('\n'));
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -115,12 +129,12 @@ async function addAllExtensions() {
         @blur="input.trim() && add(input)"
       />
     </div>
-    <div v-if="extScan" class="browse-row">
-      <button type="button" class="browse" :disabled="disabled || !basePath" @click="addAllExtensions"><Icon name="doc" /> {{ t('editor.addAllExts') }}</button>
-    </div>
-    <div v-if="dirSelect" class="browse-row">
-      <button type="button" class="browse" :disabled="disabled" @click="browse"><Icon name="folder" /> {{ t('editor.browseDisk') }}</button>
-      <button type="button" class="browse" :disabled="disabled || !basePath" @click="addAllSubdirs"><Icon name="folder" /> {{ t('editor.allSubdirs') }}</button>
+    <div class="browse-row">
+      <button v-if="fileSelect" type="button" class="browse" :disabled="disabled" @click="browseFiles"><Icon name="doc" /> {{ t('editor.browseDiskFiles') }}</button>
+      <button v-if="extScan" type="button" class="browse" :disabled="disabled || !basePath" @click="addAllExtensions"><Icon name="doc" /> {{ t('editor.addAllExts') }}</button>
+      <button v-if="dirSelect" type="button" class="browse" :disabled="disabled" @click="browse"><Icon name="folder" /> {{ t('editor.browseDisk') }}</button>
+      <button v-if="dirSelect" type="button" class="browse" :disabled="disabled || !basePath" @click="addAllSubdirs"><Icon name="folder" /> {{ t('editor.allSubdirs') }}</button>
+      <button type="button" class="browse clear" :disabled="disabled || !(modelValue ?? []).length" @click="clearAll"><Icon name="close" :size="10" /> {{ t('editor.clearAll') }}</button>
     </div>
     <p v-if="error" class="field-error">{{ error }}</p>
   </div>
@@ -151,6 +165,7 @@ async function addAllExtensions() {
 .browse { margin-top: 4px; background: transparent; color: var(--fg-1); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 3px 8px; font-size: 12px; cursor: pointer; white-space: nowrap; }
 .browse:disabled { opacity: .4; cursor: not-allowed; }
 .browse-row { display: flex; align-items: center; gap: 10px; }
+.browse.clear { margin-left: auto; }
 .disabled { opacity: .5; }
 input.invalid { border-color: var(--err); }
 .field-error { color: var(--err); font-size: 11px; margin: 3px 0 0 2px; }

@@ -322,6 +322,8 @@ redaction:
     strategyDropLine: '行全体を削除',
     exportModeCustom: 'カスタムテンプレート',
     browseDisk: 'ディスクから選択…',
+    browseDiskFiles: 'ディスクからファイルを選択…',
+    clearAll: 'すべてクリア',
     addAllExts: 'すべての拡張子を追加',
     allSubdirs: 'すべてのサブフォルダを追加',
     noSubdirs: 'サブフォルダがありません: {dir}',

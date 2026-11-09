@@ -41,6 +41,8 @@ export function ScanSensitive(arg1:config.ProjectConfig,arg2:Array<string>):Prom
 
 export function SelectDirectory(arg1:string):Promise<string>;
 
+export function SelectFiles(arg1:string):Promise<Array<string>>;
+
 export function SerializeYAML(arg1:config.ProjectConfig):Promise<string>;
 
 export function SetLocale(arg1:string):Promise<void>;
