@@ -2,6 +2,8 @@
 
 English | [简体中文](README.zh-CN.md)
 
+![Wails](https://img.shields.io/badge/Wails-v2-FF0000?logo=wails&logoColor=white) ![Go](https://img.shields.io/badge/Go-1.27+-00ADD8?logo=go&logoColor=white) ![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white) ![pnpm](https://img.shields.io/badge/pnpm-12-F69220?logo=pnpm&logoColor=white)
+
 Turn any local project into one clean, well-structured Markdown document — full source with file tree, a file manifest, or a symbol index — ready to paste into an online LLM for code review, Q&A, or documentation.
 
 The whole workflow lives in a single desktop app: point at a project directory, tick the files that matter, pick an export mode, and export. Secrets are stripped before anything is written, token usage is estimated before you commit, and oversized output can be split into chunks automatically.

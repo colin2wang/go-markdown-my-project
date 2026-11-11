@@ -2,6 +2,8 @@
 
 [English](README.md) | 简体中文
 
+![Wails](https://img.shields.io/badge/Wails-v2-FF0000?logo=wails&logoColor=white) ![Go](https://img.shields.io/badge/Go-1.27+-00ADD8?logo=go&logoColor=white) ![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white) ![pnpm](https://img.shields.io/badge/pnpm-12-F69220?logo=pnpm&logoColor=white)
+
 把本地任意项目聚合成一份干净、结构清晰的 Markdown 文档——完整源码（含文件树）、文件清单或符号索引——可直接粘贴到在线 LLM，用于代码审查、问答或文档整理。
 
 整个流程都在一个桌面应用内完成：选择项目目录，勾选需要的文件，挑选导出模式，一键导出。敏感信息在落盘前自动剥离，Token 用量在导出前提前预估，超大文档可自动拆分。
