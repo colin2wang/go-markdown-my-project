@@ -33,8 +33,13 @@ var (
 )
 
 // openFileInFileManager 在文件管理器中打开文件所在目录并选中该文件
-// （explorer /select）。此方式总是新开窗口，不走复用逻辑。
+// （explorer /select，总是新开窗口）。Win10 下 /select 会复用已显示同目录的
+// 窗口，Win11（标签页）则总是新开；为行为一致，先尝试复用父目录窗口，
+// 命中则仅置前（不做选中高亮），未命中才走 /select 新开。
 func openFileInFileManager(path string) error {
+	if bringExplorerToFront(filepath.Dir(path)) {
+		return nil
+	}
 	return exec.Command("explorer", "/select,", path).Start()
 }
 
