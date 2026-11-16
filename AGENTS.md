@@ -23,7 +23,7 @@ cd frontend && pnpm dev    # 纯前端开发
 - 新增的 `core/infer`（按项目结构推断推荐配置）、`core/pick`（文件重要性评分/预算裁剪）、`core/compress`（注释剥离 `StripComments` / 骨架化 `Skeleton` / 长行截断 `MinifyWith`）、`core/gitignore`（递归查找项目内所有 `.gitignore`、解析 Git 通配规则、`Matcher.Ignored` 判定路径忽略）、`core/wordfilter`（导出敏感词过滤 `Filter`：替换 XSS 测试样本、危险协议、恶意示例域名与攻击性描述词为占位符，规则表内置于 `words.go`，RE2 正则，与密钥脱敏 `core/redactor` 互不相干）均为纯 Go，不依赖 Wails，可被复用与单测；**注释剔除的语法表与状态机只放在 `core/compress/comments.go` 一个文件**，其它包不得另写一套注释规则。
 - 绑定层方法必须可导出（`Startup` 而非 `startup`），否则 Wails 不生成前端绑定。
 - 前端通过 `frontend/src/api/bindings.ts` 手写封装访问 `window.go.app.App`（App 结构体在 `app` 包下），新增后端方法需同步在此补类型。
-- **窗口初始化**：`main.go` 以 `StartHidden: true` 启动，`app.App.Startup` 用 `runtime.ScreenGetAll` 取主屏**逻辑**分辨率（`Screen.Size`）的 75% 设尺寸并居中，且必须 `defer runtime.WindowShow(ctx)` 才显示窗口；取不到屏幕信息时回退 `main.go` 的固定尺寸，勿删 `WindowShow`。
+- **窗口初始化**：`main.go` 以 `StartHidden: true` 启动，`app.App.Startup` 必须有 `defer runtime.WindowShow(ctx)` 才显示窗口（勿删）；窗口尺寸为 `main.go` 的固定值（1400×800），已移除启动时按屏幕分辨率自动调整的逻辑。
 
 ## 协作约定
 

@@ -26,11 +26,11 @@ func main() {
 		title += " " + v
 	}
 	err := wails.Run(&options.App{
-		// 回退尺寸：取不到屏幕信息时使用；StartHidden 下由 app.App.Startup 按主屏 75% 设定并显示
+		// 固定初始尺寸：StartHidden 下由 app.App.Startup 显示窗口
 		Title:       title,
-		Width:       1200,
+		Width:       1400,
 		Height:      800,
-		MinWidth:    640,  // 下限放宽，避免小屏上把 75% 的窗口顶大
+		MinWidth:    640, // 下限放宽，避免小屏上把 75% 的窗口顶大
 		MinHeight:   400,
 		StartHidden: true,
 		AssetServer: &assetserver.Options{
