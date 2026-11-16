@@ -24,6 +24,14 @@ export interface ProjectConfig {
     allowlist?: string[];
     custom_patterns?: string[];
   };
+  word_filter?: {
+    /** 项目级开关；工作台勾选为运行时覆盖 */
+    enabled: boolean;
+    /** 规则档位：basic | standard | strict，省略 = standard */
+    profile?: string;
+    /** 处理策略：destroy | neutralize，省略 = destroy */
+    strategy?: string;
+  };
   split_tokens?: number;
   template?: string;
   /** 是否合并全局默认排除（config/exclude_defaults.yml）；省略 = true */
@@ -89,6 +97,8 @@ export interface ExportResult {
   /** 输出文件字节数（启用空白精简后为精简后大小） */
   outputBytes?: number;
   durationMs: number;
+  /** 敏感词过滤命中总数（wordFilter 开启时统计，与密钥脱敏分开） */
+  filteredCount?: number;
 }
 
 export interface PreviewResult {

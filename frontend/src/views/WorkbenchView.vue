@@ -327,6 +327,7 @@ async function copyResult() {
               <tr><th>{{ t('wb.resultTokens') }}</th><td>{{ fmtNum(exp.result.tokenCount ?? estTokens) }}</td></tr>
               <tr><th>{{ t('wb.resultDuration') }}</th><td>{{ exp.result.durationMs }} ms</td></tr>
               <tr><th>{{ t('wb.resultRedaction') }}</th><td>{{ redactEnabled ? t('wb.hitsShort', { n: sensitive.count }) : t('common.off') }}</td></tr>
+              <tr v-if="exp.result.filteredCount"><th>{{ t('wb.resultWordFilter') }}</th><td>{{ t('wb.hitsShort', { n: exp.result.filteredCount }) }}</td></tr>
             </table>
             <div class="result-actions">
               <button @click="openOutputDir">{{ t('wb.openDir') }}</button>

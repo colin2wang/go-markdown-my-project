@@ -18,10 +18,18 @@ import (
 type RedactionConfig struct {
 	Enabled        bool     `yaml:"enabled" json:"enabled"`
 	Placeholder    string   `yaml:"placeholder,omitempty" json:"placeholder,omitempty"`
-	Strategy       string   `yaml:"strategy,omitempty" json:"strategy,omitempty"`   // placeholder | drop_line
+	Strategy       string   `yaml:"strategy,omitempty" json:"strategy,omitempty"`         // placeholder | drop_line
 	RuleProfile    string   `yaml:"rule_profile,omitempty" json:"rule_profile,omitempty"` // strict | standard | relaxed，空 = standard
-	Allowlist      []string `yaml:"allowlist,omitempty" json:"allowlist,omitempty"` // key = 相对路径:行号:规则名
+	Allowlist      []string `yaml:"allowlist,omitempty" json:"allowlist,omitempty"`       // key = 相对路径:行号:规则名
 	CustomPatterns []string `yaml:"custom_patterns,omitempty" json:"custom_patterns,omitempty"`
+}
+
+// WordFilterConfig 敏感词过滤配置（独立于密钥脱敏 RedactionConfig）。
+type WordFilterConfig struct {
+	// Enabled 项目级开关；工作台 ExportOptions.WordFilter 勾选为运行时覆盖
+	Enabled  bool   `yaml:"enabled" json:"enabled"`
+	Profile  string `yaml:"profile,omitempty" json:"profile,omitempty"`   // basic | standard | strict，空 = standard
+	Strategy string `yaml:"strategy,omitempty" json:"strategy,omitempty"` // destroy | neutralize，空 = destroy
 }
 
 // ProjectConfig 对应 projects/*.yml。
@@ -41,10 +49,11 @@ type ProjectConfig struct {
 	IncludeEnabled  *bool    `yaml:"include_enabled,omitempty" json:"include_enabled,omitempty"`
 	IncludePatterns []string `yaml:"include_patterns,omitempty" json:"include_patterns,omitempty"`
 	// v2 字段
-	ExportMode  string          `yaml:"export_mode,omitempty" json:"export_mode,omitempty"` // full | files | symbols | signatures | custom
-	Redaction   RedactionConfig `yaml:"redaction,omitempty" json:"redaction,omitempty"`
-	SplitTokens int             `yaml:"split_tokens,omitempty" json:"split_tokens,omitempty"`
-	Template    string          `yaml:"template,omitempty" json:"template,omitempty"`
+	ExportMode  string           `yaml:"export_mode,omitempty" json:"export_mode,omitempty"` // full | files | symbols | signatures | custom
+	Redaction   RedactionConfig  `yaml:"redaction,omitempty" json:"redaction,omitempty"`
+	WordFilter  WordFilterConfig `yaml:"word_filter,omitempty" json:"word_filter,omitempty"`
+	SplitTokens int              `yaml:"split_tokens,omitempty" json:"split_tokens,omitempty"`
+	Template    string           `yaml:"template,omitempty" json:"template,omitempty"`
 	// UseDefaultExcludes 是否合并全局默认排除（config/exclude_defaults.yml）；nil = true
 	UseDefaultExcludes *bool `yaml:"use_default_excludes,omitempty" json:"use_default_excludes,omitempty"`
 	// UseGitIgnore 是否按项目内所有 .gitignore 的规则过滤；nil = true（默认开启）

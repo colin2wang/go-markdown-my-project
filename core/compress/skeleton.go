@@ -2,6 +2,7 @@ package compress
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -116,6 +117,30 @@ func Skeleton(lang, text string, opt SkeletonOptions) string {
 		b.WriteByte('\n')
 	}
 	return b.String()
+}
+
+// HeadTailFold 头尾保留折叠兜底：对没有可折叠函数体的文件（YAML/JSON/长文本
+// 等无 func/method 符号），保留头部 keepLines 行与尾部 keepLines 行，中段替换
+// 为一行省略标记。LLM 通常需要结构头部（import/包声明/顶层键），尾部价值低。
+// 行数不足（≤ keepLines*2+1）时原样返回。
+func HeadTailFold(text string, keepLines int) string {
+	lines := strings.Split(text, "\n")
+	if len(lines) <= keepLines*2+1 {
+		return text
+	}
+	omitted := len(lines) - keepLines*2
+	mid := fmt.Sprintf("# … %d lines omitted …", omitted)
+	out := append(append([]string{}, lines[:keepLines]...), mid)
+	out = append(out, lines[len(lines)-keepLines:]...)
+	return strings.Join(out, "\n")
+}
+
+// foldCountRe 匹配 Skeleton 折叠标记「// … N lines …」中的行数。
+var foldCountRe = regexp.MustCompile(`… \d+ lines …`)
+
+// FoldedCount 统计骨架输出中折叠标记的个数（用于折叠数量统计展示）。
+func FoldedCount(skeleton string) int {
+	return len(foldCountRe.FindAllString(skeleton, -1))
 }
 
 // sigEndLine 从声明行起找到签名结束行（类 C 的 '{' 行 / Python 的 ':' 行）。

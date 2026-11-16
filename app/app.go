@@ -74,6 +74,8 @@ type ExportResult struct {
 	TokenCount  int   `json:"tokenCount"`
 	OutputBytes int64 `json:"outputBytes"` // 输出文件字节数
 	DurationMs  int64 `json:"durationMs"`
+	// FilteredCount 敏感词过滤命中总数（与密钥脱敏的 RedactedCount 分开统计）
+	FilteredCount int `json:"filteredCount"`
 }
 
 // PreviewResult 导出内容预览（干跑，不写盘）。
@@ -205,6 +207,13 @@ func (a *App) ValidateConfig(cfg config.ProjectConfig) []FieldError {
 	if rp := cfg.Redaction.RuleProfile; rp != "" &&
 		rp != "strict" && rp != "standard" && rp != "relaxed" {
 		add("rule_profile", i18n.T("val.ruleProfileInvalid", "val", rp))
+	}
+	if p := cfg.WordFilter.Profile; p != "" &&
+		p != "basic" && p != "standard" && p != "strict" {
+		add("word_filter.profile", i18n.T("val.wordFilterProfileInvalid", "val", p))
+	}
+	if s := cfg.WordFilter.Strategy; s != "" && s != "destroy" && s != "neutralize" {
+		add("word_filter.strategy", i18n.T("val.wordFilterStrategyInvalid", "val", s))
 	}
 	for _, p := range cfg.Redaction.CustomPatterns {
 		if _, err := regexp.Compile(p); err != nil {
@@ -430,11 +439,13 @@ func markdownLangFromLocale() string {
 
 // exportPlan 导出前的公共准备结果（扫描结果 + 裁剪 + 语言映射 + 模式）。
 type exportPlan struct {
-	Results   []scanner.FileResult
-	Dropped   []scanner.FileResult // 按预算裁剪掉的文件（生成省略清单用）
-	Langs     map[string]string
-	Mode      generator.ExportMode
-	FileCount int
+	Results       []scanner.FileResult
+	Dropped       []scanner.FileResult // 按预算裁剪掉的文件（生成省略清单用）
+	Langs         map[string]string
+	Mode          generator.ExportMode
+	FileCount     int
+	FilteredCount int                             // 敏感词过滤命中总数（0 = 未启用或无命中）
+	Prefolded     map[string]generator.SmartStats // smart 预折叠统计（key = FullPath）
 }
 
 // prepareExport 导出前公共准备：解析勾选覆盖、扫描、敏感替换、语言映射、
@@ -486,7 +497,19 @@ func prepareExport(cfg config.ProjectConfig, opt ExportOptions) (exportPlan, err
 	}
 
 	// 预算裁剪：按重要性评分挑文件（用更少 token 覆盖更多有效信息）。
-	// 在压缩之前按原始内容估算，保证预算口径与用户勾选时的估算一致。
+	// smart 模式先预折叠再算预算：预算阶段看到折叠后的真实体积，
+	// 折叠能救回的文件不再被整只丢弃（dropped manifest 显著缩小）。
+	// full 等其它模式仍按原始内容估算，保证预算口径与用户勾选时的估算一致。
+	var prefolded map[string]generator.SmartStats
+	if opt.BudgetTokens > 0 && mode == generator.ModeSmart {
+		prefolded = generator.Prefold(results, generator.Options{
+			Mode:               mode,
+			Languages:          langs,
+			SmartFullTokens:    opt.SmartFullTokens,
+			StripComments:      opt.StripComments,
+			DropMarkedComments: opt.DropMarkedComments,
+		})
+	}
 	var dropped []scanner.FileResult
 	if opt.BudgetTokens > 0 {
 		sel := generator.SelectWithinBudget(results, cfg.ProjectPath, opt.BudgetTokens)
@@ -498,7 +521,7 @@ func prepareExport(cfg config.ProjectConfig, opt ExportOptions) (exportPlan, err
 
 	// 逐文件精简：分片路径按文件单元装箱，逐文件处理保证每片同样精简。
 	// 空白精简已并入 smart 模式（generator.MinifySmart，去缩进仅大括号语言），
-	// 此处仅保留注释剥离、超长行截断与敏感词过滤。
+	// 此处仅保留注释剥离与超长行截断。
 	if opt.StripComments || opt.MaxLineLen > 0 {
 		for i := range results {
 			lang := generator.LanguageFor(langs, results[i].FullPath)
@@ -511,15 +534,34 @@ func prepareExport(cfg config.ProjectConfig, opt ExportOptions) (exportPlan, err
 			if opt.MaxLineLen > 0 {
 				c = compress.MinifyWith(c, opt.MaxLineLen)
 			}
-			// 敏感词过滤（默认关闭）：替换 XSS 测试样本、危险协议等易触发
-			// 平台审核的内容，最后执行避免占位符被其它处理再改写
-			if opt.WordFilter {
-				c = wordfilter.Filter(c)
-			}
 			results[i].Content = c
 		}
 	}
-	return exportPlan{Results: results, Dropped: dropped, Langs: langs, Mode: mode, FileCount: len(results)}, nil
+	// 敏感词过滤：项目配置 word_filter 为基线，工作台勾选（ExportOptions.WordFilter）
+	// 为运行时覆盖；任一开启即生效。档位/策略取项目配置（空 = standard/destroy）。
+	// 管道位置约定：必须在一切 MaxLineLen 截断之前执行（截断会把 `<script`
+	// 劈成两半导致块规则漏配），且在 token 统计之前（替换改变字数）；
+	// redactor 的 [REDACTED] 占位符不匹配任何载荷规则，两者互不干扰。
+	wfCfg := cfg.WordFilter
+	filtered := 0
+	if opt.WordFilter || wfCfg.Enabled {
+		total := 0
+		for i := range results {
+			out, hits := wordfilter.FilterWithStats(results[i].Content, wordfilter.Config{
+				Profile:  wfCfg.Profile,
+				Strategy: wfCfg.Strategy,
+			})
+			results[i].Content = out
+			for _, h := range hits {
+				total += h.Count
+			}
+		}
+		filtered = total
+		if total > 0 {
+			logger.Info(i18n.T("log.wordFilterApplied"), "count", total)
+		}
+	}
+	return exportPlan{Results: results, Dropped: dropped, Langs: langs, Mode: mode, FileCount: len(results), FilteredCount: filtered, Prefolded: prefolded}, nil
 }
 
 // maxSignatureLen 导出签名长度上限（≤0 → 默认 200）。
@@ -558,18 +600,24 @@ func redactorConfig(rc config.RedactionConfig) redactor.Config {
 
 // genOptions 由导出选项构造生成参数（各导出入口共用，避免字段透传遗漏）。
 func genOptions(cfg config.ProjectConfig, opt ExportOptions, plan exportPlan) generator.Options {
+	// smart 模式强制关闭行号：行号本身吃 token，与省流目标冲突
+	lineNumbers := opt.IncludeLineNumbers == nil || *opt.IncludeLineNumbers
+	if plan.Mode == generator.ModeSmart {
+		lineNumbers = false
+	}
 	return generator.Options{
 		ProjectName:        cfg.ProjectName,
 		ProjectRoot:        cfg.ProjectPath,
 		Lang:               cfg.MarkdownLang,
 		Mode:               plan.Mode,
 		Languages:          plan.Langs,
-		IncludeLineNumbers: opt.IncludeLineNumbers == nil || *opt.IncludeLineNumbers,
+		IncludeLineNumbers: lineNumbers,
 		MaxSignatureLen:    maxSignatureLen(opt),
 		SmartFullTokens:    opt.SmartFullTokens,
 		StripComments:      opt.StripComments,
 		DropMarkedComments: opt.DropMarkedComments,
 		MaxLineLen:         opt.MaxLineLen,
+		Prefolded:          plan.Prefolded,
 	}
 }
 
@@ -593,6 +641,15 @@ func buildExport(cfg config.ProjectConfig, opt ExportOptions) (string, generator
 }
 
 // RunExport 执行导出（GUI 主流程）。结果与进度经事件推送，此处同步返回结果。
+//
+// 内容处理管道顺序（固化约定，勿随意调换）：
+//
+//	generate（逐文件，smart 模式内置骨架折叠与 MinifySmart 精简）
+//	  → wordfilter（危险载荷中和；必须在一切 MaxLineLen 截断之前，
+//	    否则截断把 `<script` 劈成两半导致块规则漏配）
+//	  → redactor（密钥脱敏；其 [REDACTED] 占位符不匹配任何载荷规则，互不干扰）
+//	  → MaxLineLen 截断 → token 统计（替换改变字数，统计须反映最终文本）
+//	  → 编码写盘
 func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResult, error) {
 	start := time.Now()
 
@@ -684,11 +741,12 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 	logger.Info(i18n.T("log.exportDone"), "mode", string(mode), "files", fileCount, "chars", len([]rune(content)), "out", strings.Join(outPaths, ","), "ms", time.Since(start).Milliseconds())
 
 	return ExportResult{
-		OutputPaths: outPaths,
-		TotalChars:  len([]rune(content)),
-		TokenCount:  token.EstimateTokens(content),
-		OutputBytes: int64(len(content)),
-		DurationMs:  time.Since(start).Milliseconds(),
+		OutputPaths:   outPaths,
+		TotalChars:    len([]rune(content)),
+		TokenCount:    token.EstimateTokens(content),
+		OutputBytes:   int64(len(content)),
+		DurationMs:    time.Since(start).Milliseconds(),
+		FilteredCount: plan.FilteredCount,
 	}, nil
 }
 

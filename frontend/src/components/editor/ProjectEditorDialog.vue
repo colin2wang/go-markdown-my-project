@@ -74,6 +74,7 @@ const SECTIONS = [
   { id: 'sec-include', key: 'editor.anchorInclude' },
   { id: 'sec-export', key: 'editor.anchorExport' },
   { id: 'sec-redaction', key: 'editor.anchorRedaction' },
+  { id: 'sec-wordfilter', key: 'editor.anchorWordFilter' },
   { id: 'sec-preview', key: 'editor.anchorPreview' },
 ] as const;
 function scrollTo(id: string) {
@@ -279,6 +280,31 @@ function onCancel() {
                 </label>
                 <label class="plain">{{ t('editor.customPatterns') }}</label>
                 <TagListInput v-model="ed.draft!.redaction!.custom_patterns!" :placeholder="t('editor.phPatterns')" :error="ed.errors.custom_patterns" />
+              </template>
+            </EditorSection>
+
+            <EditorSection
+              id="sec-wordfilter" icon="ban" :title="t('editor.sectionWordFilter')"
+              :muted="!ed.draft.word_filter?.enabled"
+            >
+              <label class="inline">
+                <input v-model="ed.draft!.word_filter!.enabled" type="checkbox" />
+                {{ t('editor.wordFilterEnable') }}
+              </label>
+              <template v-if="ed.draft.word_filter?.enabled">
+                <label class="inline">{{ t('editor.wfProfile') }}
+                  <select v-model="ed.draft!.word_filter!.profile">
+                    <option value="basic">{{ t('editor.wfProfileBasic') }}</option>
+                    <option value="standard">{{ t('editor.wfProfileStandard') }}</option>
+                    <option value="strict">{{ t('editor.wfProfileStrict') }}</option>
+                  </select>
+                </label>
+                <label class="inline">{{ t('editor.strategy') }}
+                  <select v-model="ed.draft!.word_filter!.strategy">
+                    <option value="destroy">{{ t('editor.wfStrategyDestroy') }}</option>
+                    <option value="neutralize">{{ t('editor.wfStrategyNeutralize') }}</option>
+                  </select>
+                </label>
               </template>
             </EditorSection>
 

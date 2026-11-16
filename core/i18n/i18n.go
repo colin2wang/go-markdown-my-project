@@ -74,6 +74,11 @@ var dicts = map[string]map[Locale]string{
 		EnUS: "Redaction applied",
 		JaJP: "マスキング置換が完了しました",
 	},
+	"log.wordFilterApplied": {
+		ZhCN: "敏感词过滤完成",
+		EnUS: "Word filter applied",
+		JaJP: "ワードフィルタが完了しました",
+	},
 	"log.exportDone": {
 		ZhCN: "导出完成",
 		EnUS: "Export finished",
@@ -198,6 +203,16 @@ var dicts = map[string]map[Locale]string{
 		ZhCN: "规则模板无效（应为 strict / standard / relaxed）: {val}",
 		EnUS: "Invalid rule profile (must be strict / standard / relaxed): {val}",
 		JaJP: "ルールテンプレートが無効（strict / standard / relaxed のいずれか）: {val}",
+	},
+	"val.wordFilterProfileInvalid": {
+		ZhCN: "过滤档位无效（应为 basic / standard / strict）: {val}",
+		EnUS: "Invalid filter profile (must be basic / standard / strict): {val}",
+		JaJP: "フィルタテンプレートが無効（basic / standard / strict のいずれか）: {val}",
+	},
+	"val.wordFilterStrategyInvalid": {
+		ZhCN: "过滤策略无效（应为 destroy / neutralize）: {val}",
+		EnUS: "Invalid filter strategy (must be destroy / neutralize): {val}",
+		JaJP: "フィルタ戦略が無効（destroy / neutralize のいずれか）: {val}",
 	},
 	"log.suggest": {
 		ZhCN: "自动分析项目结构",

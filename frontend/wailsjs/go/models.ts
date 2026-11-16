@@ -54,6 +54,7 @@ export namespace app {
 	    tokenCount: number;
 	    outputBytes: number;
 	    durationMs: number;
+	    filteredCount: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new ExportResult(source);
@@ -66,6 +67,7 @@ export namespace app {
 	        this.tokenCount = source["tokenCount"];
 	        this.outputBytes = source["outputBytes"];
 	        this.durationMs = source["durationMs"];
+	        this.filteredCount = source["filteredCount"];
 	    }
 	}
 	export class FieldError {
@@ -245,6 +247,22 @@ export namespace config {
 	        this.interfaceLanguage = source["interfaceLanguage"];
 	    }
 	}
+	export class WordFilterConfig {
+	    enabled: boolean;
+	    profile?: string;
+	    strategy?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WordFilterConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.profile = source["profile"];
+	        this.strategy = source["strategy"];
+	    }
+	}
 	export class RedactionConfig {
 	    enabled: boolean;
 	    placeholder?: string;
@@ -281,6 +299,7 @@ export namespace config {
 	    include_patterns?: string[];
 	    export_mode?: string;
 	    redaction?: RedactionConfig;
+	    word_filter?: WordFilterConfig;
 	    split_tokens?: number;
 	    template?: string;
 	    use_default_excludes?: boolean;
@@ -307,6 +326,7 @@ export namespace config {
 	        this.include_patterns = source["include_patterns"];
 	        this.export_mode = source["export_mode"];
 	        this.redaction = this.convertValues(source["redaction"], RedactionConfig);
+	        this.word_filter = this.convertValues(source["word_filter"], WordFilterConfig);
 	        this.split_tokens = source["split_tokens"];
 	        this.template = source["template"];
 	        this.use_default_excludes = source["use_default_excludes"];
@@ -333,6 +353,7 @@ export namespace config {
 		    return a;
 		}
 	}
+	
 
 }
 

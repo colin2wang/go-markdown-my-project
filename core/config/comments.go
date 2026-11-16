@@ -137,6 +137,20 @@ func SerializeWithComments(c *ProjectConfig) (string, error) {
 		}
 		pair("Sensitive information redaction settings", "redaction", r)
 	}
+	if wf := c.WordFilter; wf.Enabled || wf.Profile != "" || wf.Strategy != "" {
+		w := &yaml.Node{Kind: yaml.MappingNode}
+		wp := func(key string, val *yaml.Node) {
+			w.Content = append(w.Content, &yaml.Node{Kind: yaml.ScalarNode, Value: key}, val)
+		}
+		wp("enabled", boolNode(wf.Enabled))
+		if wf.Profile != "" && wf.Profile != "standard" {
+			wp("profile", strNode(false, wf.Profile))
+		}
+		if wf.Strategy != "" && wf.Strategy != "destroy" {
+			wp("strategy", strNode(false, wf.Strategy))
+		}
+		pair("Sensitive word filter settings (XSS payloads etc.); profile: basic | standard | strict, strategy: destroy | neutralize", "word_filter", w)
+	}
 
 	doc := &yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{mapping}}
 	var buf bytes.Buffer

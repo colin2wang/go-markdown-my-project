@@ -42,6 +42,7 @@ func localizedText(key, lang string) string {
 		"no_symbols":            "未识别到符号",
 		"skeleton_note":         "（骨架）",
 		"omitted_files":         "已按预算省略的文件",
+		"smart_fold_note":       "（已折叠 %d 处，省 ≈%d tokens）",
 	}
 	if lang == "zh_cn" {
 		if v, ok := zh[key]; ok {
@@ -71,6 +72,8 @@ func localizedText(key, lang string) string {
 			return " (skeleton)"
 		case "omitted_files":
 			return "Omitted files (token budget)"
+		case "smart_fold_note":
+			return " (folded %d, saved ≈%d tokens)"
 		}
 	}
 	return key
@@ -127,6 +130,9 @@ type Options struct {
 	StripComments      bool
 	DropMarkedComments bool
 	MaxLineLen         int
+	// Prefolded 预算裁剪前已完成的预折叠统计（key = 文件 FullPath），
+	// 命中时 smart 生成阶段跳过二次折叠、直接沿用统计打标。
+	Prefolded map[string]SmartStats
 }
 
 // Generate 按模式生成完整 Markdown 内容。
