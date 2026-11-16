@@ -62,8 +62,10 @@ export interface ProjectSummary {
 export interface ExportOptions {
   mode: string;
   splitTokens: number;
-  /** 精简空白输出（裁剪行尾空白、折叠空行，保持语法） */
-  compress?: boolean;
+  /** 按个数切分输出：1 = 不切分；N > 1 时导出为 N 个文件（full/smart） */
+  splitParts?: number;
+  /** 敏感词过滤：替换 XSS 测试样本、危险协议等易触发平台审核的内容（默认关闭） */
+  wordFilter?: boolean;
   fileOverrides: string[];
   includeLineNumbers?: boolean;
   maxSignatureLen?: number;

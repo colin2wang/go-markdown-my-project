@@ -61,6 +61,8 @@ async function rescan() {
 watch(() => exp.mode, (m, old) => {
   previewData.value = null; // 选项变化后旧预览失效
   exp.stripComments = m === 'smart';
+  // 精简空白已并入 smart 模式：后端 generator.smartContent 走 MinifySmart
+  // （去缩进仅大括号语言，Python/YAML 等缩进敏感语言自动跳过），前端无需开关
   if (old) log.info(t('wb.logModeSwitch', { from: old, to: m }));
 });
 
@@ -124,6 +126,15 @@ const splitTokens = ref(100000);
 const estParts = computed(() =>
   splitEnabled.value && splitTokens.value > 0 ? Math.max(1, Math.ceil(estTokens.value / splitTokens.value)) : 1
 );
+const estFileParts = computed(() =>
+  exp.splitParts > 1 ? Math.max(1, Math.min(exp.splitParts, checkedFiles.value.length)) : 1
+);
+
+// 输入归一：非正整数回退 1（不切分）
+function normalizeSplitParts() {
+  const v = Math.floor(Number(exp.splitParts));
+  exp.splitParts = Number.isFinite(v) && v >= 1 ? v : 1;
+}
 
 // 按当前勾选的估算填入预算：取 80%（留给文件树与清单等脚手架文本），对齐到千位
 function fillBudget() {
@@ -262,6 +273,12 @@ async function copyResult() {
         </template>
         <p v-else class="muted">{{ t('wb.redactDisabledHint') }}</p>
 
+        <label class="inline wrap">
+          <input v-model="exp.wordFilter" type="checkbox" />
+          {{ t('wb.wordFilter') }}
+          <span class="muted">{{ t('wb.wordFilterHint') }}</span>
+        </label>
+
         <h3>{{ t('wb.tokenSaving') }}</h3>
         <label class="inline">
           <input v-model="exp.stripComments" type="checkbox" />
@@ -289,11 +306,13 @@ async function copyResult() {
           <input v-model="splitEnabled" type="checkbox" />
           {{ t('wb.overTokens') }} <input v-model.number="splitTokens" type="number" class="num" :disabled="!splitEnabled" /> token
         </label>
-        <label class="inline">
-          <input v-model="exp.compress" type="checkbox" />
-          {{ t('wb.compressOutput') }}
+        <label class="inline wrap">
+          {{ t('wb.splitParts') }}
+          <input v-model.number="exp.splitParts" type="number" class="num" min="1" step="1" @change="normalizeSplitParts" />
+          <span class="muted">{{ t('wb.splitPartsHint') }}</span>
         </label>
         <p v-if="splitEnabled" class="muted">{{ t('wb.estParts', { n: estParts }) }}</p>
+        <p v-if="estFileParts > 1" class="muted">{{ t('wb.estParts', { n: estFileParts }) }}</p>
       </section>
 
       <!-- 右栏：预览 / 结果 -->

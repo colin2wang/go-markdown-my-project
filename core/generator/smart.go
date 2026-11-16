@@ -86,7 +86,9 @@ func smartContent(content, lang string, opts Options) (string, bool) {
 			content, skeleton = sk, true
 		}
 	}
-	content = compress.MinifyWith(content, opts.MaxLineLen)
+	// 智能省流：行尾空白/空行折叠全语言适用；去缩进仅大括号语言
+	// （Python/YAML 等缩进敏感语言保持缩进，避免语法破坏）
+	content = compress.MinifySmart(lang, content, opts.MaxLineLen)
 	if !strings.HasSuffix(content, "\n") {
 		content += "\n"
 	}

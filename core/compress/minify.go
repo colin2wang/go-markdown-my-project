@@ -42,20 +42,33 @@ func MinifyWith(text string, maxLineLen int) string {
 var braceLangs = map[string]bool{
 	"go": true, "golang": true,
 	"java":       true,
-	"javascript": true, "js": true,
-	"typescript": true, "ts": true,
+	"javascript": true, "js": true, "jsx": true, "mjs": true, "cjs": true,
+	"typescript": true, "ts": true, "tsx": true,
 	"c": true, "c++": true, "cpp": true,
 	"c#": true, "cs": true, "csharp": true,
+	"h": true, "hpp": true, "cc": true, "cxx": true,
+	"objective-c": true, "objc": true,
 	"rust": true, "rs": true,
 	"kotlin": true, "kt": true,
 	"scala": true, "swift": true, "dart": true,
 	"php": true, "groovy": true,
-	"json": true,
+	"json": true, "jsonc": true, "json5": true,
 }
 
 // IsBraceLanguage 判断语言名是否为大括号类语言（行首缩进可安全剥除）。
 func IsBraceLanguage(lang string) bool {
 	return braceLangs[strings.ToLower(strings.TrimSpace(lang))]
+}
+
+// MinifySmart 智能省流模式专用：
+//   - 行尾空白裁剪、空行折叠：所有语言安全；
+//   - 去缩进：仅花括号语言（Go/Java/JS/C 系等）；
+//     Python / YAML / Haskell / Makefile 等缩进敏感语言跳过，避免语法破坏。
+func MinifySmart(lang, text string, maxLineLen int) string {
+	if IsBraceLanguage(lang) {
+		text = StripIndent(text)
+	}
+	return MinifyWith(text, maxLineLen)
 }
 
 // StripIndent 剥除每行行首空格/制表符（嵌套结构由大括号表达，语法不变；

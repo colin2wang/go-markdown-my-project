@@ -23,6 +23,7 @@ import (
 	"go-markdown-my-project/core/redactor"
 	"go-markdown-my-project/core/scanner"
 	"go-markdown-my-project/core/token"
+	"go-markdown-my-project/core/wordfilter"
 )
 
 // FileInfo 前端展示的文件条目（ScanProject 结果）。
@@ -45,9 +46,11 @@ type ProjectSummary struct {
 
 // ExportOptions 导出选项（对齐设计文档 §5.2/§9）。
 type ExportOptions struct {
-	Mode          string   `json:"mode"`
-	SplitTokens   int      `json:"splitTokens"`
-	Compress      bool     `json:"compress"`      // 空白精简输出（裁行尾空白、折叠空行，保持语法）
+	Mode        string `json:"mode"`
+	SplitTokens int    `json:"splitTokens"`
+	SplitParts  int    `json:"splitParts"` // 按个数切分：导出为 N 个文件，1 = 不切分（full/smart）
+	WordFilter  bool   `json:"wordFilter"` // 敏感词过滤（替换 XSS 测试样本等易触发平台审核的内容），默认关闭
+	// Compress 已删除：精简空白（含安全去缩进）并入 smart 模式（generator.MinifySmart）
 	FileOverrides []string `json:"fileOverrides"` // GUI 勾选覆盖配置（相对路径）
 	// symbols / signatures 模式子选项
 	IncludeLineNumbers *bool `json:"includeLineNumbers"` // nil → 默认 true
@@ -521,22 +524,24 @@ func prepareExport(cfg config.ProjectConfig, opt ExportOptions) (exportPlan, err
 	}
 
 	// 逐文件精简：分片路径按文件单元装箱，逐文件处理保证每片同样精简。
-	// 压缩输出 T2：大括号类语言（缩进不承载语法）剥除行首缩进，
-	// 仅作用于源码文件内容；Markdown 结构（列表/引用缩进）不受影响。
-	if opt.Compress || opt.StripComments || opt.MaxLineLen > 0 {
+	// 空白精简已并入 smart 模式（generator.MinifySmart，去缩进仅大括号语言），
+	// 此处仅保留注释剥离、超长行截断与敏感词过滤。
+	if opt.StripComments || opt.MaxLineLen > 0 {
 		for i := range results {
 			lang := generator.LanguageFor(langs, results[i].FullPath)
 			c := results[i].Content
-			if opt.Compress && compress.IsBraceLanguage(lang) {
-				c = compress.StripIndent(c)
-			}
 			if opt.StripComments {
 				c = compress.StripCommentsWithOptions(lang, c, compress.CommentOptions{
 					KeepMarkers: !opt.DropMarkedComments,
 				})
 			}
-			if opt.Compress || opt.MaxLineLen > 0 {
+			if opt.MaxLineLen > 0 {
 				c = compress.MinifyWith(c, opt.MaxLineLen)
+			}
+			// 敏感词过滤（默认关闭）：替换 XSS 测试样本、危险协议等易触发
+			// 平台审核的内容，最后执行避免占位符被其它处理再改写
+			if opt.WordFilter {
+				c = wordfilter.Filter(c)
 			}
 			results[i].Content = c
 		}
@@ -611,10 +616,6 @@ func buildExport(cfg config.ProjectConfig, opt ExportOptions) (string, generator
 		return "", "", 0, err
 	}
 	content += droppedManifest(plan, cfg)
-	// 压缩输出：整篇空白精简（与逐文件精简叠加，覆盖脚手架文本）
-	if opt.Compress {
-		content = compress.MinifyWith(content, opt.MaxLineLen)
-	}
 	return content, plan.Mode, plan.FileCount, nil
 }
 
@@ -637,36 +638,61 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 	var outPaths []string
 	var content string
 
-	if (mode == generator.ModeFull || mode == generator.ModeSmart) && opt.SplitTokens > 0 {
-		// Token 限制分片（§7.5）：以文件为最小单位贪心装箱，产出 xxx.partN.md；
-		// 单文件超过上限时独占一片，内容不截断
-		preamble, parts := generator.FileParts(plan.Results, genOpts)
-		if opt.Compress {
-			preamble = compress.MinifyWith(preamble, opt.MaxLineLen)
-		}
-		units := make([]token.FileUnit, len(parts))
-		for i, p := range parts {
-			units[i] = token.FileUnit{Path: p.RelPath, Content: p.Content}
-		}
-		chunks := token.Split(units, opt.SplitTokens, preamble)
-		ext := filepath.Ext(cfg.OutputFile)
-		base := strings.TrimSuffix(cfg.OutputFile, ext)
-		for i, c := range chunks {
-			body := c.Content
-			// 省略清单附在最后一片，保证分片合并后信息完整
-			if i == len(chunks)-1 {
-				body += manifest
+	if mode == generator.ModeFull || mode == generator.ModeSmart {
+		splittable := opt.SplitParts > 1 || opt.SplitTokens > 0
+		if splittable {
+			// 分片导出（full/smart）：个数切分优先于 token 切分，产出 xxx.partN.md
+			preamble, parts := generator.FileParts(plan.Results, genOpts)
+			units := make([]token.FileUnit, len(parts))
+			for i, p := range parts {
+				units[i] = token.FileUnit{Path: p.RelPath, Content: p.Content}
 			}
-			name := fmt.Sprintf("%s.part%d%s", base, c.Index, ext)
-			p, werr := generator.WriteOutput("output", name, body, a.exportEncoding(cfg))
+			var chunks []token.Chunk
+			if opt.SplitParts > 1 {
+				// 按个数切分：导出为 N 个文件（按 token 估算均衡分配）
+				chunks = token.SplitByCount(units, opt.SplitParts, preamble)
+				logger.Info(i18n.T("log.exportSplit"), "parts", opt.SplitParts)
+			} else {
+				// Token 限制分片（§7.5）：以文件为最小单位贪心装箱；
+				// 单文件超过上限时独占一片，内容不截断
+				chunks = token.Split(units, opt.SplitTokens, preamble)
+				logger.Info(i18n.T("log.exportSplit"), "parts", len(chunks), "limit", opt.SplitTokens)
+			}
+			ext := filepath.Ext(cfg.OutputFile)
+			base := strings.TrimSuffix(cfg.OutputFile, ext)
+			for _, c := range chunks {
+				body := c.Content
+				// 省略清单附在最后一片，保证分片合并后信息完整
+				if c.Index == len(chunks) {
+					body += manifest
+				}
+				name := fmt.Sprintf("%s.part%d%s", base, c.Index, ext)
+				p, werr := generator.WriteOutput("output", name, body, a.exportEncoding(cfg))
+				if werr != nil {
+					logExportFail(werr)
+					return ExportResult{}, werr
+				}
+				outPaths = append(outPaths, p)
+				content += body
+			}
+		} else {
+			content, err = generator.Generate(plan.Results, genOpts)
+			if err != nil {
+				logExportFail(err)
+				return ExportResult{}, err
+			}
+			content += manifest
+			outPath, werr := generator.WriteOutput("output", cfg.OutputFile, content, a.exportEncoding(cfg))
 			if werr != nil {
 				logExportFail(werr)
 				return ExportResult{}, werr
 			}
-			outPaths = append(outPaths, p)
-			content += body
+			outPaths = []string{outPath}
+			if mode == generator.ModeSmart {
+				// smart 模式内置空白精简（MinifySmart），记录精简后体积
+				logger.Info(i18n.T("log.compressDone"), "out", outPath, "bytes", len(content))
+			}
 		}
-		logger.Info(i18n.T("log.exportSplit"), "parts", len(chunks), "limit", opt.SplitTokens)
 	} else {
 		content, err = generator.Generate(plan.Results, genOpts)
 		if err != nil {
@@ -674,18 +700,12 @@ func (a *App) RunExport(cfg config.ProjectConfig, opt ExportOptions) (ExportResu
 			return ExportResult{}, err
 		}
 		content += manifest
-		if opt.Compress {
-			content = compress.MinifyWith(content, opt.MaxLineLen)
-		}
 		outPath, werr := generator.WriteOutput("output", cfg.OutputFile, content, a.exportEncoding(cfg))
 		if werr != nil {
 			logExportFail(werr)
 			return ExportResult{}, werr
 		}
 		outPaths = []string{outPath}
-		if opt.Compress {
-			logger.Info(i18n.T("log.compressDone"), "out", outPath, "bytes", len(content))
-		}
 	}
 
 	logger.Info(i18n.T("log.exportDone"), "mode", string(mode), "files", fileCount, "chars", len([]rune(content)), "out", strings.Join(outPaths, ","), "ms", time.Since(start).Milliseconds())

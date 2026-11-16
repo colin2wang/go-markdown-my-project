@@ -17,7 +17,8 @@ export namespace app {
 	export class ExportOptions {
 	    mode: string;
 	    splitTokens: number;
-	    compress: boolean;
+	    splitParts: number;
+	    wordFilter: boolean;
 	    fileOverrides: string[];
 	    includeLineNumbers?: boolean;
 	    maxSignatureLen: number;
@@ -35,7 +36,8 @@ export namespace app {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.mode = source["mode"];
 	        this.splitTokens = source["splitTokens"];
-	        this.compress = source["compress"];
+	        this.splitParts = source["splitParts"];
+	        this.wordFilter = source["wordFilter"];
 	        this.fileOverrides = source["fileOverrides"];
 	        this.includeLineNumbers = source["includeLineNumbers"];
 	        this.maxSignatureLen = source["maxSignatureLen"];

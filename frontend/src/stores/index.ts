@@ -43,7 +43,8 @@ export const useExportStore = defineStore('export', () => {
   const checkedPaths = ref<Set<string>>(new Set());
   const mode = ref<string>('full');
   const splitTokens = ref(0);
-  const compress = ref(false); // 空白精简输出
+  const splitParts = ref(1); // 按个数切分：导出为 N 个文件，1 = 不切分
+  const wordFilter = ref(false); // 敏感词过滤（默认关闭）
   const includeLineNumbers = ref(true);
   const maxSignatureLen = ref(200);
   // 省 token 策略（用更少 token 承载更多有效信息）
@@ -63,7 +64,8 @@ export const useExportStore = defineStore('export', () => {
     return {
       mode: mode.value,
       splitTokens: splitTokens.value,
-      compress: compress.value,
+      splitParts: splitParts.value,
+      wordFilter: wordFilter.value,
       fileOverrides: [...checkedPaths.value],
       includeLineNumbers: includeLineNumbers.value,
       maxSignatureLen: maxSignatureLen.value,
@@ -86,7 +88,7 @@ export const useExportStore = defineStore('export', () => {
   }
 
   return {
-    files, checkedPaths, mode, splitTokens, compress,
+    files, checkedPaths, mode, splitTokens, splitParts, wordFilter,
     includeLineNumbers, maxSignatureLen,
     budgetTokens, stripComments, keepMarkedComments, maxLineLen, smartFullTokens,
     result, scan, run, preview,
