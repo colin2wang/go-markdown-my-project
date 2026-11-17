@@ -18,7 +18,6 @@ export namespace app {
 	    mode: string;
 	    splitTokens: number;
 	    splitParts: number;
-	    wordFilter: boolean;
 	    fileOverrides: string[];
 	    includeLineNumbers?: boolean;
 	    maxSignatureLen: number;
@@ -40,7 +39,6 @@ export namespace app {
 	        this.mode = source["mode"];
 	        this.splitTokens = source["splitTokens"];
 	        this.splitParts = source["splitParts"];
-	        this.wordFilter = source["wordFilter"];
 	        this.fileOverrides = source["fileOverrides"];
 	        this.includeLineNumbers = source["includeLineNumbers"];
 	        this.maxSignatureLen = source["maxSignatureLen"];
@@ -242,6 +240,7 @@ export namespace config {
 	export class GlobalSettings {
 	    outputEncoding: string;
 	    interfaceLanguage: string;
+	    theme: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new GlobalSettings(source);
@@ -251,6 +250,7 @@ export namespace config {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.outputEncoding = source["outputEncoding"];
 	        this.interfaceLanguage = source["interfaceLanguage"];
+	        this.theme = source["theme"];
 	    }
 	}
 	export class WordFilterConfig {

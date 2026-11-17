@@ -49,7 +49,6 @@ type ExportOptions struct {
 	Mode        string `json:"mode"`
 	SplitTokens int    `json:"splitTokens"`
 	SplitParts  int    `json:"splitParts"` // 按个数切分：导出为 N 个文件，1 = 不切分（full/smart）
-	WordFilter  bool   `json:"wordFilter"` // 敏感词过滤（替换 XSS 测试样本等易触发平台审核的内容），默认关闭
 	// Compress 已删除：精简空白（含安全去缩进）并入 smart 模式（generator.MinifySmart）
 	FileOverrides []string `json:"fileOverrides"` // GUI 勾选覆盖配置（相对路径）
 	// symbols / signatures 模式子选项
@@ -545,14 +544,14 @@ func prepareExport(cfg config.ProjectConfig, opt ExportOptions) (exportPlan, err
 			results[i].Content = c
 		}
 	}
-	// 敏感词过滤：项目配置 word_filter 为基线，工作台勾选（ExportOptions.WordFilter）
-	// 为运行时覆盖；任一开启即生效。档位/策略取项目配置（空 = standard/destroy）。
+	// 敏感词过滤：仅由项目配置 word_filter.enabled 决定（工作台只读展示，不提供
+	// 运行时覆盖）。档位/策略取项目配置（空 = standard/destroy）。
 	// 管道位置约定：必须在一切 MaxLineLen 截断之前执行（截断会把 `<script`
 	// 劈成两半导致块规则漏配），且在 token 统计之前（替换改变字数）；
 	// redactor 的 [REDACTED] 占位符不匹配任何载荷规则，两者互不干扰。
 	wfCfg := cfg.WordFilter
 	filtered := 0
-	if opt.WordFilter || wfCfg.Enabled {
+	if wfCfg.Enabled {
 		total := 0
 		for i := range results {
 			out, hits := wordfilter.FilterWithStats(results[i].Content, wordfilter.Config{

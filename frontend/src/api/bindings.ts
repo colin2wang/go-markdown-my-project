@@ -25,7 +25,7 @@ export interface ProjectConfig {
     custom_patterns?: string[];
   };
   word_filter?: {
-    /** 项目级开关；工作台勾选为运行时覆盖 */
+    /** 项目级开关；工作台只读展示，不支持运行时覆盖 */
     enabled: boolean;
     /** 规则档位：basic | standard | strict，省略 = standard */
     profile?: string;
@@ -49,6 +49,8 @@ export interface GlobalSettings {
   outputEncoding: string;
   /** 界面语言：zh_cn | en_us | ja_jp（旧配置 auto 会被前端按当前语言回显） */
   interfaceLanguage: string;
+  /** 界面主题：dark | light（旧配置空值 = dark） */
+  theme?: string;
 }
 
 export interface FileInfo {
@@ -72,8 +74,6 @@ export interface ExportOptions {
   splitTokens: number;
   /** 按个数切分输出：1 = 不切分；N > 1 时导出为 N 个文件（full/smart） */
   splitParts?: number;
-  /** 敏感词过滤：替换 XSS 测试样本、危险协议等易触发平台审核的内容（默认关闭） */
-  wordFilter?: boolean;
   fileOverrides: string[];
   includeLineNumbers?: boolean;
   maxSignatureLen?: number;

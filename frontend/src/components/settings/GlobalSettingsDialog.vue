@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue';
 import { api } from '../../api/bindings';
 import { useI18n, type LocaleCode } from '../../i18n';
 import { useLogStore } from '../../stores/log';
+import { applyTheme, currentTheme, type Theme } from '../../theme';
 
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ (e: 'close'): void }>();
@@ -26,8 +27,14 @@ const languages = computed(() => [
 ]);
 const outputEncoding = ref<OutputEncoding>('utf8_bom');
 const interfaceLanguage = ref('zh_cn');
+const theme = ref<Theme>(currentTheme());
 const saving = ref(false);
 const error = ref('');
+
+const themes = computed(() => [
+  { value: 'dark' as Theme, label: t('settings.themeDark') },
+  { value: 'light' as Theme, label: t('settings.themeLight') },
+]);
 
 const langMap: Record<string, string> = { zh_cn: 'zh-CN', en_us: 'en-US', ja_jp: 'ja-JP' };
 // 旧配置遗留的 auto / 空值按当前实际语言回显
@@ -40,6 +47,7 @@ async function load() {
     interfaceLanguage.value = langMap[saved] ? saved : (localeToLang[locale.value] ?? 'zh_cn');
     if (s) {
       outputEncoding.value = (s.outputEncoding as OutputEncoding) || 'utf8_bom';
+      theme.value = s.theme === 'light' ? 'light' : 'dark';
     }
   } catch (e) {
     error.value = String(e);
@@ -53,7 +61,10 @@ async function save() {
     await api.saveGlobalSettings({
       outputEncoding: outputEncoding.value,
       interfaceLanguage: interfaceLanguage.value,
+      theme: theme.value,
     });
+    // 主题即时生效
+    applyTheme(theme.value);
     // 界面语言即时生效
     const mapped = langMap[interfaceLanguage.value];
     if (mapped && mapped !== locale.value) {
@@ -100,6 +111,14 @@ watch(
           <option v-for="l in languages" :key="l.value" :value="l.value">{{ l.label }}</option>
         </select>
         <p class="hint">{{ t('settings.interfaceLanguageHint') }}</p>
+      </label>
+
+      <label class="field">
+        {{ t('settings.theme') }}
+        <select v-model="theme">
+          <option v-for="th in themes" :key="th.value" :value="th.value">{{ th.label }}</option>
+        </select>
+        <p class="hint">{{ t('settings.themeHint') }}</p>
       </label>
 
       <p v-if="error" class="error">{{ error }}</p>

@@ -29,12 +29,23 @@ const (
 	LangAutoValue = "auto"
 )
 
+// 主题常量（Theme 取值）。
+const (
+	ThemeDark  = "dark"  // 深色（默认）
+	ThemeLight = "light" // 浅色
+)
+
+// SupportedThemes 主题白名单（校验与对话框下拉共用）。
+var SupportedThemes = []string{ThemeDark, ThemeLight}
+
 // GlobalSettings 全局设置。
 type GlobalSettings struct {
 	// OutputEncoding 导出文件编码：utf8_bom | utf8 | gb18030
 	OutputEncoding string `yaml:"output_encoding" json:"outputEncoding"`
 	// InterfaceLanguage 界面语言：auto | zh_cn | en_us | ja_jp
 	InterfaceLanguage string `yaml:"interface_language" json:"interfaceLanguage"`
+	// Theme 界面主题：dark | light
+	Theme string `yaml:"theme" json:"theme"`
 }
 
 // DefaultGlobalSettings 返回默认全局设置。
@@ -42,6 +53,7 @@ func DefaultGlobalSettings() *GlobalSettings {
 	return &GlobalSettings{
 		OutputEncoding:    EncodingDefault,
 		InterfaceLanguage: LangAuto,
+		Theme:             ThemeDark,
 	}
 }
 
@@ -53,6 +65,9 @@ func (g *GlobalSettings) normalize() error {
 	if g.InterfaceLanguage == "" {
 		g.InterfaceLanguage = LangAuto
 	}
+	if g.Theme == "" {
+		g.Theme = ThemeDark
+	}
 	if !validEncoding(g.OutputEncoding) {
 		return fmt.Errorf("invalid output_encoding: %s (supported: %v)", g.OutputEncoding, SupportedEncodings)
 	}
@@ -61,7 +76,19 @@ func (g *GlobalSettings) normalize() error {
 	default:
 		return fmt.Errorf("invalid interface_language: %s", g.InterfaceLanguage)
 	}
+	if !validTheme(g.Theme) {
+		return fmt.Errorf("invalid theme: %s (supported: %v)", g.Theme, SupportedThemes)
+	}
 	return nil
+}
+
+func validTheme(t string) bool {
+	for _, s := range SupportedThemes {
+		if s == t {
+			return true
+		}
+	}
+	return false
 }
 
 func validEncoding(e string) bool {
@@ -125,6 +152,7 @@ func SerializeGlobalSettings(g *GlobalSettings) (string, error) {
 	}
 	pair("Export file encoding: utf8_bom | utf8 | gb18030", "output_encoding", strNode(true, g.OutputEncoding))
 	pair("Interface language: auto | zh_cn | en_us | ja_jp", "interface_language", strNode(true, g.InterfaceLanguage))
+	pair("UI theme: dark | light", "theme", strNode(true, g.Theme))
 	doc := &yaml.Node{Kind: yaml.DocumentNode, Content: []*yaml.Node{mapping}}
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)

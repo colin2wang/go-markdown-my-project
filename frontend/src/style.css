@@ -30,6 +30,29 @@
   --r-lg: 7px;
 }
 
+/* 浅色主题：仅覆盖颜色类变量，几何/布局令牌不动 */
+:root[data-theme='light'] {
+  --bg-0: #f5f6f8;
+  --bg-1: #eceef1;
+  --bg-2: #ffffff;
+  --bg-3: #e4e7eb;
+  --line: #d8dce2;
+  --line-2: #c2c8d0;
+  --fg-1: #24292f;
+  --fg-2: #57606a;
+  --fg-3: #8b949e;
+  --accent: #b08800;
+  --accent-strong: #9a6700;
+  --accent-dim: rgba(176, 136, 0, .12);
+  --ok: #4d7c43;
+  --warn: #a66a2c;
+  --err: #b35555;
+  --fg-on-accent: #ffffff;
+  --mask: rgba(0, 0, 0, .35);
+  --shadow-modal: 0 8px 24px rgba(0, 0, 0, .18);
+  --shadow-toast: 0 4px 12px rgba(0, 0, 0, .12);
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -122,3 +145,11 @@ a { color: var(--accent-strong); text-decoration: none; }
 .num { width: 84px; }
 .spacer { flex: 1; }
 .search { width: 220px; }
+
+/* 动效降级：用户偏好减少动画时关闭全部过渡与动画（进度条/toast/折叠等） */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

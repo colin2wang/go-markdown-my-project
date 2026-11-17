@@ -67,6 +67,31 @@ onMounted(() => {
 // 锚点导航：点击滚动到左栏对应分区；滚动时高亮当前所在分区（scroll-spy）
 const leftPane = ref<HTMLElement | null>(null);
 const activeSec = ref('sec-basic');
+
+// 勾选启用敏感词过滤：立即填入默认档位/策略（standard/destroy），YAML 同步显式写出
+function onWordFilterEnable() {
+  const wf = ed.draft?.word_filter;
+  if (!wf?.enabled) return;
+  if (!wf.profile) wf.profile = 'standard';
+  if (!wf.strategy) wf.strategy = 'destroy';
+}
+
+// YAML 联动：聚焦字段（data-field）或所在分区 → 对应 YAML 顶层键，右栏高亮 + 滚动跟随
+const focusedField = ref('');
+const secYamlKey: Record<string, string> = {
+  'sec-basic': 'project_name',
+  'sec-exclude': 'exclude_patterns',
+  'sec-include': 'include_patterns',
+  'sec-export': 'export_mode',
+  'sec-redaction': 'custom_patterns',
+  'sec-wordfilter': 'word_filter',
+};
+function onFormFocus(e: FocusEvent) {
+  const t = e.target as HTMLElement;
+  const field = t.closest?.('[data-field]')?.getAttribute('data-field');
+  const sec = t.closest?.('[id^="sec-"]')?.id;
+  focusedField.value = field || (sec && secYamlKey[sec]) || '';
+}
 const SECTIONS = [
   { id: 'sec-basic', key: 'editor.anchorBasic' },
   { id: 'sec-scope', key: 'editor.anchorScope' },
@@ -155,7 +180,7 @@ function onCancel() {
       <!-- 双栏 -->
       <div class="body">
         <!-- 左栏：可视化编辑 -->
-        <div ref="leftPane" class="left" @scroll="onLeftScroll">
+        <div ref="leftPane" class="left" @scroll="onLeftScroll" @focusin="onFormFocus">
           <!-- 锚点 -->
           <nav class="anchors">
             <a
@@ -168,13 +193,13 @@ function onCancel() {
           <template v-if="ed.draft">
             <EditorSection id="sec-basic" icon="box" :title="t('editor.sectionBasic')" :error-count="['project_name', 'project_path', 'output_file'].filter((f) => ed.errors[f]).length">
               <label class="plain">{{ t('editor.projectName') }}
-                <input :value="ed.draft.project_name" :class="{ invalid: !!ed.errors.project_name }" @input="ed.draft!.project_name = ($event.target as HTMLInputElement).value" />
+                <input data-field="project_name" :value="ed.draft.project_name" :class="{ invalid: !!ed.errors.project_name }" @input="ed.draft!.project_name = ($event.target as HTMLInputElement).value" />
               </label>
               <p v-if="ed.errors.project_name" class="field-error">{{ ed.errors.project_name }}</p>
               <label class="plain">{{ t('editor.projectPath') }}</label>
               <PathInput v-model="ed.draft!.project_path" placeholder="F:/path/to/project" :error="ed.errors.project_path" :validated="onPathValidated" />
               <label class="plain">{{ t('editor.outputFile') }}
-                <div class="outrow">
+                <div class="outrow" data-field="output_file">
                   <input :value="outName" @input="setOutName(($event.target as HTMLInputElement).value)" />
                   <select :value="outExt" @change="setOutExt(($event.target as HTMLSelectElement).value)">
                     <option value=".md">.md</option>
@@ -203,7 +228,7 @@ function onCancel() {
               <label class="plain">{{ t('editor.excludePatterns') }}</label>
               <TagListInput v-model="ed.draft!.exclude_patterns!" :placeholder="t('editor.phExcludePatterns')" :error="ed.errors.exclude_patterns" />
               <label class="inline">{{ t('editor.maxSize') }}
-                <input :value="ed.draft.max_file_size ?? 0" type="number" class="num" :class="{ invalid: !!ed.errors.max_file_size }" @input="ed.draft!.max_file_size = Number(($event.target as HTMLInputElement).value)" />
+                <input data-field="max_file_size" :value="ed.draft.max_file_size ?? 0" type="number" class="num" :class="{ invalid: !!ed.errors.max_file_size }" @input="ed.draft!.max_file_size = Number(($event.target as HTMLInputElement).value)" />
                 {{ t('editor.maxSizeSuffix') }}
               </label>
               <label class="inline">
@@ -247,7 +272,7 @@ function onCancel() {
                 </select>
               </label>
               <label class="inline">{{ t('editor.splitTokens') }}
-                <input :value="ed.draft.split_tokens ?? 0" type="number" class="num" :class="{ invalid: !!ed.errors.split_tokens }" @input="ed.draft!.split_tokens = Number(($event.target as HTMLInputElement).value)" />
+                <input data-field="split_tokens" :value="ed.draft.split_tokens ?? 0" type="number" class="num" :class="{ invalid: !!ed.errors.split_tokens }" @input="ed.draft!.split_tokens = Number(($event.target as HTMLInputElement).value)" />
                 {{ t('editor.splitHint') }}
               </label>
             </EditorSection>
@@ -288,7 +313,7 @@ function onCancel() {
               :muted="!ed.draft.word_filter?.enabled"
             >
               <label class="inline">
-                <input v-model="ed.draft!.word_filter!.enabled" type="checkbox" />
+                <input v-model="ed.draft!.word_filter!.enabled" type="checkbox" @change="onWordFilterEnable" />
                 {{ t('editor.wordFilterEnable') }}
               </label>
               <template v-if="ed.draft.word_filter?.enabled">
@@ -317,7 +342,7 @@ function onCancel() {
 
         <!-- 右栏：YAML 实时镜像（只读） -->
         <div class="right">
-          <YamlPreview :yaml="ed.yamlText" :changed="ed.changedLines" :error-count="ed.errorCount" :syncing="ed.syncing" />
+          <YamlPreview :yaml="ed.yamlText" :changed="ed.changedLines" :error-count="ed.errorCount" :syncing="ed.syncing" :focus-key="focusedField" />
         </div>
       </div>
 

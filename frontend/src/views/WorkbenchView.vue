@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProjectsStore, useExportStore } from '../stores';
 import { api } from '../api/bindings';
@@ -30,6 +30,20 @@ const MODES = computed(() => [
   { value: 'symbols', icon: 'search', label: t('wb.modes.symbols.label'), desc: t('wb.modes.symbols.desc') },
   { value: 'signatures', icon: 'open', label: t('wb.modes.signatures.label'), desc: t('wb.modes.signatures.desc') },
 ]);
+
+// 模式卡片 radiogroup：方向键在模式间移动（焦点随选中项），空格/回车确认
+function onModeKeydown(e: KeyboardEvent) {
+  if (!['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', ' ', 'Enter'].includes(e.key)) return;
+  e.preventDefault();
+  const idx = MODES.value.findIndex((m) => m.value === exp.mode);
+  if (e.key === ' ' || e.key === 'Enter') return; // 已在当前选中项，无需处理
+  const dir = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : -1;
+  const next = MODES.value[(idx + dir + MODES.value.length) % MODES.value.length];
+  exp.mode = next.value;
+  nextTick(() => {
+    (document.querySelector(`[role="radio"][aria-checked="true"]`) as HTMLElement | null)?.focus();
+  });
+}
 
 onMounted(async () => {
   loadError.value = '';
@@ -96,6 +110,8 @@ const showSensitiveDrawer = ref(false);
 const sensitiveScanning = ref(false);
 // 是否脱敏完全由项目配置 redaction.enabled 决定；工作台只负责扫描与展示
 const redactEnabled = computed(() => projects.current?.redaction?.enabled ?? false);
+// 敏感词过滤同样只读：状态来自项目配置 word_filter.enabled，工作台不提供修改
+const wordFilterOn = computed(() => projects.current?.word_filter?.enabled ?? false);
 // 命中抽屉顶部展示的统一替换值；drop_line 策略为空串（表示整行删除）
 const replaceTo = computed(() =>
   projects.current?.redaction?.strategy === 'drop_line'
@@ -118,6 +134,17 @@ async function scanSensitive() {
   } finally {
     sensitiveScanning.value = false;
   }
+}
+
+// 智能省流参数：当前生效值（0 = 后端默认）与一键恢复默认
+const effFullTokens = computed(() => exp.smartFullTokens || 1200);
+const effMinBody = computed(() => exp.skeletonMinBodyLines || 4);
+const effKeep = computed(() => exp.headTailKeepLines || 20);
+function resetSmartParams() {
+  exp.smartFullTokens = 0;
+  exp.skeletonMinBodyLines = 0;
+  exp.headTailKeepLines = 0;
+  exp.smartSkeleton = false;
 }
 
 // —— 大小控制 ——
@@ -236,13 +263,22 @@ async function copyResult() {
       <section class="pane pane-options">
         <h3>{{ t('wb.exportMode') }}</h3>
         <div
-          v-for="m in MODES" :key="m.value"
-          class="mode-card" :class="{ active: exp.mode === m.value }"
-          @click="exp.mode = m.value"
+          role="radiogroup"
+          :aria-label="t('wb.exportMode')"
+          @keydown="onModeKeydown"
         >
-          <div class="mode-line"><Icon :name="m.icon as IconName" /> {{ m.label }}</div>
-          <div class="mode-desc">{{ m.desc }}</div>
-          <Icon name="check" :size="12" class="mode-check" />
+          <div
+            v-for="m in MODES" :key="m.value"
+            role="radio"
+            :aria-checked="exp.mode === m.value"
+            :tabindex="exp.mode === m.value ? 0 : -1"
+            class="mode-card" :class="{ active: exp.mode === m.value }"
+            @click="exp.mode = m.value"
+          >
+            <div class="mode-line"><Icon :name="m.icon as IconName" /> {{ m.label }}</div>
+            <div class="mode-desc">{{ m.desc }}</div>
+            <Icon name="check" :size="12" class="mode-check" />
+          </div>
         </div>
 
         <!-- 符号类模式子选项（设计文档 §8） -->
@@ -257,32 +293,32 @@ async function copyResult() {
           </label>
         </template>
 
-        <!-- 智能省流：缩进说明与可调参数（仅 smart 模式） -->
-        <p v-if="exp.mode === 'smart'" class="mode-note">
-          <Icon name="warn" :size="12" /> {{ t('wb.smartIndentNote') }}
-        </p>
-        <template v-if="exp.mode === 'smart'">
+        <fieldset v-if="exp.mode === 'smart'" class="smart-params">
+          <legend>{{ t('wb.smartParams') }} <button type="button" class="link" @click="resetSmartParams">{{ t('wb.resetSmartParams') }}</button></legend>
           <label class="inline">
             <input v-model="exp.smartSkeleton" type="checkbox" />
             {{ t('wb.skeletonLargeFiles') }}
-            <span class="muted">{{ t('wb.skeletonLargeFilesHint') }}</span>
           </label>
+          <p class="mode-note"><Icon name="warn" :size="12" /> {{ t('wb.smartIndentNote') }}</p>
           <label class="inline wrap" :class="{ disabled: !exp.smartSkeleton }">
             {{ t('wb.smartFullTokens') }}
             <input v-model.number="exp.smartFullTokens" type="number" class="num" min="0" :disabled="!exp.smartSkeleton" />
             <span class="muted">{{ t('wb.smartFullTokensHint') }}</span>
+            <span class="eff">{{ t('wb.effective', { n: effFullTokens }) }}</span>
           </label>
           <label class="inline wrap" :class="{ disabled: !exp.smartSkeleton }">
             {{ t('wb.skeletonMinBody') }}
             <input v-model.number="exp.skeletonMinBodyLines" type="number" class="num" min="0" :disabled="!exp.smartSkeleton" />
             <span class="muted">{{ t('wb.skeletonMinBodyHint') }}</span>
+            <span class="eff">{{ t('wb.effective', { n: effMinBody }) }}</span>
           </label>
           <label class="inline wrap" :class="{ disabled: !exp.smartSkeleton }">
             {{ t('wb.headTailKeep') }}
             <input v-model.number="exp.headTailKeepLines" type="number" class="num" min="0" :disabled="!exp.smartSkeleton" />
             <span class="muted">{{ t('wb.headTailKeepHint') }}</span>
+            <span class="eff">{{ t('wb.effective', { n: effKeep }) }}</span>
           </label>
-        </template>
+        </fieldset>
 
         <h3>{{ t('wb.redaction') }}</h3>
         <template v-if="redactEnabled">
@@ -300,11 +336,8 @@ async function copyResult() {
         </template>
         <p v-else class="muted">{{ t('wb.redactDisabledHint') }}</p>
 
-        <label class="inline wrap">
-          <input v-model="exp.wordFilter" type="checkbox" />
-          {{ t('wb.wordFilter') }}
-          <span class="muted">{{ t('wb.wordFilterHint') }}</span>
-        </label>
+        <!-- 敏感词过滤：仅展示项目配置状态，修改请在项目编辑器「敏感词过滤」区 -->
+        <p class="muted">{{ t('wb.wordFilter') }}：{{ wordFilterOn ? t('common.on') : t('common.off') }} · {{ t('wb.wordFilterHint') }}</p>
 
         <h3>{{ t('wb.tokenSaving') }}</h3>
         <label class="inline">
@@ -486,6 +519,10 @@ async function copyResult() {
 }
 .inline.wrap { flex-wrap: wrap; }
 .inline.disabled { opacity: .5; }
+.inline.disabled input, input:disabled { cursor: not-allowed; }
+.smart-params { border: 1px solid var(--line-2); border-radius: var(--r-md); padding: 4px 10px 8px; margin: 8px 0; }
+.smart-params legend { font-size: 12px; color: var(--fg-2); padding: 0 4px; }
+.smart-params .eff { color: var(--accent); font-variant-numeric: tabular-nums; }
 .mini { font-size: 12px; padding: 1px 8px; }
 .status-left { display: flex; gap: 12px; align-items: center; }
 .status-right { display: flex; gap: 8px; }

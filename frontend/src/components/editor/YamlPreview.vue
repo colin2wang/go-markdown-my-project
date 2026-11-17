@@ -1,6 +1,6 @@
 <!-- YamlPreview：只读实时镜像，行号 + 变更行高亮 + 状态芯片 + 复制/换行（设计文档 §3.1/§3.3） -->
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useLogStore } from '../../stores/log';
 import { useI18n } from '../../i18n';
 
@@ -10,12 +10,29 @@ const props = defineProps<{
   changed: Set<number>;
   errorCount: number;
   syncing: boolean;
+  /** 当前聚焦的表单字段（YAML 键名）；空串 = 无聚焦 */
+  focusKey?: string;
 }>();
 
 const log = useLogStore();
 const wrap = ref(false);
+const codeEl = ref<HTMLElement | null>(null);
 
 const lines = computed(() => props.yaml.split('\n'));
+
+// 聚焦字段对应的 YAML 行：匹配「key:」顶层键（首次出现）
+const focusLine = computed(() => {
+  if (!props.focusKey) return -1;
+  const esc = props.focusKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp('^\\s*-?\\s*' + esc + ':');
+  return lines.value.findIndex((l) => re.test(l));
+});
+// 聚焦变化时滚动跟随，让编辑中的字段在 YAML 里始终可见
+watch(focusLine, async (ln) => {
+  if (ln < 0) return;
+  await nextTick();
+  codeEl.value?.querySelector(`[data-idx="${ln}"]`)?.scrollIntoView({ block: 'nearest' });
+});
 
 // 最简 YAML 语法高亮：注释/行号弱化、键加粗、值与字符串用降饱和状态色
 // 不引 CodeMirror，够用即可；特殊行（多行块、列表项内的复杂结构）按普通文本渲染
@@ -56,8 +73,8 @@ async function copyAll() {
       <button type="button" @click="copyAll">{{ t('editor.yamlCopy') }}</button>
       <label class="wrap-toggle"><input v-model="wrap" type="checkbox" /> {{ t('editor.yamlWrap') }}</label>
     </div>
-    <div class="code" :class="{ wrap }">
-      <div v-for="(l, i) in hlLines" :key="i" class="line" :class="{ changed: changed.has(i + 1) }">
+    <div ref="codeEl" class="code" :class="{ wrap }">
+      <div v-for="(l, i) in hlLines" :key="i" class="line" :class="{ changed: changed.has(i + 1), focused: i === focusLine }">
         <span class="ln">{{ i + 1 }}</span>
         <span class="txt"><span v-for="(s, j) in l" :key="j" :class="s.cls">{{ s.text }}</span></span>
       </div>
@@ -92,4 +109,6 @@ button { background: var(--bg-3); color: var(--fg-1); border: 1px solid var(--li
 .tok-value { color: var(--ok); }
 .tok-string { color: var(--warn); }
 .line.changed { background: var(--accent-dim); }
+/* 聚焦联动行：左侧强调条 + 微高亮（区别于变更行的纯背景） */
+.line.focused { background: var(--accent-dim); box-shadow: inset 2px 0 0 var(--accent); }
 </style>

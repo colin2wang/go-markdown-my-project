@@ -9,6 +9,24 @@ const log = useLogStore();
 const collapsed = ref(false);
 const autoscroll = ref(true);
 const scroller = ref<HTMLElement | null>(null);
+// level 过滤（空串 = 全部）与关键字搜索（大小写不敏感，匹配 msg 与属性文本）
+const levelFilter = ref('');
+const query = ref('');
+const LEVELS = ['DEBUG', 'INFO', 'WARN', 'ERROR'] as const;
+
+const filtered = computed(() => {
+  const q = query.value.trim().toLowerCase();
+  return log.entries.filter((e) => {
+    if (levelFilter.value && e.level.toUpperCase() !== levelFilter.value) return false;
+    if (!q) return true;
+    if (e.msg.toLowerCase().includes(q)) return true;
+    if (e.source.toLowerCase().includes(q)) return true;
+    return e.attrs ? Object.entries(e.attrs).some(([k, v]) => (k + '=' + v).toLowerCase().includes(q)) : false;
+  });
+});
+
+// 折叠时顶栏 error 徽标：有未读错误即点亮（展开或清屏后熄灭）
+const collapsedErrors = computed(() => (collapsed.value ? counts.value.ERROR : 0));
 
 watch(
   () => log.entries.length,
@@ -42,25 +60,31 @@ function levelClass(level: string) {
 <template>
   <section class="logpanel" :class="{ collapsed }">
     <header class="log-head">
-      <button class="toggle" @click="collapsed = !collapsed"><Icon name="chevron" :size="12" :class="{ 'is-collapsed': collapsed }" /> {{ t('log.title') }}</button>
-      <span class="counts">
-        <span class="lvl-debug">D {{ counts.DEBUG }}</span>
-        <span class="lvl-info">I {{ counts.INFO }}</span>
-        <span class="lvl-warn">W {{ counts.WARN }}</span>
-        <span class="lvl-error">E {{ counts.ERROR }}</span>
-      </span>
+      <button class="toggle" @click="collapsed = !collapsed">
+        <Icon name="chevron" :size="12" :class="{ 'is-collapsed': collapsed }" /> {{ t('log.title') }}
+        <span v-if="collapsedErrors" class="err-badge" :title="t('log.errors', { n: collapsedErrors })">{{ collapsedErrors }}</span>
+      </button>
       <span class="spacer" />
-      <label class="auto"><input v-model="autoscroll" type="checkbox" /> {{ t('log.autoscroll') }}</label>
-      <button class="clear" @click="log.clear()">{{ t('log.clear') }}</button>
+      <template v-if="!collapsed">
+        <input v-model="query" class="search" :placeholder="t('log.search')" />
+        <span class="chips">
+          <button class="chip" :class="{ active: levelFilter === '' }" @click="levelFilter = ''">{{ t('log.all') }}</button>
+          <button v-for="lv in LEVELS" :key="lv" class="chip" :class="['chip-' + lv.toLowerCase(), { active: levelFilter === lv }]" @click="levelFilter = levelFilter === lv ? '' : lv">
+            {{ lv[0] }} {{ counts[lv] }}
+          </button>
+        </span>
+        <label class="auto"><input v-model="autoscroll" type="checkbox" /> {{ t('log.autoscroll') }}</label>
+      </template>
+      <button class="clear" @click="log.clear(); levelFilter = ''; query = ''">{{ t('log.clear') }}</button>
     </header>
     <div v-show="!collapsed" ref="scroller" class="log-body" @scroll="onScroll">
-      <div v-for="(e, i) in log.entries" :key="i" class="log-line" :class="levelClass(e.level)">
+      <div v-for="(e, i) in filtered" :key="i" class="log-line" :class="levelClass(e.level)">
         <span class="t">{{ e.time }}</span>
         <span class="lv">{{ e.level }}</span>
         <span class="m">{{ e.msg }}</span><template v-if="e.attrs"><span v-for="(v, k) in e.attrs" :key="k" class="attr"> {{ k }}={{ v }}</span></template>
         <span v-if="e.source" class="src">{{ e.source }}</span>
       </div>
-      <div v-if="log.entries.length === 0" class="empty">{{ t('log.empty') }}</div>
+      <div v-if="filtered.length === 0" class="empty">{{ log.entries.length === 0 ? t('log.empty') : t('log.noMatch') }}</div>
     </div>
   </section>
 </template>
@@ -89,6 +113,16 @@ function levelClass(level: string) {
 }
 .toggle { background: none; border: none; color: var(--fg-2); cursor: pointer; padding: 0 4px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
 .toggle .is-collapsed { transform: rotate(-90deg); }
+/* 折叠态 error 徽标：有未读错误即点亮 */
+.err-badge { min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; background: var(--err); color: #fff; font-size: 10px; line-height: 14px; text-align: center; font-weight: 600; }
+/* level 过滤 chips：单字 + 计数，激活态高亮对应 level 色 */
+.chips { display: flex; gap: 4px; }
+.chip { border: 1px solid var(--line-2); background: transparent; color: var(--fg-3); border-radius: var(--r-sm); padding: 1px 6px; font-size: 11px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.chip:hover { color: var(--fg-1); }
+.chip.active { border-color: var(--accent); color: var(--accent); }
+.chip.active.chip-warn { border-color: var(--warn); color: var(--warn); }
+.chip.active.chip-error { border-color: var(--err); color: var(--err); }
+.search { width: 140px; padding: 2px 8px; font-size: 12px; }
 /* 计数徽标去掉彩色：只有数字本身在出错时才着色 */
 .counts { display: flex; gap: 8px; font-variant-numeric: tabular-nums; color: var(--fg-3); }
 .spacer { flex: 1; }

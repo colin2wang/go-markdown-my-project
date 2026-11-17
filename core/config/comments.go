@@ -143,11 +143,20 @@ func SerializeWithComments(c *ProjectConfig) (string, error) {
 			w.Content = append(w.Content, &yaml.Node{Kind: yaml.ScalarNode, Value: key}, val)
 		}
 		wp("enabled", boolNode(wf.Enabled))
-		if wf.Profile != "" && wf.Profile != "standard" {
-			wp("profile", strNode(false, wf.Profile))
+		// 启用时默认值也显式写出（GUI 预览可见）；禁用且无自定义时整体省略
+		if wf.Enabled || wf.Profile != "" {
+			profile := wf.Profile
+			if profile == "" {
+				profile = "standard"
+			}
+			wp("profile", strNode(false, profile))
 		}
-		if wf.Strategy != "" && wf.Strategy != "destroy" {
-			wp("strategy", strNode(false, wf.Strategy))
+		if wf.Enabled || wf.Strategy != "" {
+			strategy := wf.Strategy
+			if strategy == "" {
+				strategy = "destroy"
+			}
+			wp("strategy", strNode(false, strategy))
 		}
 		pair("Sensitive word filter settings (XSS payloads etc.); profile: basic | standard | strict, strategy: destroy | neutralize", "word_filter", w)
 	}

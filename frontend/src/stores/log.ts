@@ -50,14 +50,14 @@ export const useLogStore = defineStore('log', () => {
     listening = true;
   }
 
-  // —— 全局 toast（保存成功等短提示，自动消失）——
-  const toast = ref<{ msg: string; kind: 'success' | 'warn'; seq: number } | null>(null);
+  // —— 全局 toast（保存成功等短提示，自动消失；error 加长到 8s 且颜色分级）——
+  const toast = ref<{ msg: string; kind: 'success' | 'warn' | 'error'; seq: number } | null>(null);
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
-  function showToast(msg: string, kind: 'success' | 'warn' = 'success') {
-    // seq 递增保证连续触发时过渡动画能重放
+  function showToast(msg: string, kind: 'success' | 'warn' | 'error' = 'success') {
+    // seq 递增保证连续触发时过渡动画能重放；error 更久以免错过
     toast.value = { msg, kind, seq: Date.now() };
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { toast.value = null; }, 2600);
+    toastTimer = setTimeout(() => { toast.value = null; }, kind === 'error' ? 8000 : 2600);
   }
 
   return { entries, clear, listen, push, info, warn, error, toast, showToast };

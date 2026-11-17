@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useLogStore } from './stores/log';
 import { useProjectsStore } from './stores';
@@ -8,6 +8,7 @@ import { useI18n, type LocaleCode } from './i18n';
 import { api } from './api/bindings';
 import GlobalSettingsDialog from './components/settings/GlobalSettingsDialog.vue';
 import Icon from './components/ui/Icon.vue';
+import { applyTheme } from './theme';
 
 const route = useRoute();
 const log = useLogStore();
@@ -29,6 +30,14 @@ const helpPage = ref<'config' | 'configSample' | 'about' | null>(null);
 // 语言菜单：地球图标触发，与帮助菜单互斥
 const langOpen = ref(false);
 
+// 项目名超长时中间省略（路径类名称截中间比截尾部更可读）
+function midTruncate(s: string, max = 28): string {
+  if (s.length <= max) return s;
+  const head = Math.ceil((max - 1) / 2);
+  const tail = Math.floor((max - 1) / 2);
+  return s.slice(0, head) + '…' + (tail > 0 ? s.slice(-tail) : '');
+}
+
 function showHelp(page: 'config' | 'configSample' | 'about') {
   helpOpen.value = false;
   helpPage.value = page;
@@ -44,6 +53,7 @@ async function pickLocale(code: LocaleCode) {
     await api.saveGlobalSettings({
       outputEncoding: s?.outputEncoding ?? 'utf8_bom',
       interfaceLanguage: code === 'zh-CN' ? 'zh_cn' : code === 'en-US' ? 'en_us' : 'ja_jp',
+      theme: s?.theme ?? 'dark',
     });
   } catch { /* 全局设置写失败不影响界面语言生效 */ }
 }
@@ -51,7 +61,19 @@ async function pickLocale(code: LocaleCode) {
 onMounted(() => {
   log.listen();
   void api.setLocale(locale.value); // 启动时把持久化语言同步给后端
+  // 启动时应用持久化主题（旧配置空值 = dark）
+  api.getGlobalSettings().then((s) => applyTheme(s?.theme)).catch(() => { /* 读失败保持深色 */ });
 });
+
+// Esc 关闭顶栏 dropdown 与帮助弹窗（焦点不在输入框时也响应，属全局导航）
+function onKeydown(e: KeyboardEvent) {
+  if (e.key !== 'Escape') return;
+  langOpen.value = false;
+  helpOpen.value = false;
+  if (helpPage.value) helpPage.value = null;
+}
+onMounted(() => window.addEventListener('keydown', onKeydown));
+onUnmounted(() => window.removeEventListener('keydown', onKeydown));
 </script>
 
 <template>
@@ -82,7 +104,7 @@ onMounted(() => {
         <template v-if="route.name === 'workbench'">
           <span class="crumb-sep">/</span>
           <span class="tab active crumb-name" :title="projects.current?.project_name ?? ''">
-            <span class="crumb-text">{{ projects.current?.project_name ?? t('app.workbench') }}</span>
+            <span class="crumb-text">{{ midTruncate(projects.current?.project_name ?? t('app.workbench')) }}</span>
           </span>
         </template>
       </nav>
@@ -130,6 +152,7 @@ onMounted(() => {
     <!-- 全局 toast：保存成功等短提示（避开底部日志面板，居中偏上） -->
     <Transition name="toast">
       <div v-if="log.toast" :key="log.toast.seq" class="toast" :class="log.toast.kind" role="status">
+        <Icon :name="log.toast.kind === 'error' ? 'warn' : log.toast.kind === 'warn' ? 'warn' : 'check'" :size="13" />
         {{ log.toast.msg }}
       </div>
     </Transition>
@@ -244,6 +267,8 @@ nav { display: flex; align-items: center; gap: 6px; min-width: 0; }
   word-break: break-all;
 }
 .toast.warn { border-left-color: var(--warn); }
+.toast.warn, .toast.error { color: var(--warn); display: flex; align-items: center; gap: 6px; }
+.toast.error { border-left-color: var(--err); color: var(--err); }
 .toast-enter-active, .toast-leave-active { transition: opacity .2s, transform .2s; }
 .toast-enter-from, .toast-leave-to { opacity: 0; transform: translate(-50%, 8px); }
 </style>
