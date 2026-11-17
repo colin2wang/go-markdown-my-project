@@ -23,6 +23,8 @@ export function emptyConfig(): ProjectConfig {
     export_mode: 'full',
     split_tokens: 0,
     redaction: { enabled: true, strategy: 'placeholder', placeholder: '[REDACTED]', rule_profile: 'standard', custom_patterns: [] },
+    // 模板 v-model 直接读取 word_filter.enabled；禁用态不填档位/策略，避免写出无意义的 YAML 块
+    word_filter: { enabled: false },
   };
 }
 
@@ -149,6 +151,7 @@ export const useProjectEditor = defineStore('projectEditor', () => {
     copy.include_patterns ??= [];
     copy.include_enabled ??= false;
     copy.use_gitignore ??= true;
+    copy.word_filter ??= { enabled: false };
     if (copy.redaction) {
       copy.redaction.custom_patterns ??= [];
       copy.redaction.allowlist ??= [];
