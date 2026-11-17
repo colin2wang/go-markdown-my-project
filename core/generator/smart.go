@@ -12,6 +12,11 @@ import (
 // defaultSmartFullTokens 单文件保留全文的 token 上限（超出则改为骨架输出）。
 const defaultSmartFullTokens = 1200
 
+const (
+	defaultSkeletonMinBody   = 4  // 骨架折叠起点：函数体 ≥ N 行才折叠
+	defaultHeadTailKeepLines = 20 // 头尾折叠兜底：保留头尾各 N 行
+)
+
 // SmartStats 单文件 smart 处理的统计（用于章节标题标注与「省流」价值展示）。
 type SmartStats struct {
 	Folded      int  // 折叠的函数体数量（按折叠标记统计）
@@ -79,6 +84,11 @@ func smartContent(path, content, lang string, opts Options) (string, SmartStats)
 	return minifySmartContent(content, lang, opts), st
 }
 
+// skeletonEnabled 大文件骨架开关（nil = 默认开启）。
+func skeletonEnabled(opts Options) bool {
+	return opts.SmartSkeleton == nil || *opts.SmartSkeleton
+}
+
 // foldContent smart 处理的折叠段：（可选）剥离注释 → 两级骨架降级 →
 // 头尾折叠兜底。剥离必须早于骨架化：token 阈值按精简后的内容估算
 // （更多小文件可保留全文），且不会把 Skeleton 生成的「// … N lines …」
@@ -96,16 +106,23 @@ func foldContent(content, lang string, opts Options) (string, SmartStats) {
 	if token.EstimateTokens(content) <= limit {
 		return content, st
 	}
+	// 大文件骨架关闭：超限文件保留全文，仅保留注释剥离带来的节省。
+	if !skeletonEnabled(opts) {
+		st.SavedTokens = before - token.EstimateTokens(content)
+		return content, st
+	}
 	// 第一档：标准骨架
-	if sk := compress.Skeleton(lang, content, compress.DefaultSkeletonOptions()); sk != content {
+	if sk := compress.Skeleton(lang, content, compress.SkeletonOptions{MinBodyLines: skeletonMinBody(opts)}); sk != content {
 		st.Folded = compress.FoldedCount(sk)
 		content = sk
 	}
-	// 第二档：激进骨架（函数短而多的文件）
+	// 第二档：激进骨架（函数短而多的文件）：取标准档一半，下限 2
 	if token.EstimateTokens(content) > limit {
-		opt := compress.DefaultSkeletonOptions()
-		opt.MinBodyLines = 2
-		if sk := compress.Skeleton(lang, content, opt); sk != content {
+		aggressive := skeletonMinBody(opts) / 2
+		if aggressive < 2 {
+			aggressive = 2
+		}
+		if sk := compress.Skeleton(lang, content, compress.SkeletonOptions{MinBodyLines: aggressive}); sk != content {
 			st.Folded = compress.FoldedCount(sk)
 			content = sk
 			st.Escalated = true
@@ -114,7 +131,7 @@ func foldContent(content, lang string, opts Options) (string, SmartStats) {
 	// 兜底：无符号文件（YAML/JSON/长文本等）走头尾保留折叠。
 	// 仅非大括号语言（两档骨架对其本就无效）；大括号语言宁可全量也不丢函数体。
 	if token.EstimateTokens(content) > limit && !compress.IsBraceLanguage(lang) && st.Folded == 0 {
-		if folded := compress.HeadTailFold(content, 20); folded != content {
+		if folded := compress.HeadTailFold(content, headTailKeep(opts)); folded != content {
 			content = folded
 			st.Escalated = true
 		}
@@ -129,6 +146,22 @@ func smartLimit(opts Options) int {
 		return opts.SmartFullTokens
 	}
 	return defaultSmartFullTokens
+}
+
+// skeletonMinBody 骨架折叠起点：函数体 ≥ N 行才折叠（≤0 → 默认 4）。
+func skeletonMinBody(opts Options) int {
+	if opts.SkeletonMinBodyLines > 0 {
+		return opts.SkeletonMinBodyLines
+	}
+	return defaultSkeletonMinBody
+}
+
+// headTailKeep 头尾折叠兜底保留的头尾行数（≤0 → 默认 20）。
+func headTailKeep(opts Options) int {
+	if opts.HeadTailKeepLines > 0 {
+		return opts.HeadTailKeepLines
+	}
+	return defaultHeadTailKeepLines
 }
 
 // minifySmartContent smart 收尾的空白/长行精简：行尾空白/空行折叠全语言适用；

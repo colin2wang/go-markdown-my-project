@@ -53,6 +53,9 @@ export const useExportStore = defineStore('export', () => {
   const keepMarkedComments = ref(true); // 剥离注释时保留 TODO/许可证等标记
   const maxLineLen = ref(0); // 0 = 不截断
   const smartFullTokens = ref(0); // 0 = 后端默认
+  const skeletonMinBodyLines = ref(0); // 骨架折叠起点，0 = 后端默认 4
+  const headTailKeepLines = ref(0); // 头尾折叠兜底保留行数，0 = 后端默认 20
+  const smartSkeleton = ref(false); // 大文件骨架：超限文件折叠函数体（默认关闭，显式下发 false）
   const result = ref<ExportResult | null>(null);
 
   async function scan(cfg: ProjectConfig) {
@@ -74,6 +77,9 @@ export const useExportStore = defineStore('export', () => {
       dropMarkedComments: !keepMarkedComments.value,
       maxLineLen: maxLineLen.value,
       smartFullTokens: smartFullTokens.value,
+      skeletonMinBodyLines: skeletonMinBodyLines.value,
+      headTailKeepLines: headTailKeepLines.value,
+      smartSkeleton: smartSkeleton.value,
     };
   }
 
@@ -91,6 +97,7 @@ export const useExportStore = defineStore('export', () => {
     files, checkedPaths, mode, splitTokens, splitParts, wordFilter,
     includeLineNumbers, maxSignatureLen,
     budgetTokens, stripComments, keepMarkedComments, maxLineLen, smartFullTokens,
+    skeletonMinBodyLines, headTailKeepLines, smartSkeleton,
     result, scan, run, preview,
   };
 });

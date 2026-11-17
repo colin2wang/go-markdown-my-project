@@ -257,6 +257,33 @@ async function copyResult() {
           </label>
         </template>
 
+        <!-- 智能省流：缩进说明与可调参数（仅 smart 模式） -->
+        <p v-if="exp.mode === 'smart'" class="mode-note">
+          <Icon name="warn" :size="12" /> {{ t('wb.smartIndentNote') }}
+        </p>
+        <template v-if="exp.mode === 'smart'">
+          <label class="inline">
+            <input v-model="exp.smartSkeleton" type="checkbox" />
+            {{ t('wb.skeletonLargeFiles') }}
+            <span class="muted">{{ t('wb.skeletonLargeFilesHint') }}</span>
+          </label>
+          <label class="inline wrap" :class="{ disabled: !exp.smartSkeleton }">
+            {{ t('wb.smartFullTokens') }}
+            <input v-model.number="exp.smartFullTokens" type="number" class="num" min="0" :disabled="!exp.smartSkeleton" />
+            <span class="muted">{{ t('wb.smartFullTokensHint') }}</span>
+          </label>
+          <label class="inline wrap" :class="{ disabled: !exp.smartSkeleton }">
+            {{ t('wb.skeletonMinBody') }}
+            <input v-model.number="exp.skeletonMinBodyLines" type="number" class="num" min="0" :disabled="!exp.smartSkeleton" />
+            <span class="muted">{{ t('wb.skeletonMinBodyHint') }}</span>
+          </label>
+          <label class="inline wrap" :class="{ disabled: !exp.smartSkeleton }">
+            {{ t('wb.headTailKeep') }}
+            <input v-model.number="exp.headTailKeepLines" type="number" class="num" min="0" :disabled="!exp.smartSkeleton" />
+            <span class="muted">{{ t('wb.headTailKeepHint') }}</span>
+          </label>
+        </template>
+
         <h3>{{ t('wb.redaction') }}</h3>
         <template v-if="redactEnabled">
           <button :disabled="sensitiveScanning" @click="scanSensitive">
@@ -413,6 +440,7 @@ async function copyResult() {
   transition: opacity .12s, transform .12s;
 }
 .mode-card.active .mode-check { opacity: 1; transform: scale(1); }
+.mode-note { color: var(--fg-3); font-size: 11px; margin: 6px 0 0; display: flex; align-items: center; gap: 5px; }
 .inline { display: flex; align-items: center; gap: 6px; margin: 6px 0; }
 .block { display: block; margin: 6px 0; }
 .num { width: 100px; }
@@ -457,6 +485,7 @@ async function copyResult() {
   to { transform: translateX(320%); }
 }
 .inline.wrap { flex-wrap: wrap; }
+.inline.disabled { opacity: .5; }
 .mini { font-size: 12px; padding: 1px 8px; }
 .status-left { display: flex; gap: 12px; align-items: center; }
 .status-right { display: flex; gap: 8px; }

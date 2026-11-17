@@ -27,6 +27,9 @@ export namespace app {
 	    dropMarkedComments: boolean;
 	    maxLineLen: number;
 	    smartFullTokens: number;
+	    skeletonMinBodyLines: number;
+	    headTailKeepLines: number;
+	    smartSkeleton?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ExportOptions(source);
@@ -46,6 +49,9 @@ export namespace app {
 	        this.dropMarkedComments = source["dropMarkedComments"];
 	        this.maxLineLen = source["maxLineLen"];
 	        this.smartFullTokens = source["smartFullTokens"];
+	        this.skeletonMinBodyLines = source["skeletonMinBodyLines"];
+	        this.headTailKeepLines = source["headTailKeepLines"];
+	        this.smartSkeleton = source["smartSkeleton"];
 	    }
 	}
 	export class ExportResult {

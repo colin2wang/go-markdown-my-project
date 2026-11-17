@@ -130,3 +130,66 @@ func TestHeadTailFold(t *testing.T) {
 		t.Errorf("头尾折叠结果不符: %q", out)
 	}
 }
+
+// 骨架折叠起点可调：minBody=10 时 3 行函数体不应折叠（默认 4 会折叠）。
+func TestSmartCustomMinBody(t *testing.T) {
+	opts := smartTestOptions(0)
+	opts.SkeletonMinBodyLines = 10
+	var b strings.Builder
+	b.WriteString("package main\n\nfunc f() {\n")
+	for i := 0; i < 3; i++ {
+		b.WriteString("\ta()\n")
+	}
+	b.WriteString("}\n")
+	if _, st := smartContent("f.go", b.String(), "go", opts); st.Folded != 0 {
+		t.Errorf("3 行体 < minBody=10，不应折叠: %+v", st)
+	}
+}
+
+// 头尾折叠兜底保留行数可调：keep=5 时 YAML 兜底输出仅头尾各 5 行 + 提示行。
+func TestSmartCustomHeadTailKeep(t *testing.T) {
+	opts := smartTestOptions(0)
+	opts.HeadTailKeepLines = 5
+	var b strings.Builder
+	b.WriteString("key: config\n")
+	for i := 0; i < 50; i++ {
+		b.WriteString("item: value\n")
+	}
+	out, st := smartContent("f.yaml", b.String(), "yaml", opts)
+	if st.Escalated {
+		t.Fatalf("期望头尾兜底生效: %+v", st)
+	}
+	if got := len(strings.Split(out, "\n")); got > 5*2+3 {
+		t.Errorf("keep=5 时头尾共约 10 行 + 提示行，got %d 行", got)
+	}
+}
+
+// 大文件骨架关闭：超限文件不折叠、不降级，保留全文。
+func TestSmartSkeletonDisabled(t *testing.T) {
+	var b strings.Builder
+	b.WriteString("package main\n\nfunc big() {\n")
+	for i := 0; i < 200; i++ {
+		b.WriteString("\tprintln(1)\n")
+	}
+	b.WriteString("}\n")
+	src := b.String()
+
+	off := false
+	opts := smartTestOptions(0)
+	opts.SmartSkeleton = &off
+	out, st := smartContent("f.go", src, "go", opts)
+	if st.Folded != 0 || st.Escalated {
+		t.Errorf("骨架关闭时不应折叠: %+v", st)
+	}
+	if strings.Contains(out, "lines …") {
+		t.Errorf("骨架关闭时不应有折叠标记: %q", out)
+	}
+	if !strings.Contains(out, "println(1)") {
+		t.Errorf("骨架关闭时应保留全文")
+	}
+
+	// nil = 默认开启（向后兼容回归）
+	if _, st := smartContent("f.go", src, "go", smartTestOptions(0)); st.Folded == 0 {
+		t.Errorf("SmartSkeleton=nil 应默认开启骨架")
+	}
+}

@@ -130,6 +130,14 @@ type Options struct {
 	StripComments      bool
 	DropMarkedComments bool
 	MaxLineLen         int
+	// 智能省流可调参数（0 = 使用默认值）：
+	// SkeletonMinBodyLines 骨架折叠：函数体 ≥ N 行才折叠（默认 4）；
+	// HeadTailKeepLines 头尾折叠兜底：保留头尾各 N 行（默认 20）。
+	SkeletonMinBodyLines int
+	HeadTailKeepLines    int
+	// SmartSkeleton 是否启用大文件骨架（超 SmartFullTokens 的文件折叠函数体）；
+	// nil = 默认开启。false 时超限文件保留全文（仍受注释剥离/长行截断/空白精简约束）。
+	SmartSkeleton *bool
 	// Prefolded 预算裁剪前已完成的预折叠统计（key = 文件 FullPath），
 	// 命中时 smart 生成阶段跳过二次折叠、直接沿用统计打标。
 	Prefolded map[string]SmartStats

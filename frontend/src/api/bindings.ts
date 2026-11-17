@@ -87,6 +87,12 @@ export interface ExportOptions {
   maxLineLen?: number;
   /** smart 模式：单文件保留全文的 token 上限（≤0 → 后端默认 1200） */
   smartFullTokens?: number;
+  /** 骨架折叠：函数体 ≥ N 行才折叠（0 = 默认 4） */
+  skeletonMinBodyLines?: number;
+  /** 头尾折叠兜底保留行数（0 = 默认 20） */
+  headTailKeepLines?: number;
+  /** false = 关闭大文件骨架（超限文件保留全文）；缺省 = 开启 */
+  smartSkeleton?: boolean;
 }
 
 export interface ExportResult {

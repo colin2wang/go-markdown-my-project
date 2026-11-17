@@ -64,6 +64,11 @@ type ExportOptions struct {
 	DropMarkedComments bool `json:"dropMarkedComments"`
 	MaxLineLen         int  `json:"maxLineLen"`
 	SmartFullTokens    int  `json:"smartFullTokens"`
+	// 智能省流可调参数（0 = 默认）
+	SkeletonMinBodyLines int `json:"skeletonMinBodyLines"`
+	HeadTailKeepLines    int `json:"headTailKeepLines"`
+	// SmartSkeleton 大文件骨架开关：nil/true = 开启（默认），false = 超限文件保留全文。
+	SmartSkeleton *bool `json:"smartSkeleton"`
 }
 
 // ExportResult 导出结果。
@@ -503,11 +508,14 @@ func prepareExport(cfg config.ProjectConfig, opt ExportOptions) (exportPlan, err
 	var prefolded map[string]generator.SmartStats
 	if opt.BudgetTokens > 0 && mode == generator.ModeSmart {
 		prefolded = generator.Prefold(results, generator.Options{
-			Mode:               mode,
-			Languages:          langs,
-			SmartFullTokens:    opt.SmartFullTokens,
-			StripComments:      opt.StripComments,
-			DropMarkedComments: opt.DropMarkedComments,
+			Mode:                 mode,
+			Languages:            langs,
+			SmartFullTokens:      opt.SmartFullTokens,
+			StripComments:        opt.StripComments,
+			DropMarkedComments:   opt.DropMarkedComments,
+			SkeletonMinBodyLines: opt.SkeletonMinBodyLines,
+			HeadTailKeepLines:    opt.HeadTailKeepLines,
+			SmartSkeleton:        opt.SmartSkeleton,
 		})
 	}
 	var dropped []scanner.FileResult
@@ -618,6 +626,10 @@ func genOptions(cfg config.ProjectConfig, opt ExportOptions, plan exportPlan) ge
 		DropMarkedComments: opt.DropMarkedComments,
 		MaxLineLen:         opt.MaxLineLen,
 		Prefolded:          plan.Prefolded,
+
+		SkeletonMinBodyLines: opt.SkeletonMinBodyLines,
+		HeadTailKeepLines:    opt.HeadTailKeepLines,
+		SmartSkeleton:        opt.SmartSkeleton,
 	}
 }
 
