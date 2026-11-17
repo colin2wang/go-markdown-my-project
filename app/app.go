@@ -57,10 +57,10 @@ type ExportOptions struct {
 	MaxSignatureLen    int   `json:"maxSignatureLen"`    // ≤0 → 默认 200
 	// 省 token 三件套（用更少 token 承载更多代码信息）
 	// BudgetTokens >0 时按重要性裁剪文件（低价值文件移入省略清单）；
-	// DropMarkedComments=true 时连 TODO/许可证等标记注释一起删除（默认保留）；
 	// MaxLineLen >0 时截断超长行；SmartFullTokens ≤0 时用默认 1200。
-	BudgetTokens       int  `json:"budgetTokens"`
-	StripComments      bool `json:"stripComments"`
+	BudgetTokens  int  `json:"budgetTokens"`
+	StripComments bool `json:"stripComments"`
+	// DropMarkedComments=true 时连 TODO/许可证等标记注释一起删除（默认保留）
 	DropMarkedComments bool `json:"dropMarkedComments"`
 	MaxLineLen         int  `json:"maxLineLen"`
 	SmartFullTokens    int  `json:"smartFullTokens"`

@@ -37,7 +37,7 @@ func TestSmartContentFoldsLongFunction(t *testing.T) {
 	b.WriteString("}\n")
 	src := b.String()
 
-	out, st := smartContent("f.go", src, "go", smartTestOptions(0))
+	out, st := smartContent("f.go", src, "go", smartTestOptions(300))
 	if st.Folded == 0 {
 		t.Fatalf("超限文件应折叠函数体: %+v", st)
 	}
@@ -47,7 +47,7 @@ func TestSmartContentFoldsLongFunction(t *testing.T) {
 	if st.SavedTokens <= 0 {
 		t.Errorf("应统计出节省的 token: %+v", st)
 	}
-	if !token.EstimateTokens(src) > 0 || token.EstimateTokens(out) >= token.EstimateTokens(src) {
+	if token.EstimateTokens(out) >= token.EstimateTokens(src) {
 		t.Errorf("折叠后 token 应下降")
 	}
 }
@@ -80,7 +80,7 @@ func TestSmartContentHeadTailFold(t *testing.T) {
 	b.WriteString("tail: last\n")
 	src := b.String()
 
-	out, st := smartContent("f.yaml", src, "yaml", smartTestOptions(0))
+	out, st := smartContent("f.yaml", src, "yaml", smartTestOptions(300))
 	if !strings.Contains(out, "lines omitted …") {
 		t.Errorf("无符号文件应走头尾折叠兜底: %q", out[:min(300, len(out))])
 	}
@@ -100,7 +100,7 @@ func TestSmartContentIdempotent(t *testing.T) {
 		b.WriteString("\tprintln(1)\n")
 	}
 	b.WriteString("}\n")
-	opts := smartTestOptions(0)
+	opts := smartTestOptions(300)
 	once, _ := smartContent("f.go", b.String(), "go", opts)
 	twice, _ := smartContent("f.go", once, "go", opts)
 	if once != twice {
@@ -131,24 +131,30 @@ func TestHeadTailFold(t *testing.T) {
 	}
 }
 
-// 骨架折叠起点可调：minBody=10 时 3 行函数体不应折叠（默认 4 会折叠）。
+// 骨架折叠起点可调：对照式验证——4 行体在默认 minBody=4 时应折叠，
+// minBody=10（激进档=5）时两档都不折叠。
 func TestSmartCustomMinBody(t *testing.T) {
-	opts := smartTestOptions(0)
-	opts.SkeletonMinBodyLines = 10
 	var b strings.Builder
 	b.WriteString("package main\n\nfunc f() {\n")
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 4; i++ { // 4 行体：≥默认4（应折叠），< minBody=10 且 < 激进档5（不应折叠）
 		b.WriteString("\ta()\n")
 	}
 	b.WriteString("}\n")
-	if _, st := smartContent("f.go", b.String(), "go", opts); st.Folded != 0 {
-		t.Errorf("3 行体 < minBody=10，不应折叠: %+v", st)
+	src := b.String() // ≈16 tokens，低于阈值 10 才会进入骨架分支——用自定义低阈值
+
+	custom := smartTestOptions(10)
+	custom.SkeletonMinBodyLines = 10
+	if _, st := smartContent("f.go", src, "go", custom); st.Folded != 0 {
+		t.Errorf("4 行体 < minBody=10（激进档=5），不应折叠: %+v", st)
+	}
+	if _, st := smartContent("f.go", src, "go", smartTestOptions(10)); st.Folded == 0 {
+		t.Errorf("默认 minBody=4 时 4 行体应折叠: %+v", st)
 	}
 }
 
 // 头尾折叠兜底保留行数可调：keep=5 时 YAML 兜底输出仅头尾各 5 行 + 提示行。
 func TestSmartCustomHeadTailKeep(t *testing.T) {
-	opts := smartTestOptions(0)
+	opts := smartTestOptions(100) // 51 行 ≈153 tokens，低于默认 1200，用低阈值才能触发兜底
 	opts.HeadTailKeepLines = 5
 	var b strings.Builder
 	b.WriteString("key: config\n")
@@ -156,7 +162,7 @@ func TestSmartCustomHeadTailKeep(t *testing.T) {
 		b.WriteString("item: value\n")
 	}
 	out, st := smartContent("f.yaml", b.String(), "yaml", opts)
-	if st.Escalated {
+	if !st.Escalated {
 		t.Fatalf("期望头尾兜底生效: %+v", st)
 	}
 	if got := len(strings.Split(out, "\n")); got > 5*2+3 {
@@ -175,7 +181,7 @@ func TestSmartSkeletonDisabled(t *testing.T) {
 	src := b.String()
 
 	off := false
-	opts := smartTestOptions(0)
+	opts := smartTestOptions(300)
 	opts.SmartSkeleton = &off
 	out, st := smartContent("f.go", src, "go", opts)
 	if st.Folded != 0 || st.Escalated {
@@ -189,7 +195,7 @@ func TestSmartSkeletonDisabled(t *testing.T) {
 	}
 
 	// nil = 默认开启（向后兼容回归）
-	if _, st := smartContent("f.go", src, "go", smartTestOptions(0)); st.Folded == 0 {
+	if _, st := smartContent("f.go", src, "go", smartTestOptions(300)); st.Folded == 0 {
 		t.Errorf("SmartSkeleton=nil 应默认开启骨架")
 	}
 }
