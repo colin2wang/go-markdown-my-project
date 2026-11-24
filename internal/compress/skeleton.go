@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"go-markdown-my-project/core/symbol"
+	"go-markdown-my-project/internal/symbol"
 )
 
 // SkeletonOptions 骨架化参数。

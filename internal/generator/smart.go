@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"go-markdown-my-project/core/compress"
-	"go-markdown-my-project/core/scanner"
-	"go-markdown-my-project/core/token"
+	"go-markdown-my-project/internal/compress"
+	"go-markdown-my-project/internal/scanner"
+	"go-markdown-my-project/internal/token"
 )
 
 // defaultSmartFullTokens 单文件保留全文的 token 上限（超出则改为骨架输出）。

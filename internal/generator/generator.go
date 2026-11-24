@@ -12,8 +12,8 @@ import (
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"gopkg.in/yaml.v3"
 
-	"go-markdown-my-project/core/scanner"
-	"go-markdown-my-project/core/symbol"
+	"go-markdown-my-project/internal/scanner"
+	"go-markdown-my-project/internal/symbol"
 )
 
 // ExportMode 导出模式。

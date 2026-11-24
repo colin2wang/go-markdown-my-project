@@ -13,9 +13,9 @@ import (
 	"sort"
 	"strings"
 
-	"go-markdown-my-project/core/config"
-	"go-markdown-my-project/core/i18n"
-	"go-markdown-my-project/core/pick"
+	"go-markdown-my-project/internal/config"
+	"go-markdown-my-project/internal/i18n"
+	"go-markdown-my-project/internal/pick"
 )
 
 // Options 推断参数。

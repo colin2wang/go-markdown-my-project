@@ -12,8 +12,8 @@ import (
 // lineComment 行注释起始符。
 type lineComment struct {
 	prefix      string
-	foldCase    bool // 大小写不敏感（Batch 的 REM）
-	boundary    bool // 后须为空白或行尾（避免把 remark 当成 REM 注释）
+	foldCase    bool   // 大小写不敏感（Batch 的 REM）
+	boundary    bool   // 后须为空白或行尾（避免把 remark 当成 REM 注释）
 	blockedNext string // 后跟这些字符时不算注释（PHP 的 #[Attribute]）
 }
 

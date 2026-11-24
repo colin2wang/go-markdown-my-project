@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"go-markdown-my-project/core/scanner"
+	"go-markdown-my-project/internal/scanner"
 )
 
 // updateGolden 支持 go test ./core/generator/ -update 重新生成黄金快照。

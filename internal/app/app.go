@@ -14,16 +14,16 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
-	"go-markdown-my-project/core/compress"
-	"go-markdown-my-project/core/config"
-	"go-markdown-my-project/core/generator"
-	"go-markdown-my-project/core/i18n"
-	"go-markdown-my-project/core/infer"
-	"go-markdown-my-project/core/logger"
-	"go-markdown-my-project/core/redactor"
-	"go-markdown-my-project/core/scanner"
-	"go-markdown-my-project/core/token"
-	"go-markdown-my-project/core/wordfilter"
+	"go-markdown-my-project/internal/compress"
+	"go-markdown-my-project/internal/config"
+	"go-markdown-my-project/internal/generator"
+	"go-markdown-my-project/internal/i18n"
+	"go-markdown-my-project/internal/infer"
+	"go-markdown-my-project/internal/logger"
+	"go-markdown-my-project/internal/redactor"
+	"go-markdown-my-project/internal/scanner"
+	"go-markdown-my-project/internal/token"
+	"go-markdown-my-project/internal/wordfilter"
 )
 
 // FileInfo 前端展示的文件条目（ScanProject 结果）。

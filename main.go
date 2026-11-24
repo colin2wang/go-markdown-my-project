@@ -6,9 +6,9 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
-	"go-markdown-my-project/app"
-	"go-markdown-my-project/core/i18n"
-	"go-markdown-my-project/core/logger"
+	"go-markdown-my-project/internal/app"
+	"go-markdown-my-project/internal/i18n"
+	"go-markdown-my-project/internal/logger"
 )
 
 //go:embed all:frontend/dist

@@ -7,10 +7,10 @@ import { Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as config$0 from "../core/config/models.js";
+import * as config$0 from "../config/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as infer$0 from "../core/infer/models.js";
+import * as infer$0 from "../infer/models.js";
 
 /**
  * ExcludeDefaultsResult DefaultExcludes 的返回（Wails 绑定使用具名结构体避免多返回值歧义）。

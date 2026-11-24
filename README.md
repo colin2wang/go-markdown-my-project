@@ -60,8 +60,8 @@ Two views, switched via the top tabs:
 
 ```
 ├── main.go                       # Wails GUI entry
-├── app/app.go                    # Thin Wails binding layer (dialogs, scan, export, YAML mirror)
-├── core/                         # Pure Go, independently testable (no Wails imports)
+├── internal/app/app.go           # Thin Wails binding layer (dialogs, scan, export, YAML mirror)
+├── internal/                     # Pure Go, independently testable (no Wails imports)
 │   ├── config/                   # Project config load/validate/save + comment-template YAML writer
 │   ├── scanner/                  # File scanning, exclusion rules, parallel read
 │   ├── generator/                # Markdown generation (full/files modes) + file tree
@@ -157,7 +157,7 @@ Built-in false-positive suppression: values containing `your_`, `xxx`, `example`
 ## Development
 
 ```powershell
-go test ./core/...          # unit tests (generator golden regression, symbol, redactor, token)
+go test ./internal/...          # unit tests (generator golden regression, symbol, redactor, token)
 wails dev                   # live-reload GUI development
 cd frontend && pnpm dev     # frontend-only dev server
 ```

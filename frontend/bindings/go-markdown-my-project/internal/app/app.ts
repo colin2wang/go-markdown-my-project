@@ -12,10 +12,10 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as application$0 from "../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as config$0 from "../core/config/models.js";
+import * as config$0 from "../config/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -25,7 +25,7 @@ import * as $models from "./models.js";
  * DefaultExcludes 返回全局默认排除规则（config/exclude_defaults.yml），供编辑器只读展示。
  */
 export function DefaultExcludes(): $CancellablePromise<$models.ExcludeDefaultsResult> {
-    return $Call.ByID(822768833).then(($result: any) => {
+    return $Call.ByID(1563302961).then(($result: any) => {
         return $$createType0($result);
     });
 }
@@ -34,21 +34,21 @@ export function DefaultExcludes(): $CancellablePromise<$models.ExcludeDefaultsRe
  * DefaultProjectsDir 返回 exe 工作目录下的默认 projects 目录（绝对路径）。
  */
 export function DefaultProjectsDir(): $CancellablePromise<string> {
-    return $Call.ByID(2913258219);
+    return $Call.ByID(2603629819);
 }
 
 /**
  * DeleteProject 删除项目配置文件。
  */
 export function DeleteProject(configPath: string): $CancellablePromise<void> {
-    return $Call.ByID(4205353739, configPath);
+    return $Call.ByID(991454491, configPath);
 }
 
 /**
  * GetGlobalSettings 读取全局设置（config/global_settings.yml）；不存在返回默认值。
  */
 export function GetGlobalSettings(): $CancellablePromise<config$0.GlobalSettings> {
-    return $Call.ByID(2115511521).then(($result: any) => {
+    return $Call.ByID(2829031889).then(($result: any) => {
         return $$createType1($result);
     });
 }
@@ -57,7 +57,7 @@ export function GetGlobalSettings(): $CancellablePromise<config$0.GlobalSettings
  * GetVersion 返回展示用版本串，供前端标题栏展示。
  */
 export function GetVersion(): $CancellablePromise<string> {
-    return $Call.ByID(1581586633);
+    return $Call.ByID(3041344889);
 }
 
 /**
@@ -65,7 +65,7 @@ export function GetVersion(): $CancellablePromise<string> {
  * dirs 为包含目录列表（相对 projectPath，/ 分隔）；为空时扫描整个项目目录。
  */
 export function ListFileExtensions(projectPath: string, dirs: string[]): $CancellablePromise<string[]> {
-    return $Call.ByID(3206702793, projectPath, dirs).then(($result: any) => {
+    return $Call.ByID(4112569337, projectPath, dirs).then(($result: any) => {
         return $$createType2($result);
     });
 }
@@ -74,7 +74,7 @@ export function ListFileExtensions(projectPath: string, dirs: string[]): $Cancel
  * ListProjects 列出 projectsDir 下所有 *.yml 项目配置。
  */
 export function ListProjects(projectsDir: string): $CancellablePromise<$models.ProjectSummary[]> {
-    return $Call.ByID(3042513355, projectsDir).then(($result: any) => {
+    return $Call.ByID(4272034619, projectsDir).then(($result: any) => {
         return $$createType4($result);
     });
 }
@@ -84,7 +84,7 @@ export function ListProjects(projectsDir: string): $CancellablePromise<$models.P
  * 供「添加所有子文件夹」一键填充包含目录列表。
  */
 export function ListSubdirs(path: string): $CancellablePromise<string[]> {
-    return $Call.ByID(2636774153, path).then(($result: any) => {
+    return $Call.ByID(1612858073, path).then(($result: any) => {
         return $$createType2($result);
     });
 }
@@ -93,7 +93,7 @@ export function ListSubdirs(path: string): $CancellablePromise<string[]> {
  * LoadProject 加载单个项目配置（仅解析不校验：project_path 失效等也应能打开编辑器修复）。
  */
 export function LoadProject(configPath: string): $CancellablePromise<config$0.ProjectConfig | null> {
-    return $Call.ByID(4129374034, configPath).then(($result: any) => {
+    return $Call.ByID(1531035586, configPath).then(($result: any) => {
         return $$createType6($result);
     });
 }
@@ -103,7 +103,7 @@ export function LoadProject(configPath: string): $CancellablePromise<config$0.Pr
  * Windows 上打开目录时优先复用已显示该目录的资源管理器窗口（见 openpath_windows.go）。
  */
 export function OpenPath(path: string): $CancellablePromise<void> {
-    return $Call.ByID(3752827586, path);
+    return $Call.ByID(3135527186, path);
 }
 
 /**
@@ -111,7 +111,7 @@ export function OpenPath(path: string): $CancellablePromise<void> {
  * 返回结构体而非多返回值：Wails 对 (bool, bool) 的绑定易生歧义。
  */
 export function PathExists(path: string): $CancellablePromise<$models.PathCheck> {
-    return $Call.ByID(1210428110, path).then(($result: any) => {
+    return $Call.ByID(1089473150, path).then(($result: any) => {
         return $$createType7($result);
     });
 }
@@ -120,7 +120,7 @@ export function PathExists(path: string): $CancellablePromise<$models.PathCheck>
  * PreviewExport 干跑导出：生成完整内容但不写盘，返回（截断后的）预览。
  */
 export function PreviewExport(cfg: config$0.ProjectConfig, opt: $models.ExportOptions): $CancellablePromise<$models.PreviewResult> {
-    return $Call.ByID(1407448821, cfg, opt).then(($result: any) => {
+    return $Call.ByID(156480773, cfg, opt).then(($result: any) => {
         return $$createType8($result);
     });
 }
@@ -129,7 +129,7 @@ export function PreviewExport(cfg: config$0.ProjectConfig, opt: $models.ExportOp
  * PreviewScan 保存前预检：文件数 / 总大小 / 语言分布 / 警告。
  */
 export function PreviewScan(cfg: config$0.ProjectConfig): $CancellablePromise<$models.ScanPreview> {
-    return $Call.ByID(3308917086, cfg).then(($result: any) => {
+    return $Call.ByID(4154705230, cfg).then(($result: any) => {
         return $$createType9($result);
     });
 }
@@ -147,7 +147,7 @@ export function PreviewScan(cfg: config$0.ProjectConfig): $CancellablePromise<$m
  * 	  → 编码写盘
  */
 export function RunExport(cfg: config$0.ProjectConfig, opt: $models.ExportOptions): $CancellablePromise<$models.ExportResult> {
-    return $Call.ByID(3204096216, cfg, opt).then(($result: any) => {
+    return $Call.ByID(1228793320, cfg, opt).then(($result: any) => {
         return $$createType10($result);
     });
 }
@@ -156,21 +156,21 @@ export function RunExport(cfg: config$0.ProjectConfig, opt: $models.ExportOption
  * SaveGlobalSettings 保存全局设置。
  */
 export function SaveGlobalSettings(g: config$0.GlobalSettings): $CancellablePromise<void> {
-    return $Call.ByID(1444841634, g);
+    return $Call.ByID(465608850, g);
 }
 
 /**
  * SaveProject 保存项目配置（新建或编辑），校验后写回。
  */
 export function SaveProject(configPath: string, cfg: config$0.ProjectConfig): $CancellablePromise<void> {
-    return $Call.ByID(4170899437, configPath, cfg);
+    return $Call.ByID(2832328413, configPath, cfg);
 }
 
 /**
  * ScanProject 扫描项目，返回文件树条目（大小与行数由扫描阶段顺带统计，不重复读盘）。
  */
 export function ScanProject(cfg: config$0.ProjectConfig): $CancellablePromise<$models.FileInfo[]> {
-    return $Call.ByID(1651928237, cfg).then(($result: any) => {
+    return $Call.ByID(3268070333, cfg).then(($result: any) => {
         return $$createType12($result);
     });
 }
@@ -179,7 +179,7 @@ export function ScanProject(cfg: config$0.ProjectConfig): $CancellablePromise<$m
  * ScanSensitive 扫描勾选文件的敏感信息（F99），返回掩码后的命中列表。
  */
 export function ScanSensitive(cfg: config$0.ProjectConfig, fileOverrides: string[]): $CancellablePromise<$models.SensitiveHit[]> {
-    return $Call.ByID(3123298848, cfg, fileOverrides).then(($result: any) => {
+    return $Call.ByID(3771811088, cfg, fileOverrides).then(($result: any) => {
         return $$createType14($result);
     });
 }
@@ -189,7 +189,7 @@ export function ScanSensitive(cfg: config$0.ProjectConfig, fileOverrides: string
  * startDir 为初始打开目录（可为空；不存在或非目录时忽略）。
  */
 export function SelectDirectory(startDir: string): $CancellablePromise<string> {
-    return $Call.ByID(604782592, startDir);
+    return $Call.ByID(3163015184, startDir);
 }
 
 /**
@@ -197,7 +197,7 @@ export function SelectDirectory(startDir: string): $CancellablePromise<string> {
  * startDir 为初始打开目录（可为空；不存在或非目录时忽略）。
  */
 export function SelectFiles(startDir: string): $CancellablePromise<string[]> {
-    return $Call.ByID(1336727832, startDir).then(($result: any) => {
+    return $Call.ByID(1967178248, startDir).then(($result: any) => {
         return $$createType2($result);
     });
 }
@@ -206,21 +206,21 @@ export function SelectFiles(startDir: string): $CancellablePromise<string[]> {
  * SerializeYAML 配置 → 带注释 YAML 文本（GUI 右栏实时镜像，与保存落盘同源）。
  */
 export function SerializeYAML(cfg: config$0.ProjectConfig): $CancellablePromise<string> {
-    return $Call.ByID(1676326378, cfg);
+    return $Call.ByID(3081782778, cfg);
 }
 
 /**
  * SetApplication 注入 v3 应用实例（main.go 创建 application 后调用）。
  */
 export function SetApplication(ap: application$0.App | null): $CancellablePromise<void> {
-    return $Call.ByID(353474803, ap);
+    return $Call.ByID(3782987139, ap);
 }
 
 /**
  * SetLocale 由前端在切换界面语言时调用，同步后端日志/校验文案语言。
  */
 export function SetLocale(code: string): $CancellablePromise<void> {
-    return $Call.ByID(542884965, code);
+    return $Call.ByID(849704949, code);
 }
 
 /**
@@ -228,7 +228,7 @@ export function SetLocale(code: string): $CancellablePromise<void> {
  * 仅依据目录与文件名做启发式推断，不修改任何文件；失败时返回错误由前端提示。
  */
 export function SuggestConfig(projectPath: string): $CancellablePromise<$models.SuggestResult> {
-    return $Call.ByID(202406103, projectPath).then(($result: any) => {
+    return $Call.ByID(3003733031, projectPath).then(($result: any) => {
         return $$createType15($result);
     });
 }
@@ -237,7 +237,7 @@ export function SuggestConfig(projectPath: string): $CancellablePromise<$models.
  * ValidateConfig 配置完整校验（保存前复检；glob/RE2 编译级别检查）。
  */
 export function ValidateConfig(cfg: config$0.ProjectConfig): $CancellablePromise<$models.FieldError[]> {
-    return $Call.ByID(3054429673, cfg).then(($result: any) => {
+    return $Call.ByID(979668889, cfg).then(($result: any) => {
         return $$createType17($result);
     });
 }

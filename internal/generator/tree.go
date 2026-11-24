@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"go-markdown-my-project/core/scanner"
+	"go-markdown-my-project/internal/scanner"
 )
 
 // directory 对应 Rust struct Directory。

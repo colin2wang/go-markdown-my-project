@@ -10,7 +10,7 @@ vars:
     sh: echo "${BUILD_TIME:-dev}"
   LDFLAGS: >-
     -s -w -H=windowsgui
-    -X '{{.APP_MODULE}}/app.BuildVersion={{.BUILD_TIME}}'
+    -X '{{.APP_MODULE}}/internal/app.BuildVersion={{.BUILD_TIME}}'
 
 tasks:
   generate:appicon:

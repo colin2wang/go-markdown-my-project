@@ -12,9 +12,9 @@ import (
 	"strings"
 	"sync"
 
-	"go-markdown-my-project/core/gitignore"
-	"go-markdown-my-project/core/i18n"
-	"go-markdown-my-project/core/logger"
+	"go-markdown-my-project/internal/gitignore"
+	"go-markdown-my-project/internal/i18n"
+	"go-markdown-my-project/internal/logger"
 )
 
 // FileResult 对应旧版 Vec<(PathBuf, String)>：文件绝对路径 + 内容。

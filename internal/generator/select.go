@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"go-markdown-my-project/core/pick"
-	"go-markdown-my-project/core/scanner"
-	"go-markdown-my-project/core/token"
+	"go-markdown-my-project/internal/pick"
+	"go-markdown-my-project/internal/scanner"
+	"go-markdown-my-project/internal/token"
 )
 
 // BudgetResult 预算裁剪结果：保留的文件与被裁剪的文件。

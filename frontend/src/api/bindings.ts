@@ -164,7 +164,7 @@ export interface ExcludeDefaults {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-import { App as appBinding } from '../../bindings/go-markdown-my-project/app';
+import { App as appBinding } from '../../bindings/go-markdown-my-project/internal/app';
 
 // Wails v3 生成绑定：`wails3 generate bindings` 产出 frontend/bindings/<module>/<pkg>，
 // 方法挂在 App 命名空间下（appBinding.ListProjects 等）。绑定不存在时（生成前）返回空对象，

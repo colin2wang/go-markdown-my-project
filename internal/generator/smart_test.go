@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"go-markdown-my-project/core/compress"
-	"go-markdown-my-project/core/token"
+	"go-markdown-my-project/internal/compress"
+	"go-markdown-my-project/internal/token"
 )
 
 func smartTestOptions(smartTokens int) Options {

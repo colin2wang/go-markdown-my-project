@@ -60,8 +60,8 @@
 
 ```
 ├── main.go                       # Wails GUI 入口
-├── app/app.go                    # 薄 Wails 绑定层（对话框、扫描、导出、YAML 镜像）
-├── core/                         # 纯 Go，可独立测试（不 import Wails）
+├── internal/app/app.go           # 薄 Wails 绑定层（对话框、扫描、导出、YAML 镜像）
+├── internal/                     # 纯 Go，可独立测试（不 import Wails）
 │   ├── config/                   # 项目配置加载/校验/保存 + 带注释模板的 YAML 写出
 │   ├── scanner/                  # 文件扫描、排除规则、并行读取
 │   ├── generator/                # Markdown 生成（full/files 等模式）+ 文件树
@@ -157,7 +157,7 @@ split_tokens: 0                 # >0 启用拆分，如 100000
 ## 开发
 
 ```powershell
-go test ./core/...          # 单元测试（generator 黄金快照回归、symbol、redactor、token）
+go test ./internal/...          # 单元测试（generator 黄金快照回归、symbol、redactor、token）
 wails dev                   # GUI 热重载开发
 cd frontend && pnpm dev     # 仅前端开发服务器
 ```

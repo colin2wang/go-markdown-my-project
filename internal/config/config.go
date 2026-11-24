@@ -10,7 +10,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"go-markdown-my-project/core/logger"
+	"go-markdown-my-project/internal/logger"
 )
 
 // RedactionConfig 敏感信息过滤配置（F99，v2 新增）。
