@@ -164,10 +164,14 @@ export interface ExcludeDefaults {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+import { App as appBinding } from '../../bindings/go-markdown-my-project/app';
+
+// Wails v3 生成绑定：`wails3 generate bindings` 产出 frontend/bindings/<module>/<pkg>，
+// 方法挂在 App 命名空间下（appBinding.ListProjects 等）。绑定不存在时（生成前）返回空对象，
+// 各 api 方法照旧以可选链兜底。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function go(): any {
-  // Wails 运行时注入：App 结构体在 app 包下，绑定为 window['go']['app']['App']
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (window as any).go?.app?.App;
+  return appBinding;
 }
 
 export const api = {

@@ -1,13 +1,11 @@
 {
-  "$schema": "https://wails.io/schemas/config.v2.json",
+  "$schema": "https://wails.io/schemas/config.v3.json",
   "name": "go-markdown-my-project",
-  "outputfilename": "project-docs-gui",
-  "frontend:install": "pnpm install",
-  "frontend:build": "pnpm run build",
-  "frontend:dev:watcher": "pnpm run dev",
-  "frontend:dev:serverUrl": "auto",
-  "author": {
-    "name": "Bing",
-    "email": "colin2wang@gmail.com"
+  "frontend": {
+    "dir": "./frontend",
+    "install": "pnpm install",
+    "build": "pnpm build",
+    "dev": "pnpm dev",
+    "devServerUrl": "http://localhost:5173"
   }
 }

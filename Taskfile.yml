@@ -1,0 +1,61 @@
+version: '3'
+
+# Wails v3 构建任务（`wails3 build` 即 `wails3 task build` 的别名）。
+# BUILD_TIME 由 build.ps1 以环境变量传入本地时区时间戳（下划线占位，避免 ldflags
+# 值含空格被截断）；未设置时（直接跑 wails3 task build）回退为 dev。
+vars:
+  APP_NAME: project-docs-gui
+  APP_MODULE: go-markdown-my-project
+  BUILD_TIME:
+    sh: echo "${BUILD_TIME:-dev}"
+  LDFLAGS: >-
+    -s -w -H=windowsgui
+    -X '{{.APP_MODULE}}/app.BuildVersion={{.BUILD_TIME}}'
+
+tasks:
+  generate:appicon:
+    desc: genicon 自研工具：SVG 源 → build/appicon.png
+    cmds:
+      - go run ./tools/genicon -in frontend/public/icon.svg -png build/appicon.png
+
+  ensure:icondirs:
+    desc: 创建图标输出目录（wails3 generate icons 不会自动创建）
+    cmds:
+      - cmd: mkdir -p build/darwin build/windows
+        platforms: [darwin, linux]
+      - cmd: powershell -NoProfile -Command "New-Item -ItemType Directory -Force -Path 'build/darwin' | Out-Null"
+        platforms: [windows]
+
+  generate:icons:
+    desc: v3 CLI：PNG → 全平台图标（ico/icns）
+    deps: [ensure:icondirs, generate:appicon]
+    cmds:
+      - wails3 generate icons -input build/appicon.png -windowsfilename build/windows/icon.ico -macfilename build/darwin/icon.icns
+      - wails3 generate syso -manifest build/windows/wails.exe.manifest -icon build/windows/icon.ico -info build/windows/info.json -arch amd64 -out rsrc_windows_amd64.syso
+
+  generate:bindings:
+    desc: 生成 Go<->前端绑定（frontend/bindings/）
+    cmds:
+      - wails3 generate bindings -d frontend/bindings -ts -silent ./...
+
+  install:frontend:deps:
+    dir: frontend
+    cmds:
+      - pnpm install --frozen-lockfile
+
+  build:frontend:
+    deps: [install:frontend:deps]
+    dir: frontend
+    cmds:
+      - pnpm build
+
+  build:
+    deps: [generate:icons]
+    cmds:
+      - task: generate:bindings
+      - task: build:frontend
+      - go build -tags production,desktop -ldflags "{{.LDFLAGS}}" -o build/bin/{{.APP_NAME}}.exe .
+
+  dev:
+    cmds:
+      - wails3 dev

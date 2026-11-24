@@ -2,7 +2,7 @@
 
 English | [简体中文](README.zh-CN.md)
 
-![Wails](https://img.shields.io/badge/Wails-v2-FF0000?logo=wails&logoColor=white) ![Go](https://img.shields.io/badge/Go-1.27+-00ADD8?logo=go&logoColor=white) ![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white) ![pnpm](https://img.shields.io/badge/pnpm-12-F69220?logo=pnpm&logoColor=white)
+![Wails](https://img.shields.io/badge/Wails-v3-FF0000?logo=wails&logoColor=white) ![Go](https://img.shields.io/badge/Go-1.27+-00ADD8?logo=go&logoColor=white) ![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white) ![pnpm](https://img.shields.io/badge/pnpm-12-F69220?logo=pnpm&logoColor=white)
 
 Turn any local project into one clean, well-structured Markdown document — full source with file tree, a file manifest, or a symbol index — ready to paste into an online LLM for code review, Q&A, or documentation.
 
@@ -53,7 +53,7 @@ Two views, switched via the top tabs:
 
 ## Tech Stack
 
-- **Backend**: Go 1.22+, Wails v2, `gopkg.in/yaml.v3`, goroutine worker pool, `log/slog` + rolling file
+- **Backend**: Go 1.27+, Wails v3, `gopkg.in/yaml.v3`, goroutine worker pool, `log/slog` + rolling file
 - **Frontend**: Vue 3 + TypeScript + Pinia + vue-router + Vite (pnpm)
 
 ## Project Layout
@@ -85,7 +85,7 @@ Two views, switched via the top tabs:
 
 ## Build
 
-Requirements: **Go 1.22+**, **Node + pnpm**, optional **Wails v2 CLI** (auto-installed by the script if missing).
+Requirements: **Go 1.27+**, **Node + pnpm**, optional **Wails v3 CLI** (auto-installed by the script if missing).
 
 ```powershell
 .\build.ps1                # full build → build/bin/

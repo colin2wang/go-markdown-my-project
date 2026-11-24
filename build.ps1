@@ -1,28 +1,22 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    project-docs-gui one-click build script: install frontend deps (pnpm), let
-    `wails build` regenerate the Go<->frontend bindings, build the frontend and compile the
-    Go backend, then copy the CLI and config files next to the binary in build/bin/.
+    go-markdown-my-project one-click build script (Wails v3): check the toolchain,
+    run `wails3 build` (Taskfile: bindings -> frontend -> go build) and copy the
+    config files next to the binary in build/bin/.
 .PARAMETER SkipInstall
-    Skip pnpm install (use when dependencies already exist)
-.PARAMETER SkipFrontend
-    Skip the frontend build performed inside `wails build` (adds -s, reuses existing frontend/dist)
-.PARAMETER Package
-    Additionally generate Windows installer using NSIS (NSIS must be installed locally)
+    Skip frontend dependency install (use when dependencies already exist)
 .PARAMETER Clean
-    Clean build/bin directory before build
+    Clean the output directory before build
 .EXAMPLE
     .\build.ps1
     .\build.ps1 -Clean
-    .\build.ps1 -SkipInstall -SkipFrontend
+    .\build.ps1 -SkipInstall
 #>
 
 [CmdletBinding()]
 param(
     [switch]$SkipInstall,
-    [switch]$SkipFrontend,
-    [switch]$Package,
     [switch]$Clean
 )
 
@@ -58,29 +52,28 @@ try {
     Push-Location $root
 
     Write-Step 'Check build environment'
-    Assert-Command 'go' 'Please install Go 1.21+: https://go.dev/dl/' | Out-Null
+    Assert-Command 'go' 'Please install Go 1.26+: https://go.dev/dl/' | Out-Null
     Assert-Command 'pnpm' 'Please install pnpm: npm i -g pnpm' | Out-Null
     Write-Ok ('go   : ' + (go version))
     Write-Ok ('pnpm : ' + (pnpm -v))
 
-    # Wails CLI: responsible for frontend-backend binding generation and app packaging
-    if (-not (Get-Command wails -ErrorAction SilentlyContinue)) {
-        Write-Warn 'wails CLI not detected, installing github.com/wailsapp/wails/v2/cmd/wails@latest ...'
-        go install github.com/wailsapp/wails/v2/cmd/wails@latest
-        Invoke-Checked 'Failed to install wails CLI'
+    # Wails v3 CLI (independent from the v2 `wails` binary)
+    if (-not (Get-Command wails3 -ErrorAction SilentlyContinue)) {
+        Write-Warn 'wails3 CLI not detected, installing github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 ...'
+        go install github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0
+        Invoke-Checked 'Failed to install wails3 CLI'
         $goBin = & go env GOPATH
         $env:Path = "$goBin\bin;$env:Path"
     } else {
-        wails version
+        wails3 version
     }
 
-    # Clean wails output folder if -Clean switch is set
+    Write-Step 'Clean output directory (build/bin)'
     $binDir = Join-Path $root 'build\bin'
     if ($Clean -and (Test-Path $binDir)) {
-        Write-Step 'Clean build/bin directory'
         Remove-Item -Recurse -Force $binDir
-        Write-Ok 'build/bin directory cleaned'
     }
+    Write-Ok 'done'
 
     # Install frontend dependencies unless skipped
     if (-not $SkipInstall) {
@@ -100,14 +93,10 @@ try {
         Write-Ok 'Frontend dependencies ready'
     }
 
-    Write-Step 'Compile desktop application (wails build)'
-    # `wails build` regenerates the Go<->frontend bindings, then builds the frontend,
-    # so the embedded dist reflects the latest backend methods.
-    # -SkipFrontend reuses an already-built dist (skips the internal frontend build).
     # Build stamp: local wall-clock time, never UTC. [DateTime]::Now uses the
     # machine's local time zone. The value must stay space-free: it travels
-    # through PowerShell -> wails -> go and nested quoting gets stripped, which
-    # truncates the value at the space. app.FormatBuildVersion() turns the
+    # through PowerShell -> Taskfile -> go and nested quoting gets stripped,
+    # which truncates the value at the space. app.FormatBuildVersion() turns the
     # underscore into a space for display as "(build YYYY-MM-DD HH:mm:ss)".
     $buildTime = [DateTime]::Now
     $invariant = [System.Globalization.CultureInfo]::InvariantCulture
@@ -115,24 +104,24 @@ try {
     $buildLocal = $buildTime.ToString('yyyy-MM-dd HH:mm:ss', $invariant) + ' ' + $buildTime.ToString('zzz', $invariant) + ' (local)'
     Write-Ok "Build version: $buildStamp"
     Write-Ok "Build time   : $buildLocal"
-    $buildArgs = @('build', '-ldflags', "-s -w -X go-markdown-my-project/app.BuildVersion=$buildStamp")
-    if ($SkipFrontend) { $buildArgs += '-s' }
-    if ($Package) {
-        if (Get-Command makensis -ErrorAction SilentlyContinue) {
-            Write-Ok 'NSIS detected, installer will be generated'
-            $buildArgs += '-nsis'
-        } else {
-            Write-Warn 'NSIS(makensis) not detected, only executable will be built. Install NSIS and add -Package to generate installer.'
-        }
-    }
-    wails @buildArgs
+
+    # `wails3 task` does not accept variable overrides on the command line, so
+    # the stamp travels as an environment variable; the Taskfile reads it with
+    # a "dev" fallback for direct `wails3 task build` runs.
+    Write-Step 'Compile desktop application (wails3 task build)'
+    $env:BUILD_TIME = $buildStamp
+    wails3 task build
     Invoke-Checked 'Go backend compilation failed'
 
-    # Copy sample project configs + language mapping next to the wails output executable
+    # The .syso Windows resource file has served its purpose once the exe is
+    # linked (go build embeds it automatically); remove it so it doesn't linger.
+    Remove-Item -Path (Join-Path $root 'rsrc_windows_*.syso') -Force -ErrorAction SilentlyContinue
+
+    # Copy sample project configs + language mapping next to the output executable
     # (GUI reads config/langs.yml and config/projects relative to the exe's working directory)
     Write-Step 'Copy configs to build/bin/'
     if (-not (Test-Path (Join-Path $root "build\bin\$exeName"))) {
-        Write-Fail "wails build output not found: build\bin\$exeName"
+        Write-Fail "wails3 build output not found: build\bin\$exeName"
         exit 1
     }
     # Copy-Item -Recurse pitfall: if the destination dir already exists, the whole source
@@ -141,14 +130,14 @@ try {
     $configDest = Join-Path $root 'build\bin\config'
     if (Test-Path $configDest) { Remove-Item $configDest -Recurse -Force }
     Copy-Item (Join-Path $root 'config') $configDest -Recurse -Force
-    Write-Ok 'config/ -> build/bin'
+    Write-Ok 'config/ -> bin'
 
     Write-Step 'Build completed'
     Get-ChildItem -Path $binDir -Recurse -File |
         Select-Object @{n = 'File'; e = { $_.FullName.Substring($binDir.Length + 1) } },
                       @{n = 'SizeMB'; e = { [math]::Round($_.Length / 1MB, 2) } } |
         Format-Table -AutoSize
-    Write-Host "`nRun dev debug mode: wails dev" -ForegroundColor DarkGray
+    Write-Host "`nRun dev debug mode: wails3 dev" -ForegroundColor DarkGray
 } finally {
     Pop-Location
 }

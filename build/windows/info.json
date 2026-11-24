@@ -1,15 +1,30 @@
 {
 	"fixed": {
-		"file_version": "{{.Info.ProductVersion}}"
+		"file_version": "1.0.0.0",
+		"product_version": "1.0.0.0"
 	},
 	"info": {
-		"0000": {
-			"ProductVersion": "{{.Info.ProductVersion}}",
-			"CompanyName": "{{.Info.CompanyName}}",
-			"FileDescription": "{{.Info.ProductName}}",
-			"LegalCopyright": "{{.Info.Copyright}}",
-			"ProductName": "{{.Info.ProductName}}",
-			"Comments": "{{.Info.Comments}}"
+		"0804": {
+			"CompanyName": "Project Docs GUI",
+			"FileDescription": "项目文档聚合工具（项目源码 → Markdown）",
+			"FileVersion": "1.0.0.0",
+			"InternalName": "project-docs-gui",
+			"LegalCopyright": "© 2026 Project Docs GUI",
+			"OriginalFilename": "project-docs-gui.exe",
+			"ProductName": "Project Docs GUI",
+			"ProductVersion": "1.0.0.0",
+			"Comments": "把本地项目源码聚合成 Markdown，供 LLM 分析使用"
+		},
+		"0409": {
+			"CompanyName": "Project Docs GUI",
+			"FileDescription": "Project Docs GUI - Aggregate project source into Markdown",
+			"FileVersion": "1.0.0.0",
+			"InternalName": "project-docs-gui",
+			"LegalCopyright": "© 2026 Project Docs GUI",
+			"OriginalFilename": "project-docs-gui.exe",
+			"ProductName": "Project Docs GUI",
+			"ProductVersion": "1.0.0.0",
+			"Comments": "Aggregate local project source code into Markdown for LLM analysis"
 		}
 	}
 }

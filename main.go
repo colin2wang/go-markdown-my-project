@@ -2,10 +2,9 @@ package main
 
 import (
 	"embed"
+	"log"
 
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"go-markdown-my-project/app"
 	"go-markdown-my-project/core/i18n"
@@ -25,25 +24,33 @@ func main() {
 	if v := app.FormatBuildVersion(); v != "dev" { // 编译期注入的版本戳格式化为 (build YYYY-MM-DD HH:mm:ss)，dev 下不加后缀
 		title += " " + v
 	}
-	err := wails.Run(&options.App{
-		// 固定初始尺寸：StartHidden 下由 app.App.Startup 显示窗口
-		Title:       title,
-		Width:       1400,
-		Height:      800,
-		MinWidth:    640, // 下限放宽，避免小屏上把 75% 的窗口顶大
-		MinHeight:   400,
-		StartHidden: true,
-		AssetServer: &assetserver.Options{
-			Assets: assets,
+
+	wailsApp := application.New(application.Options{
+		Name: "ProjectDocs",
+		Assets: application.AssetOptions{
+			Handler: application.AssetFileServerFS(assets),
 		},
-		// 与 --bg-0 (#14161a) 对齐，避免启动瞬间闪出偏蓝底色
-		BackgroundColour: &options.RGBA{R: 20, G: 22, B: 26, A: 1},
-		OnStartup:        appObj.Startup,
-		Bind: []interface{}{
-			appObj,
+		Services: []application.Service{
+			application.NewService(appObj),
 		},
 	})
-	if err != nil {
-		println("Error:", err.Error())
+	// 注入应用引用，供事件/对话框使用
+	appObj.SetApplication(wailsApp)
+
+	// v3 由主循环启动后正常显示窗口；Hidden + 手动 Show/Run 在 v3.1.0 下会卡死或不显示
+	wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
+		Name:      "main",
+		Title:     title,
+		Width:     1400,
+		Height:    800,
+		MinWidth:  640, // 下限放宽，避免小屏上把 75% 的窗口顶大
+		MinHeight: 400,
+		// 与 --bg-0 (#14161a) 对齐，避免启动瞬间闪出偏蓝底色
+		BackgroundType:   application.BackgroundTypeSolid,
+		BackgroundColour: application.NewRGBA(20, 22, 26, 0xFF),
+	})
+
+	if err := wailsApp.Run(); err != nil {
+		log.Fatal(err)
 	}
 }

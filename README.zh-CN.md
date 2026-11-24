@@ -2,7 +2,7 @@
 
 [English](README.md) | 简体中文
 
-![Wails](https://img.shields.io/badge/Wails-v2-FF0000?logo=wails&logoColor=white) ![Go](https://img.shields.io/badge/Go-1.27+-00ADD8?logo=go&logoColor=white) ![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white) ![pnpm](https://img.shields.io/badge/pnpm-12-F69220?logo=pnpm&logoColor=white)
+![Wails](https://img.shields.io/badge/Wails-v3-FF0000?logo=wails&logoColor=white) ![Go](https://img.shields.io/badge/Go-1.27+-00ADD8?logo=go&logoColor=white) ![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white) ![pnpm](https://img.shields.io/badge/pnpm-12-F69220?logo=pnpm&logoColor=white)
 
 把本地任意项目聚合成一份干净、结构清晰的 Markdown 文档——完整源码（含文件树）、文件清单或符号索引——可直接粘贴到在线 LLM，用于代码审查、问答或文档整理。
 
@@ -53,7 +53,7 @@
 
 ## 技术栈
 
-- **后端**：Go 1.22+、Wails v2、`gopkg.in/yaml.v3`、goroutine 工作池、`log/slog` + 滚动日志文件
+- **后端**：Go 1.27+、Wails v3、`gopkg.in/yaml.v3`、goroutine 工作池、`log/slog` + 滚动日志文件
 - **前端**：Vue 3 + TypeScript + Pinia + vue-router + Vite（pnpm）
 
 ## 项目结构
@@ -85,7 +85,7 @@
 
 ## 构建
 
-环境要求：**Go 1.22+**、**Node + pnpm**，可选 **Wails v2 CLI**（缺失时脚本会自动安装）。
+环境要求：**Go 1.27+**、**Node + pnpm**，可选 **Wails v3 CLI**（缺失时脚本会自动安装）。
 
 ```powershell
 .\build.ps1                # 完整构建 → build/bin/

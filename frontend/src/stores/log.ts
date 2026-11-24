@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { EventsOn } from '../../wailsjs/runtime/runtime';
+import { Events } from '@wailsio/runtime';
 
 export interface LogEntry {
   time: string;
@@ -42,11 +42,16 @@ export const useLogStore = defineStore('log', () => {
     push({ time: now(), level: 'ERROR', msg, source: 'ui' });
   }
 
-  // 监听后端转发的日志事件。Wails v2 的 runtime 由 wailsjs 模块提供，
-  // 不依赖 window.runtime；桌面环境下 EventsOn 始终可用（浏览器 dev 下仅收不到事件，无副作用）。
+  // 监听后端转发的日志事件。Wails v3 运行时由 @wailsio/runtime 提供；
+  // 桌面环境下事件始终可用（浏览器 dev 下仅收不到事件，无副作用）。
+  // v3 载荷在事件对象上：emit 单参时 data 即该值，数组形态时取首参。
   function listen() {
     if (listening) return;
-    EventsOn('app:log', (e: LogEntry) => push(e));
+    Events.On('app:log', (ev) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const d: any = (ev as any)?.data;
+      push(Array.isArray(d) ? d[0] : d);
+    });
     listening = true;
   }
 

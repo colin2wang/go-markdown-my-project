@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"go-markdown-my-project/core/compress"
 	"go-markdown-my-project/core/config"
@@ -92,22 +92,23 @@ type PreviewResult struct {
 
 // App 暴露给前端的所有方法。
 type App struct {
-	ctx context.Context
+	app *application.App // v3 应用引用（事件/对话框入口），由 SetApplication 注入
 }
 
 // NewApp 创建 App。
 func NewApp() *App { return &App{} }
 
-// Startup 由 Wails 注入上下文。
-func (a *App) Startup(ctx context.Context) {
-	a.ctx = ctx
-	// main.go 以 StartHidden 启动：退出前必须显示窗口
-	defer runtime.WindowShow(ctx)
+// SetApplication 注入 v3 应用实例（main.go 创建 application 后调用）。
+func (a *App) SetApplication(ap *application.App) { a.app = ap }
+
+// ServiceStartup 实现 v3 Service 生命周期。
+func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	// 把全局日志转发为前端可监听的事件（core 保持无 Wails 依赖）。
 	logger.SetSink(func(e logger.Entry) {
-		runtime.EventsEmit(a.ctx, "app:log", e)
+		a.app.Event.Emit("app:log", e)
 	})
 	logger.Info(i18n.T("log.started"))
+	return nil
 }
 
 // SetLocale 由前端在切换界面语言时调用，同步后端日志/校验文案语言。
@@ -809,29 +810,29 @@ func wd() string {
 // SelectDirectory 弹出系统目录选择对话框，返回所选目录；取消返回空串。
 // startDir 为初始打开目录（可为空；不存在或非目录时忽略）。
 func (a *App) SelectDirectory(startDir string) (string, error) {
-	opts := runtime.OpenDialogOptions{Title: "选择目录"}
+	b := a.app.Dialog.OpenFile().SetTitle("选择目录")
 	if startDir != "" {
 		if abs, err := filepath.Abs(startDir); err == nil {
 			if info, err := os.Stat(abs); err == nil && info.IsDir() {
-				opts.DefaultDirectory = abs
+				b = b.SetDirectory(abs) // 原 OpenDialogOptions.DefaultDirectory
 			}
 		}
 	}
-	return runtime.OpenDirectoryDialog(a.ctx, opts)
+	return b.CanChooseDirectories(true).CanChooseFiles(false).PromptForSingleSelection()
 }
 
 // SelectFiles 弹出系统文件选择对话框（可多选），返回所选文件路径列表；取消返回空列表。
 // startDir 为初始打开目录（可为空；不存在或非目录时忽略）。
 func (a *App) SelectFiles(startDir string) ([]string, error) {
-	opts := runtime.OpenDialogOptions{Title: "选择文件"}
+	b := a.app.Dialog.OpenFile().SetTitle("选择文件")
 	if startDir != "" {
 		if abs, err := filepath.Abs(startDir); err == nil {
 			if info, err := os.Stat(abs); err == nil && info.IsDir() {
-				opts.DefaultDirectory = abs
+				b = b.SetDirectory(abs)
 			}
 		}
 	}
-	return runtime.OpenMultipleFilesDialog(a.ctx, opts)
+	return b.CanChooseFiles(true).PromptForMultipleSelection()
 }
 
 // ListFileExtensions 扫描项目下所有文件的扩展名（含点前缀，小写，去重排序）。

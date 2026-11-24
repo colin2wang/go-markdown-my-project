@@ -1,29 +1,29 @@
 # AGENTS.md — AI 编程代理指南
 
-Go + Wails v2 桌面应用（GUI）+ Vue3/TS 前端，把项目源码聚合为 Markdown 供 LLM 分析。由 Rust 项目 `markdown_my_project` 重写而来。
+Go + Wails v3 桌面应用（GUI）+ Vue3/TS 前端，把项目源码聚合为 Markdown 供 LLM 分析。由 Rust 项目 `markdown_my_project` 重写而来。
 
 ## 常用命令
 
 ```powershell
-.\build.ps1                # 一键构建 → build/bin/（pnpm build → wails build → 拷 assets）
+.\build.ps1                # 一键构建 → build/bin/（wails3 task build：genicon → 图标 → 绑定 → pnpm build → go build → 拷 config）
 .\build.ps1 -Clean         # 先清空 build/bin/（exe 被占用时先关掉正在运行的 GUI）
 go build ./...             # 仅编译后端
 go test ./core/...         # 全部单测（generator/symbol/redactor/token/compress/gitignore）
 go test ./core/generator/ -update   # 重新生成黄金快照（仅在有意变更输出格式时）
-wails dev                  # GUI 热重载开发
+wails3 dev                 # GUI 热重载开发
 cd frontend && pnpm dev    # 纯前端开发
-.\generate-icon.ps1       # 由 frontend/public/icon.svg 生成应用图标（build/appicon.png + build/windows/icon.ico）
+.\generate-icon.ps1        # 图标三步链：genicon(SVG→appicon.png) → wails3 generate icons(ico/icns) → wails3 generate syso
 ```
 
-**构建版本戳**：build.ps1 按**本地时区**的构建时间生成 `YYYY-MM-DD_HH:mm:ss`（`[DateTime]::Now`，勿用 UTC；值含空格会被 PS→wails→go 传参链截断，故用下划线占位；构建日志另打印完整本地时间与 UTC 偏移），经 `-ldflags -X` 注入 `app.BuildVersion`（`app/version.go`），展示层用 `app.FormatBuildVersion()` 格式化为 `(build YYYY-MM-DD HH:mm:ss)`（窗口标题 + 前端 `GetVersion` 绑定）；本地 `go build` / `wails dev` 下为 `dev`。
+**构建版本戳**：build.ps1 按**本地时区**的构建时间生成 `YYYY-MM-DD_HH:mm:ss`（`[DateTime]::Now`，勿用 UTC；值含空格会被 PS→Task→go 传参链截断，故用下划线占位；构建日志另打印完整本地时间与 UTC 偏移），以**环境变量 `BUILD_TIME`** 传给 `wails3 task build`（`wails3 task` 不支持命令行变量覆盖），Taskfile.yml 读取该变量并以 `-ldflags -X` 注入 `app.BuildVersion`（`app/version.go`，未设置时回退 `dev`），展示层用 `app.FormatBuildVersion()` 格式化为 `(build YYYY-MM-DD HH:mm:ss)`（窗口标题 + 前端 `GetVersion` 绑定）；本地 `go build` / `wails3 dev` 下为 `dev`。**Windows 文件属性**：`build/windows/info.json` 是 VERSIONINFO 元数据的唯一来源（文件/产品版本、产品名、描述、版权、原始文件名等），Taskfile 与 `generate-icon.ps1` 的 `wails3 generate syso` 必须带 `-info build/windows/info.json`；旧 v2 模板占位符 `{{.Info.*}}` 不会被 Wails v3 渲染，留着会导致「详细信息」全空。**Wails v3**（自 v2 迁移，wails3 CLI 独立于旧 wails）：`main.go` 用 `application.New` + `Services` + `Window.NewWithOptions`（默认可见，不设 `Hidden`），窗口由 Wails 主循环启动后显示，`ServiceStartup` 不做窗口操作；事件经 `a.app.Event.Emit("app:log", e)`，目录/文件对话框用 `a.app.Dialog.OpenFile()` 链式 API；前端绑定由 `wails3 generate bindings` 生成到 `frontend/bindings/`（Taskfile 的 generate:bindings 任务），运行时用 npm 包 `@wailsio/runtime`（`Events.On`），旧的 `frontend/wailsjs/` 已删除。
 
 ## 架构边界（必须遵守）
 
 - `core/` 各包是纯 Go，**禁止 import Wails**；进度/事件抽象在 `app/` 绑定层适配。新逻辑放 `core/`，`app/app.go` 只做薄转发。
 - 新增的 `core/infer`（按项目结构推断推荐配置）、`core/pick`（文件重要性评分/预算裁剪）、`core/compress`（注释剥离 `StripComments` / 骨架化 `Skeleton` / 长行截断 `MinifyWith`）、`core/gitignore`（递归查找项目内所有 `.gitignore`、解析 Git 通配规则、`Matcher.Ignored` 判定路径忽略）、`core/wordfilter`（导出敏感词过滤 `Filter`：替换 XSS 测试样本、危险协议、恶意示例域名与攻击性描述词为占位符，规则表内置于 `words.go`，RE2 正则，与密钥脱敏 `core/redactor` 互不相干）均为纯 Go，不依赖 Wails，可被复用与单测；**注释剔除的语法表与状态机只放在 `core/compress/comments.go` 一个文件**，其它包不得另写一套注释规则。
-- 绑定层方法必须可导出（`Startup` 而非 `startup`），否则 Wails 不生成前端绑定。
-- 前端通过 `frontend/src/api/bindings.ts` 手写封装访问 `window.go.app.App`（App 结构体在 `app` 包下），新增后端方法需同步在此补类型。
-- **窗口初始化**：`main.go` 以 `StartHidden: true` 启动，`app.App.Startup` 必须有 `defer runtime.WindowShow(ctx)` 才显示窗口（勿删）；窗口尺寸为 `main.go` 的固定值（1400×800），已移除启动时按屏幕分辨率自动调整的逻辑。
+- 绑定层方法必须可导出（`ServiceStartup` 而非 `serviceStartup`），否则 Wails 不生成前端绑定。
+- 前端通过 `frontend/src/api/bindings.ts` 手写封装访问 `frontend/bindings/` 下生成的绑定模块（App 服务在 `app` 包下），新增后端方法需重跑 `wails3 generate bindings` 并同步在此补类型。
+- **窗口初始化**：`main.go` 直接以默认可见方式创建窗口，由 Wails v3 在主循环启动后正常显示；不要在 `ServiceStartup` 中 `Run()`/`Show()`——v3.1.0 在主循环启动前 `Run()` 会卡在 WebView2 初始化（窗口白屏且“未响应”），`Show()` 在窗口未 `Run()` 时也不会清掉 `Hidden`（进程在跑但无窗口）；窗口尺寸为 `main.go` 的固定值（1400×800），已移除启动时按屏幕分辨率自动调整的逻辑。
 
 ## 协作约定
 
